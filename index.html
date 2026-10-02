@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:8580; base-uri 'none'; form-action 'self'">
+<meta name="theme-color" content="#1a1a19">
+<title>Квантовый ежедневник</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+<section id="authGate" class="gate" hidden>
+  <div class="gate-card">
+    <h1>Квантовый ежедневник</h1>
+    <div class="segmented" role="tablist" aria-label="Вход или заявка">
+      <button type="button" id="gateTabLogin" role="tab" aria-selected="true">Войти</button>
+      <button type="button" id="gateTabRequest" role="tab" aria-selected="false">Запросить доступ</button>
+    </div>
+
+    <form id="loginForm" class="gate-form">
+      <label>Почта<input name="email" type="email" required autocomplete="username"></label>
+      <label>Пароль<input name="password" type="password" required autocomplete="current-password"></label>
+      <p class="gate-msg" id="loginMsg" role="alert"></p>
+      <button type="submit" class="btn primary">Войти</button>
+    </form>
+
+    <form id="requestForm" class="gate-form" hidden>
+      <label>Имя<input name="displayName" required maxlength="80" autocomplete="name"></label>
+      <label>Почта<input name="email" type="email" required autocomplete="email"></label>
+      <label>Телефон (необязательно)<input name="phone" type="tel" maxlength="32" autocomplete="tel"></label>
+      <label>Telegram (необязательно)<input name="telegramId" maxlength="64" placeholder="@имя"></label>
+      <p class="muted">Заявку рассматривает администратор. Доступ и пароль он передаст лично — по телефону или в Telegram.</p>
+      <p class="gate-msg" id="requestMsg" role="alert"></p>
+      <button type="submit" class="btn primary">Отправить заявку</button>
+    </form>
+  </div>
+</section>
+
+<div id="appRoot">
+<header class="top">
+  <h1>Квантовый ежедневник</h1>
+  <span id="syncStatus" class="sync" role="status"></span>
+  <button type="button" id="openSettings" class="icon-btn" aria-label="Настройки">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+</header>
+
+<div class="segmented periods" role="group" aria-label="Период">
+  <button type="button" data-view="day">День</button>
+  <button type="button" data-view="week">Неделя</button>
+  <button type="button" data-view="month">Месяц</button>
+  <button type="button" data-view="year">Год</button>
+</div>
+
+<div class="range">
+  <button type="button" id="prev" class="icon-btn" aria-label="Назад">‹</button>
+  <span id="rangeLabel"></span>
+  <button type="button" id="next" class="icon-btn" aria-label="Вперёд">›</button>
+</div>
+
+<main>
+  <section class="card wheel-card">
+    <svg id="wheel" viewBox="-200 -200 400 400" role="img" aria-labelledby="summary"></svg>
+    <p id="summary" class="summary"></p>
+    <p class="legend">Сплошной круг — недельная норма (100%). Заливка — выполнение норм, площадь равна проценту. Пунктирная дуга — твоя оценка сферы 1–10.</p>
+  </section>
+
+  <section id="notice" class="card notice" hidden></section>
+
+  <section class="card">
+    <ul id="sectorList" class="sectors"></ul>
+  </section>
+</main>
+
+<dialog id="settingsDialog">
+  <form method="dialog" class="sheet">
+    <h2>Настройки</h2>
+    <div class="field-row">
+      <span>Секторов</span>
+      <div class="segmented" id="countButtons" role="group" aria-label="Число секторов">
+        <button type="button" data-count="7">7</button>
+        <button type="button" data-count="8">8</button>
+        <button type="button" data-count="9">9</button>
+      </div>
+    </div>
+    <ul id="sectorEditList" class="edit-list"></ul>
+    <button type="button" id="openAssess" class="btn">Оценить сферы 1–10</button>
+    <p class="muted" id="accountInfo"></p>
+    <button type="button" id="logoutBtn" class="btn" hidden>Выйти (на этом устройстве)</button>
+    <button type="button" id="deleteData" class="btn danger">Удалить все мои данные</button>
+    <div class="actions"><button value="close" class="btn primary">Готово</button></div>
+  </form>
+</dialog>
+
+<dialog id="goalDialog">
+  <form method="dialog" class="sheet" id="goalForm">
+    <h2 id="goalHeading">Новая цель</h2>
+    <p class="muted" id="goalSector"></p>
+    <label>Что делаю<input name="title" required maxlength="80" placeholder="Например, отжимания"></label>
+    <div class="two">
+      <label>Норма в неделю<input name="target" type="number" min="0.01" step="any" required inputmode="decimal"></label>
+      <label>Единица<input name="unit" maxlength="20" placeholder="раз"></label>
+    </div>
+    <label>Вид нормы
+      <select name="kind">
+        <option value="atLeast">Не меньше</option>
+        <option value="atMost">Не больше (траты, экранное время)</option>
+      </select>
+    </label>
+    <details>
+      <summary>План по дням и вес</summary>
+      <div class="dayplan" id="dayPlan"></div>
+      <p class="muted">Пусто — норма делится на семь дней поровну.</p>
+      <label>Вес цели в секторе<input name="weight" type="number" min="0.1" max="100" step="0.1" value="1" inputmode="decimal"></label>
+    </details>
+    <p class="muted">Новая норма действует с этой недели, прошлые недели считаются по старой.</p>
+    <div class="actions">
+      <button type="button" id="archiveGoal" class="btn">Завершить после этой недели</button>
+      <button type="button" id="deleteGoal" class="btn danger">Удалить</button>
+      <button value="cancel" formnovalidate class="btn">Отмена</button>
+      <button value="save" class="btn primary">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="logDialog">
+  <form method="dialog" class="sheet" id="logForm">
+    <h2 id="logHeading"></h2>
+    <p class="muted" id="logProgress"></p>
+    <div class="two">
+      <label>Сколько<input name="amount" type="number" min="0" step="any" required inputmode="decimal"></label>
+      <label>День<input name="date" type="date" required></label>
+    </div>
+    <label>Заметка<input name="note" maxlength="500"></label>
+    <ul id="logEntries" class="entries"></ul>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn">Закрыть</button>
+      <button value="save" class="btn primary">Записать</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="assessDialog">
+  <form method="dialog" class="sheet">
+    <h2>Как ты сейчас ощущаешь каждую сферу?</h2>
+    <p class="muted">1 — совсем плохо, 10 — отлично. Это ощущение, а не факт: на колесе его видно рядом с выполнением норм.</p>
+    <ul id="assessList" class="edit-list"></ul>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn">Позже</button>
+      <button value="save" class="btn primary">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+</div>
+</body>
+</html>
