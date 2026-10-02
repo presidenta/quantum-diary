@@ -1,0 +1,242 @@
+/* Экран «Квант» — пульт управления реальностью.
+
+   Содержание задаёт администратор, человек его не меняет. Здесь только
+   проживание момента: мудра утром, удержание кнопки днём, выдох вечером.
+
+   Про батарею: ни одного вечного таймера. Один setTimeout до ближайшего
+   момента, и во время удержания — отсчёт раз в секунду, ровно восемь раз. */
+
+import { state, t, $, h, changed } from '../store.js';
+import { API_BASE } from '../config.js';
+import { getMeta } from '../db.js';
+import {
+  HOLD_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot,
+  livedCount, activeMoment, nextMoment, timeNow, msUntil
+} from '../core/quantum.js';
+import { todayKey } from '../core/dates.js';
+
+let wakeTimer = null;
+let holdTimer = null;
+let holdCount = 0;
+
+/* ---------- Связь с сервером ---------- */
+
+async function api(path, options = {}) {
+  const token = await getMeta('token');
+  const res = await fetch(API_BASE + path, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+export async function loadQuantum() {
+  if (!API_BASE) { state.quantum = null; return; }
+  try {
+    state.quantum = await api('/api/quantum/today');
+  } catch {
+    // Нет сети — экран покажет, что день ещё не получен; данные не теряются
+    state.quantum = null;
+  }
+}
+
+async function markDone(moment) {
+  moment.doneAt = new Date().toISOString();
+  renderQuantum();
+  changed();
+  try {
+    await api(`/api/quantum/moments/${moment.id}/done`, { method: 'POST', body: '{}' });
+  } catch {
+    // Отметка переживёт сбой сети: сервер узнает о ней при следующем открытии дня
+  }
+}
+
+/* ---------- Экран ---------- */
+
+const SLOT_TITLE = { morning: 'quantum.morning', day: 'quantum.day', evening: 'quantum.evening' };
+
+export function renderQuantum() {
+  const card = $('quantumCard');
+  const day = state.quantum;
+
+  if (!day) {
+    card.replaceChildren(
+      h('p', { class: 'q-title', text: t('quantum.title') }),
+      h('p', { class: 'muted m0', text: API_BASE ? t('quantum.notReady') : t('settings.serverOff') }));
+    scheduleWake(null);
+    return;
+  }
+
+  const lived = livedCount(day.moments);
+  const now = timeNow();
+  const active = activeMoment(day.moments, now);
+  const next = nextMoment(day.moments, now);
+
+  card.replaceChildren(
+    h('div', { class: 'q-head' },
+      h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
+      h('div', {},
+        h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
+        h('p', { class: 'q-arcana-name', text: t(arcanaKey(day.arcana)) })),
+      h('div', { class: 'q-lived' },
+        h('b', { text: `${lived} / 9` }),
+        h('span', { text: t('quantum.livedShort') }))),
+
+    h('div', { class: 'q-bar' }, ...day.moments.map(m =>
+      h('i', { class: m.doneAt ? 'done' : '' }))),
+
+    ...groupBySlot(day.moments).map(group => h('div', { class: 'q-group' },
+      h('p', { class: 'q-slot', text: t(SLOT_TITLE[group.slot]) }),
+      h('div', { class: 'q-times' }, ...group.moments.map(m => h('span', {
+        class: `q-time${m.doneAt ? ' done' : ''}${m === active ? ' active' : ''}`,
+        text: m.at
+      }))))),
+
+    next && !active
+      ? h('p', { class: 'muted q-next', text: t('quantum.next-at', { time: next.at }) })
+      : null,
+    h('p', { class: 'muted q-hint', text: t('quantum.hint') })
+  );
+
+  renderLive(active, day);
+  scheduleWake(next);
+}
+
+/* Живая часть: то, ради чего всё. Утром и вечером — короткий экран с якорем,
+   днём — блуждающая кнопка, которую надо удержать восемь секунд. */
+function renderLive(active, day) {
+  const live = $('quantumLive');
+  if (!active) { live.hidden = true; live.replaceChildren(); return; }
+  live.hidden = false;
+
+  if (active.slot === 'day') {
+    renderWanderButton(live, active, day);
+  } else {
+    const anchor = active.slot === 'morning' ? 'quantum.doneMudra' : 'quantum.doneBreath';
+    live.replaceChildren(h('div', { class: 'q-overlay' },
+      h('p', { class: 'q-said', text: active.text || t(anchor) }),
+      h('p', { class: 'q-anchor', text: t(anchor) }),
+      h('button', {
+        type: 'button', class: 'btn primary', text: t('quantum.lived-it'),
+        onclick: () => markDone(active)
+      })));
+  }
+}
+
+/* Кнопка появляется в случайном месте — её нельзя ждать в одной точке.
+   Место пересчитывается только при появлении, не по таймеру. */
+function renderWanderButton(live, moment, day) {
+  const x = 6 + Math.random() * 52;          // проценты, чтобы не вылезти за край
+  const y = 10 + Math.random() * 60;
+  const button = h('button', {
+    type: 'button', class: 'q-teleport',
+    onpointerdown: e => startHold(e, moment, day),
+    onpointerup: cancelHold,
+    onpointercancel: cancelHold,
+    onpointerleave: cancelHold
+  },
+    h('span', { class: 'q-teleport-text', text: t('quantum.teleport') }),
+    h('span', { class: 'q-teleport-hold', text: t('quantum.hold') }));
+  button.style.setProperty('left', `${x}%`);
+  button.style.setProperty('top', `${y}%`);
+  live.replaceChildren(h('div', { class: 'q-field' }, button));
+}
+
+function startHold(event, moment, day) {
+  event.preventDefault();
+  if (holdTimer) return;
+  holdCount = 0;
+  const live = $('quantumLive');
+  live.replaceChildren(holdScreen(1));
+
+  holdTimer = setInterval(() => {
+    holdCount += 1;
+    if (holdCount >= HOLD_SECONDS) {
+      clearInterval(holdTimer);
+      holdTimer = null;
+      finishHold(moment, day);
+    } else {
+      live.replaceChildren(holdScreen(holdCount + 1));
+    }
+  }, 1000);
+}
+
+function holdScreen(count) {
+  return h('div', { class: 'q-overlay' },
+    h('div', { class: 'q-ring' }, h('span', { class: 'q-count', text: String(count) })),
+    h('p', { class: 'q-said', text: t('quantum.holding') }),
+    h('button', { type: 'button', class: 'btn', text: t('quantum.release'), onclick: cancelHold }));
+}
+
+// Отпустили раньше восьми секунд — ничего не засчитано, следа не остаётся
+function cancelHold() {
+  if (!holdTimer) return;
+  clearInterval(holdTimer);
+  holdTimer = null;
+  holdCount = 0;
+  renderQuantum();
+}
+
+async function finishHold(moment, day) {
+  // Вибрация только после явного жеста человека и не везде есть мотор
+  try { navigator.vibrate?.(200); } catch { /* нет мотора — не беда */ }
+
+  const live = $('quantumLive');
+  live.replaceChildren(h('div', { class: 'q-overlay' },
+    h('span', { class: 'q-infinity', text: '∞' }),
+    h('p', { class: 'q-said', text: moment.text || t('quantum.closed') })));
+
+  await markDone(moment);
+  setTimeout(() => showChromo(day), 1400);
+}
+
+/* Хромотерапия: экран заливается цветом дня на несколько секунд.
+   Сам закрывается — держать его дольше незачем. */
+function showChromo(day) {
+  const colour = colorOfDay(day.date);
+  const live = $('quantumLive');
+  live.hidden = false;
+  const screen = h('div', { class: 'q-chromo' },
+    h('p', { class: 'q-chromo-day', text: `${t(colour.nameKey)} · ${colour.chakra}` }),
+    h('p', { class: 'q-chromo-text', text: t('quantum.warrior') }),
+    h('button', {
+      type: 'button', class: 'btn q-chromo-close', text: t('quantum.found'),
+      onclick: () => { live.hidden = true; renderQuantum(); }
+    }));
+  screen.style.setProperty('background', colour.color);
+  live.replaceChildren(screen);
+
+  setTimeout(() => {
+    if (live.firstChild === screen) { live.hidden = true; renderQuantum(); }
+  }, 5000);
+}
+
+/* Пробуждение к следующему моменту: один таймер вместо опроса.
+   Когда ничего не происходит — не происходит ничего. */
+function scheduleWake(next) {
+  clearTimeout(wakeTimer);
+  if (!next) return;
+  const wait = msUntil(next.at);
+  if (wait <= 0 || wait > 6 * 3600 * 1000) return;   // мимо суток не ставим
+  wakeTimer = setTimeout(() => {
+    if (state.view === 'quantum') renderQuantum();
+  }, wait + 500);
+}
+
+export function initQuantum() {
+  // Вернулись на вкладку — перечитываем день: момент мог наступить
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || state.view !== 'quantum') return;
+    if (state.quantum?.date !== todayKey()) await loadQuantum();
+    renderQuantum();
+  });
+}

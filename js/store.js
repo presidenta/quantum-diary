@@ -18,7 +18,8 @@ export const state = {
   day: todayKey(),        // какой день открыт в ежедневнике
   selected: null,
   me: null,
-  language: DEFAULT_LANGUAGE
+  language: DEFAULT_LANGUAGE,
+  quantum: null           // день квантового модуля: приходит с сервера
 };
 
 export const t = (key, values) => translate(state.language, key, values);

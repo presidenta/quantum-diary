@@ -12,6 +12,7 @@ import {
 import { LANGUAGES, pickLanguage, isLanguage } from './core/i18n.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
+import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
 
@@ -65,10 +66,16 @@ const closeLangMenu = () => {
 
 /* ---------- Разделы и меню ---------- */
 
-function go(section) {
+async function go(section) {
   state.view = section;
   closeDrawer();
   render();
+  // День квантового модуля тянем, только когда в него зашли и его ещё нет
+  if (section === 'quantum' && !state.quantum) {
+    await loadQuantum();
+    render();
+    renderNav();            // счётчик непрожитых моментов
+  }
 }
 
 function render() {
@@ -96,26 +103,49 @@ function render() {
   renderDrawerSpheres();
 }
 
+/* Счётчик у раздела — то, что ждёт человека: непрожитые моменты,
+   невыполненные задачи. Ноль не показываем: пустая метка только шумит. */
+function sectionBadge(id) {
+  if (!state.index) return null;
+  if (id === 'day') {
+    const left = state.data.tasks.filter(x => !x.deletedAt && x.date === state.day && !x.done).length;
+    return left || null;
+  }
+  if (id === 'quantum') return state.quantum ? state.quantum.moments.filter(m => !m.doneAt).length || null : null;
+  return null;
+}
+
+function navButton(section, iconSize) {
+  const badge = sectionBadge(section.id);
+  return h('button', {
+    type: 'button', dataset: { section: section.id }, onclick: () => go(section.id)
+  },
+    svgIcon(section.icon, iconSize),
+    h('span', { text: t(section.label) }),
+    badge ? h('span', { class: 'count', text: String(badge) }) : null);
+}
+
 function renderNav() {
-  $('bottomNav').replaceChildren(...SECTIONS.map(s => h('button', {
-    type: 'button', dataset: { section: s.id }, onclick: () => go(s.id)
-  }, svgIcon(s.icon, 22), h('span', { text: t(s.label) }))));
+  $('bottomNav').replaceChildren(...SECTIONS.map(s => navButton(s, 22)));
+  $('drawerMain').replaceChildren(...SECTIONS.map(s => navButton(s, 19)));
 
-  $('drawerMain').replaceChildren(...SECTIONS.map(s => h('button', {
-    type: 'button', dataset: { section: s.id }, onclick: () => go(s.id)
-  }, svgIcon(s.icon, 20), h('span', { text: t(s.label) }))));
-
-  // Служебное прижато вниз — приём из Super Productivity
+  // Служебное прижато вниз за разделителем — приём из того же меню
   $('drawerService').replaceChildren(
-    h('button', { type: 'button', onclick: () => { closeDrawer(); $('settingsDialog').showModal(); openSettings(); } },
-      svgIcon(ICONS.settings, 20), h('span', { text: t('nav.settings') }))
+    h('button', {
+      type: 'button',
+      onclick: () => { closeDrawer(); openSettings(); $('settingsDialog').showModal(); }
+    }, svgIcon(ICONS.settings, 19), h('span', { text: t('nav.settings') })),
+    h('a', { href: 'admin.html' }, svgIcon(ICONS.admin, 19), h('span', { text: t('nav.admin') }))
   );
 }
 
 function renderDrawerSpheres() {
-  if (!state.index) return;
+  if (!state.index || $('spheresToggle').getAttribute('aria-expanded') === 'false') {
+    if (state.index) $('drawerSpheres').replaceChildren();
+    return;
+  }
   const rows = weekWheel(state.index, mondayOf(todayKey()), todayKey());
-  $('drawerSpheres').replaceChildren(...rows.slice(0, 4).map(row => h('button', {
+  $('drawerSpheres').replaceChildren(...rows.map(row => h('button', {
     type: 'button', onclick: () => go('wheel')
   },
     h('span', { class: `dot s${row.sector.slot}` }),
@@ -131,13 +161,6 @@ const closeDrawer = () => {
 };
 
 /* ---------- Квант и Деньги: пока заглушки с честным текстом ---------- */
-
-function renderQuantum() {
-  $('quantumCard').replaceChildren(
-    h('p', { style: 'margin:0 0 8px;font-weight:600', text: t('quantum.title') }),
-    h('p', { class: 'muted', style: 'margin:0', text: t('quantum.notReady') }),
-    h('p', { class: 'muted', style: 'margin:10px 0 0', text: t('quantum.hint') }));
-}
 
 function renderMoney() {
   $('moneyCard').replaceChildren(
@@ -196,6 +219,17 @@ function gateTab(which) {
 
 /* ---------- Запуск ---------- */
 
+/* Кто вошёл — в шапке панели. Заполняется после start() на обоих путях:
+   и когда сессия уже была, и когда человек только что ввёл пароль. */
+function renderUser() {
+  if (!state.me) return;
+  $('userInitial').textContent = (state.me.displayName || '?').trim()[0].toUpperCase();
+  $('userName').textContent = state.me.displayName;
+  // Номер кабинета девятью цифрами — его можно продиктовать администратору
+  $('userAccount').textContent = String(state.me.accountNo ?? 0).padStart(9, '0');
+  $('logoutBtn').hidden = false;
+}
+
 let syncStarted = false;
 
 async function start() {
@@ -212,7 +246,12 @@ async function start() {
   } else {
     syncNow();
   }
-  if (API_BASE) state.me = await fetchMe();
+  if (API_BASE) {
+    state.me = await fetchMe();
+    renderUser();
+    await loadQuantum();     // счётчик моментов нужен сразу, на любом экране
+    renderNav();
+  }
 
   // Сферы по умолчанию — только если их нет и на сервере: иначе после очистки
   // телефона рядом с вернувшимися сферами появились бы ещё девять
@@ -233,6 +272,7 @@ async function boot() {
 
   initWheel();
   initDay();
+  initQuantum();
   onChange(render);
 
   // Меню, язык, настройки
@@ -250,6 +290,19 @@ async function boot() {
     if (e.key !== 'Escape') return;
     closeLangMenu();
     closeDrawer();
+  });
+
+  // Группа сфер: сворачивание и быстрый переход к настройке — действия
+  // прямо в заголовке группы, как в том меню
+  $('spheresToggle').addEventListener('click', () => {
+    const open = $('spheresToggle').getAttribute('aria-expanded') === 'true';
+    $('spheresToggle').setAttribute('aria-expanded', String(!open));
+    renderDrawerSpheres();
+  });
+  $('spheresSettings').addEventListener('click', () => {
+    closeDrawer();
+    openSettings();
+    $('settingsDialog').showModal();
   });
 
   $('openAssess').addEventListener('click', openAssess);
@@ -321,12 +374,6 @@ async function boot() {
   if (API_BASE && !(await hasSession())) { showGate(); return; }
   hideGate();
   await start();
-  if (state.me) {
-    $('drawerUser').hidden = false;
-    $('userInitial').textContent = (state.me.displayName || '?').trim()[0].toUpperCase();
-    $('userName').textContent = state.me.displayName;
-    $('userState').textContent = t('sync.synced');
-  }
 }
 
 boot();
