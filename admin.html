@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:8580; base-uri 'none'; form-action 'self'">
+<meta name="theme-color" content="#0A0A0C">
+<title>Кабинет администратора</title>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/admin.css">
+<script type="module" src="js/admin.js"></script>
+</head>
+<body class="admin">
+
+<!-- Вход по токену: он лежит в .env сервера, человек его не придумывает -->
+<section id="tokenGate" class="gate" hidden>
+  <form class="gate-card" id="tokenForm">
+    <div class="gate-brand">
+      <h1>Кабинет администратора</h1>
+      <p class="muted m0">Доступ по токену из <code>.env</code> сервера</p>
+    </div>
+    <label><span>ADMIN_TOKEN</span><input name="token" type="password" required autocomplete="off"></label>
+    <p class="gate-msg" id="tokenMsg" role="alert"></p>
+    <button type="submit" class="btn primary">Войти</button>
+  </form>
+</section>
+
+<div id="adminRoot" hidden>
+  <header class="top">
+    <h1>Кабинет администратора</h1>
+    <span class="sync" id="adminCount"></span>
+    <button type="button" id="adminLogout" class="icon-btn" aria-label="Выйти">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4v16h-4M11 15l3-3-3-3M14 12H4"></path></svg>
+    </button>
+  </header>
+
+  <p id="adminError" class="admin-error" role="alert" hidden></p>
+
+  <main class="screen">
+    <div class="segmented" id="adminTabs" role="group" aria-label="Разделы">
+      <button type="button" data-tab="people" aria-pressed="true">Люди</button>
+      <button type="button" data-tab="content" aria-pressed="false">Содержание</button>
+    </div>
+
+    <!-- Люди: заявки, действующие, заблокированные -->
+    <section id="tabPeople">
+      <div class="segmented" id="statusTabs" role="group" aria-label="Статус">
+        <button type="button" data-status="pending" aria-pressed="true">Заявки</button>
+        <button type="button" data-status="active" aria-pressed="false">Действующие</button>
+        <button type="button" data-status="blocked" aria-pressed="false">Заблокированные</button>
+      </div>
+      <ul id="peopleList" class="people"></ul>
+    </section>
+
+    <!-- Содержание квантового модуля -->
+    <section id="tabContent" hidden>
+      <div class="card">
+        <h2>Новая фраза</h2>
+        <form id="phraseForm" class="gate-form">
+          <div class="two">
+            <label><span>Когда</span>
+              <select name="slot">
+                <option value="morning">Утро — замыкание контура</option>
+                <option value="day">День — мирный воин</option>
+                <option value="evening">Вечер — сброс потенциала</option>
+                <option value="frame">Кадр будущего</option>
+              </select>
+            </label>
+            <label><span>Язык</span>
+              <select name="language">
+                <option value="ru">Русский</option>
+                <option value="uk">Українська</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+          </div>
+          <label><span>Текст</span><textarea name="text" required maxlength="600"></textarea></label>
+          <label class="row-check">
+            <input type="checkbox" name="isCommon" checked>
+            <span>Общая — достаётся всем, у кого нет своего набора</span>
+          </label>
+          <button type="submit" class="btn primary">Добавить</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h2>Библиотека</h2>
+          <span class="muted m0" id="phraseCount"></span>
+        </div>
+        <ul id="phraseList" class="phrases mt10"></ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="passwordDialog">
+  <div class="sheet">
+    <h2>Пароль выдан</h2>
+    <p class="muted m0">Запишите его сейчас — больше он нигде не показывается. Передайте человеку лично.</p>
+    <p class="password" id="passwordValue"></p>
+    <p class="muted m0" id="passwordFor"></p>
+    <div class="actions">
+      <button type="button" class="btn" id="copyPassword">Скопировать</button>
+      <button type="button" class="btn primary" id="closePassword">Готово</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="assignDialog">
+  <form method="dialog" class="sheet" id="assignForm">
+    <h2>Персональный набор</h2>
+    <p class="muted m0" id="assignFor"></p>
+    <ul id="assignList" class="phrases"></ul>
+    <p class="muted m0">Ничего не отмечено — человек получает общие фразы.</p>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn">Отмена</button>
+      <button value="save" class="btn primary">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+</body>
+</html>

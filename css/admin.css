@@ -1,0 +1,55 @@
+/* Кабинет администратора: те же токены Genesis Luxury, свой набор карточек */
+
+body.admin { max-width: none; }
+body.admin .screen { max-width: 760px; padding-bottom: 32px; }
+body.admin .top { max-width: 760px; margin: 0 auto; padding: 16px; }
+body.admin .segmented { margin-bottom: 12px; }
+
+.people { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.person {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px;
+  display: grid; gap: 10px;
+}
+.person.pending { border-color: var(--line-strong); }
+.person-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.person-head b { display: block; font-size: 15px; }
+.person-head .contacts { font-size: 12px; color: var(--ink-2); margin-top: 3px; display: block; }
+.person-head time { font-size: 11px; color: var(--ink-2); white-space: nowrap; }
+.person-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.person-actions .btn { min-height: 44px; font-size: 14px; }
+.person-actions .btn.grow { flex-grow: 1; }
+
+.phrases { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.phrase {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 11px;
+  padding: 12px 14px; border-radius: 12px; background: var(--surface-2);
+}
+.phrase .text { font-size: 14px; line-height: 1.45; }
+.phrase .meta { font-size: 11px; color: var(--ink-2); margin-top: 4px; display: block; }
+.phrase .slot {
+  font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--gold); border: 1px solid var(--line-strong); border-radius: 6px; padding: 2px 6px; white-space: nowrap;
+}
+.phrase .remove { border: 0; background: none; color: var(--ink-2); cursor: pointer; min-width: 36px; min-height: 36px; }
+.phrase input[type="checkbox"] { margin-top: 2px; }
+.phrase.off .text { color: var(--ink-2); text-decoration: line-through; }
+
+.row-check { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.row-check input { width: 20px; height: 20px; flex: none; }
+
+.password {
+  margin: 4px 0; padding: 16px; border-radius: 12px; background: var(--bg);
+  border: 1px solid var(--line-strong);
+  font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 26px; font-weight: 700; letter-spacing: 3px; text-align: center; color: var(--gold-bright);
+}
+
+.empty { color: var(--ink-2); font-size: 14px; padding: 14px 0; }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--gold); }
+
+/* Ошибка показывается на странице: alert() вешает и работу, и проверку */
+.admin-error {
+  max-width: 760px; margin: 0 auto 10px; padding: 12px 16px;
+  border-radius: 12px; background: rgba(230, 103, 103, .14);
+  border: 1px solid rgba(230, 103, 103, .3); color: var(--danger); font-size: 14px;
+}
