@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Ни шрифтов, ни библиотек снаружи: приложение должно открываться без сети.
+     Playfair Display и Manrope берутся, если они есть в системе, иначе
+     подставляется serif и системный шрифт — рисунок страницы не ломается. -->
 <meta http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:8580; base-uri 'none'; form-action 'self'">
-<meta name="theme-color" content="#1a1a19">
+<meta name="theme-color" content="#0A0A0C">
 <title>Квантовый ежедневник</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -14,118 +17,225 @@
 </head>
 <body>
 
+<!-- Вход. Перекрывает приложение, пока нет действующей сессии -->
 <section id="authGate" class="gate" hidden>
   <div class="gate-card">
-    <h1>Квантовый ежедневник</h1>
-    <div class="segmented" role="tablist" aria-label="Вход или заявка">
-      <button type="button" id="gateTabLogin" role="tab" aria-selected="true">Войти</button>
-      <button type="button" id="gateTabRequest" role="tab" aria-selected="false">Запросить доступ</button>
+    <div class="gate-brand">
+      <svg width="58" height="58" viewBox="-50 -50 100 100" aria-hidden="true">
+        <circle r="34" fill="none" stroke="#D4AF37" stroke-width="1.5"></circle>
+        <circle r="21" fill="none" stroke="rgba(212,175,55,.45)" stroke-width="1"></circle>
+        <path d="M0 0L0 -34A34 34 0 0 1 24 -24Z" fill="#D4AF37"></path>
+        <path d="M0 0L24 24A34 34 0 0 1 0 34Z" fill="rgba(212,175,55,.5)"></path>
+        <circle r="3" fill="#FFD700"></circle>
+      </svg>
+      <h1 data-i18n="app.name">Квантовый ежедневник</h1>
+      <p class="muted m0" data-i18n="app.tagline">Пространство осознанного дня</p>
+    </div>
+
+    <div class="segmented" role="tablist">
+      <button type="button" id="gateTabLogin" role="tab" aria-selected="true" data-i18n="auth.login">Войти</button>
+      <button type="button" id="gateTabRequest" role="tab" aria-selected="false" data-i18n="auth.request">Запросить доступ</button>
     </div>
 
     <form id="loginForm" class="gate-form">
-      <label>Почта<input name="email" type="email" required autocomplete="username"></label>
-      <label>Пароль<input name="password" type="password" required autocomplete="current-password"></label>
+      <label><span data-i18n="auth.email">Почта</span><input name="email" type="email" required autocomplete="username"></label>
+      <label><span data-i18n="auth.password">Пароль</span><input name="password" type="password" required autocomplete="current-password"></label>
       <p class="gate-msg" id="loginMsg" role="alert"></p>
-      <button type="submit" class="btn primary">Войти</button>
+      <button type="submit" class="btn primary" data-i18n="auth.login">Войти</button>
     </form>
 
     <form id="requestForm" class="gate-form" hidden>
-      <label>Имя<input name="displayName" required maxlength="80" autocomplete="name"></label>
-      <label>Почта<input name="email" type="email" required autocomplete="email"></label>
-      <label>Телефон (необязательно)<input name="phone" type="tel" maxlength="32" autocomplete="tel"></label>
-      <label>Telegram (необязательно)<input name="telegramId" maxlength="64" placeholder="@имя"></label>
-      <p class="muted">Заявку рассматривает администратор. Доступ и пароль он передаст лично — по телефону или в Telegram.</p>
+      <label><span data-i18n="auth.name">Имя</span><input name="displayName" required maxlength="80" autocomplete="name"></label>
+      <label><span data-i18n="auth.email">Почта</span><input name="email" type="email" required autocomplete="email"></label>
+      <label><span data-i18n="auth.phone">Телефон</span><input name="phone" type="tel" maxlength="32" autocomplete="tel"></label>
+      <label><span data-i18n="auth.telegram">Telegram</span><input name="telegramId" maxlength="64" placeholder="@имя"></label>
+      <p class="muted" data-i18n="auth.closedNote">Заявку рассматривает администратор.</p>
       <p class="gate-msg" id="requestMsg" role="alert"></p>
-      <button type="submit" class="btn primary">Отправить заявку</button>
+      <button type="submit" class="btn primary" data-i18n="auth.request">Отправить заявку</button>
     </form>
   </div>
 </section>
 
-<!-- Скрыт до решения в boot(): иначе приложение на миг мелькает перед экраном входа.
-     Показывается сразу же, если вход не требуется или сессия уже есть. -->
+<!-- Скрыт до решения в boot(): иначе приложение мелькает перед экраном входа -->
 <div id="appRoot" hidden>
-<header class="top">
-  <h1>Квантовый ежедневник</h1>
-  <span id="syncStatus" class="sync" role="status"></span>
-  <button type="button" id="openSettings" class="icon-btn" aria-label="Настройки">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-  </button>
-</header>
 
-<div class="segmented periods" role="group" aria-label="Период">
-  <button type="button" data-view="day">День</button>
-  <button type="button" data-view="week">Неделя</button>
-  <button type="button" data-view="month">Месяц</button>
-  <button type="button" data-view="year">Год</button>
+  <button type="button" id="drawerBack" class="drawer-back" hidden aria-label="Закрыть меню"></button>
+
+  <nav id="drawer" class="drawer" hidden aria-label="Меню">
+    <div class="drawer-brand">
+      <svg width="26" height="26" viewBox="-50 -50 100 100" aria-hidden="true">
+        <circle r="34" fill="none" stroke="#D4AF37" stroke-width="2"></circle>
+        <path d="M0 0L0 -34A34 34 0 0 1 24 -24Z" fill="#D4AF37"></path>
+        <circle r="3" fill="#FFD700"></circle>
+      </svg>
+      <span data-i18n="app.name">Квантовый ежедневник</span>
+    </div>
+
+    <div class="drawer-list" id="drawerMain"></div>
+    <div class="drawer-sep"></div>
+    <p class="drawer-caption" data-i18n="nav.spheres">Сферы жизни</p>
+    <div class="drawer-list" id="drawerSpheres"></div>
+
+    <div class="drawer-grow"></div>
+
+    <div class="drawer-list" id="drawerService"></div>
+    <div class="drawer-user" id="drawerUser" hidden>
+      <span class="avatar" id="userInitial"></span>
+      <span class="who"><b id="userName"></b><span id="userState"></span></span>
+      <button type="button" id="logoutBtn" class="icon-btn plain" aria-label="Выйти">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4v16h-4M11 15l3-3-3-3M14 12H4"></path></svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="screen">
+    <header class="top">
+      <button type="button" id="openDrawer" class="icon-btn" aria-label="Меню">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+      <h1 id="screenTitle"></h1>
+      <span id="syncStatus" class="sync" role="status"></span>
+    </header>
+
+    <!-- Колесо -->
+    <section id="viewWheel">
+      <div class="segmented periods" role="group">
+        <button type="button" data-view="day" data-i18n="wheel.day">День</button>
+        <button type="button" data-view="week" data-i18n="wheel.week">Неделя</button>
+        <button type="button" data-view="month" data-i18n="wheel.month">Месяц</button>
+        <button type="button" data-view="year" data-i18n="wheel.year">Год</button>
+      </div>
+
+      <div class="range">
+        <button type="button" id="prev" class="icon-btn plain" aria-label="Назад">‹</button>
+        <span id="rangeLabel"></span>
+        <button type="button" id="next" class="icon-btn plain" aria-label="Вперёд">›</button>
+      </div>
+
+      <div class="card wheel-card">
+        <svg id="wheel" viewBox="-200 -200 400 400" role="img" aria-labelledby="summary"></svg>
+        <p id="summary" class="summary"></p>
+        <p class="legend" data-i18n="wheel.legend"></p>
+      </div>
+
+      <div class="card density">
+        <div class="density-head">
+          <span data-i18n="wheel.density">Плотность новой реальности</span>
+          <b id="densityValue">—</b>
+        </div>
+        <div class="bar gold"><i id="densityBar"></i></div>
+      </div>
+
+      <section id="notice" class="card notice" hidden></section>
+
+      <div class="card">
+        <ul id="sectorList" class="sectors"></ul>
+      </div>
+    </section>
+
+    <!-- Квант -->
+    <section id="viewQuantum" hidden>
+      <div class="card" id="quantumCard"></div>
+    </section>
+
+    <!-- День -->
+    <section id="viewDay" hidden>
+      <div class="range">
+        <button type="button" id="dayPrev" class="icon-btn plain" aria-label="Назад">‹</button>
+        <span id="dayLabel"></span>
+        <button type="button" id="dayNext" class="icon-btn plain" aria-label="Вперёд">›</button>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h2 data-i18n="day.tasks">Задачи</h2>
+          <span class="muted" id="taskProgress" class="m0"></span>
+        </div>
+        <ul id="taskList" class="tasks mt10"></ul>
+        <button type="button" id="addTask" class="add-goal ml0" data-i18n="day.addTask">+ Задача</button>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h2 data-i18n="day.note">Заметка дня</h2>
+          <button type="button" id="voiceNote" class="icon-btn plain" aria-label="Сказать голосом" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+          </button>
+        </div>
+        <textarea id="noteBody" class="mt10"></textarea>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <h2 data-i18n="day.dates">Памятные даты</h2>
+          <button type="button" id="addDate" class="add-goal m0" data-i18n="day.addDate">+ Дата</button>
+        </div>
+        <ul id="dateList" class="dates mt10"></ul>
+      </div>
+    </section>
+
+    <!-- Деньги -->
+    <section id="viewMoney" hidden>
+      <div class="card" id="moneyCard"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" id="bottomNav" aria-label="Разделы"></nav>
+
+  <div class="lang-wrap">
+    <div class="lang-menu" id="langMenu" hidden role="group" aria-label="Язык"></div>
+    <button type="button" id="langBtn" class="lang-btn" aria-expanded="false">
+      <span id="langLabel">Рус</span><span class="arrow" aria-hidden="true">▲</span>
+    </button>
+  </div>
 </div>
-
-<div class="range">
-  <button type="button" id="prev" class="icon-btn" aria-label="Назад">‹</button>
-  <span id="rangeLabel"></span>
-  <button type="button" id="next" class="icon-btn" aria-label="Вперёд">›</button>
-</div>
-
-<main>
-  <section class="card wheel-card">
-    <svg id="wheel" viewBox="-200 -200 400 400" role="img" aria-labelledby="summary"></svg>
-    <p id="summary" class="summary"></p>
-    <p class="legend">Сплошной круг — недельная норма (100%). Заливка — выполнение норм, площадь равна проценту. Пунктирная дуга — твоя оценка сферы 1–10.</p>
-  </section>
-
-  <section id="notice" class="card notice" hidden></section>
-
-  <section class="card">
-    <ul id="sectorList" class="sectors"></ul>
-  </section>
-</main>
 
 <dialog id="settingsDialog">
   <form method="dialog" class="sheet">
-    <h2>Настройки</h2>
+    <h2 data-i18n="settings.title">Настройки</h2>
     <div class="field-row">
-      <span>Секторов</span>
-      <div class="segmented" id="countButtons" role="group" aria-label="Число секторов">
+      <span data-i18n="settings.sectors">Секторов</span>
+      <div class="segmented" id="countButtons" role="group">
         <button type="button" data-count="7">7</button>
         <button type="button" data-count="8">8</button>
         <button type="button" data-count="9">9</button>
       </div>
     </div>
     <ul id="sectorEditList" class="edit-list"></ul>
-    <button type="button" id="openAssess" class="btn">Оценить сферы 1–10</button>
+    <button type="button" id="openAssess" class="btn" data-i18n="assess.open">Оценить сферы 1–10</button>
     <p class="muted" id="accountInfo"></p>
-    <button type="button" id="logoutBtn" class="btn" hidden>Выйти (на этом устройстве)</button>
-    <button type="button" id="deleteData" class="btn danger">Удалить все мои данные</button>
-    <div class="actions"><button value="close" class="btn primary">Готово</button></div>
+    <button type="button" id="deleteData" class="btn danger" data-i18n="settings.deleteAll">Удалить все мои данные</button>
+    <div class="actions"><button value="close" class="btn primary" data-i18n="settings.done">Готово</button></div>
   </form>
 </dialog>
 
 <dialog id="goalDialog">
   <form method="dialog" class="sheet" id="goalForm">
-    <h2 id="goalHeading">Новая цель</h2>
+    <h2 id="goalHeading" data-i18n="goal.new">Новая цель</h2>
     <p class="muted" id="goalSector"></p>
-    <label>Что делаю<input name="title" required maxlength="80" placeholder="Например, отжимания"></label>
+    <label><span data-i18n="goal.what">Что делаю</span><input name="title" required maxlength="80"></label>
     <div class="two">
-      <label>Норма в неделю<input name="target" type="number" min="0.01" step="any" required inputmode="decimal"></label>
-      <label>Единица<input name="unit" maxlength="20" placeholder="раз"></label>
+      <label><span data-i18n="goal.target">Норма в неделю</span><input name="target" type="number" min="0.01" step="any" required inputmode="decimal"></label>
+      <label><span data-i18n="goal.unit">Единица</span><input name="unit" maxlength="20"></label>
     </div>
-    <label>Вид нормы
+    <label><span data-i18n="goal.kind">Вид нормы</span>
       <select name="kind">
-        <option value="atLeast">Не меньше</option>
-        <option value="atMost">Не больше (траты, экранное время)</option>
+        <option value="atLeast" data-i18n="goal.atLeast">Не меньше</option>
+        <option value="atMost" data-i18n="goal.atMost">Не больше</option>
       </select>
     </label>
     <details>
-      <summary>План по дням и вес</summary>
+      <summary data-i18n="goal.dayPlan">План по дням и вес</summary>
       <div class="dayplan" id="dayPlan"></div>
-      <p class="muted">Пусто — норма делится на семь дней поровну.</p>
-      <label>Вес цели в секторе<input name="weight" type="number" min="0.1" max="100" step="0.1" value="1" inputmode="decimal"></label>
+      <p class="muted" data-i18n="goal.dayPlanHint"></p>
+      <label><span data-i18n="goal.weight">Вес цели в секторе</span><input name="weight" type="number" min="0.1" max="100" step="0.1" value="1" inputmode="decimal"></label>
     </details>
-    <p class="muted">Новая норма действует с этой недели, прошлые недели считаются по старой.</p>
+    <p class="muted" data-i18n="goal.versionHint"></p>
     <div class="actions">
-      <button type="button" id="archiveGoal" class="btn">Завершить после этой недели</button>
-      <button type="button" id="deleteGoal" class="btn danger">Удалить</button>
-      <button value="cancel" formnovalidate class="btn">Отмена</button>
-      <button value="save" class="btn primary">Сохранить</button>
+      <button type="button" id="archiveGoal" class="btn" data-i18n="goal.archive">Завершить</button>
+      <button type="button" id="deleteGoal" class="btn danger" data-i18n="goal.delete">Удалить</button>
+      <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
+      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
     </div>
   </form>
 </dialog>
@@ -135,29 +245,62 @@
     <h2 id="logHeading"></h2>
     <p class="muted" id="logProgress"></p>
     <div class="two">
-      <label>Сколько<input name="amount" type="number" min="0" step="any" required inputmode="decimal"></label>
-      <label>День<input name="date" type="date" required></label>
+      <label><span data-i18n="log.amount">Сколько</span><input name="amount" type="number" min="0" step="any" required inputmode="decimal"></label>
+      <label><span data-i18n="log.date">День</span><input name="date" type="date" required></label>
     </div>
-    <label>Заметка<input name="note" maxlength="500"></label>
+    <label><span data-i18n="log.note">Заметка</span><input name="note" maxlength="500"></label>
     <ul id="logEntries" class="entries"></ul>
     <div class="actions">
-      <button value="cancel" formnovalidate class="btn">Закрыть</button>
-      <button value="save" class="btn primary">Записать</button>
+      <button value="cancel" formnovalidate class="btn" data-i18n="common.close">Закрыть</button>
+      <button value="save" class="btn primary" data-i18n="log.heading">Записать</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="assessDialog">
   <form method="dialog" class="sheet">
-    <h2>Как ты сейчас ощущаешь каждую сферу?</h2>
-    <p class="muted">1 — совсем плохо, 10 — отлично. Это ощущение, а не факт: на колесе его видно рядом с выполнением норм.</p>
+    <h2 data-i18n="assess.title">Как ты сейчас ощущаешь каждую сферу?</h2>
+    <p class="muted" data-i18n="assess.hint"></p>
     <ul id="assessList" class="edit-list"></ul>
     <div class="actions">
-      <button value="cancel" formnovalidate class="btn">Позже</button>
-      <button value="save" class="btn primary">Сохранить</button>
+      <button value="cancel" formnovalidate class="btn" data-i18n="assess.later">Позже</button>
+      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
     </div>
   </form>
 </dialog>
-</div>
+
+<dialog id="taskDialog">
+  <form method="dialog" class="sheet" id="taskForm">
+    <h2 data-i18n="day.addTask">Задача</h2>
+    <label><span data-i18n="day.tasks">Что сделать</span><input name="title" required maxlength="200"></label>
+    <label><span data-i18n="nav.spheres">Сфера жизни</span><select name="sectorId"></select></label>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
+      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dateDialog">
+  <form method="dialog" class="sheet" id="dateForm">
+    <h2 data-i18n="day.addDate">Памятная дата</h2>
+    <label><span data-i18n="day.dates">Что за дата</span><input name="title" required maxlength="120"></label>
+    <div class="two">
+      <label><span data-i18n="log.date">День и месяц</span><input name="when" type="date" required></label>
+      <label><span data-i18n="day.turns">Год рождения</span><input name="year" type="number" min="1900" max="2200" inputmode="numeric"></label>
+    </div>
+    <label>Напомнить заранее<select name="remindDaysBefore">
+      <option value="0">в сам день</option>
+      <option value="1" selected>за день</option>
+      <option value="3">за три дня</option>
+      <option value="7">за неделю</option>
+    </select></label>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
+      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
 </body>
 </html>

@@ -1,9 +1,12 @@
 // Копия данных на телефоне: работает без сети, сервер — главный источник.
 // Запись с dirty = 1 изменена здесь и ещё не дошла до сервера.
 
-export const KINDS = ['sectors', 'goals', 'goalVersions', 'entries', 'assessments'];
+export const KINDS = [
+  'sectors', 'goals', 'goalVersions', 'entries', 'assessments',
+  'tasks', 'notes', 'memorableDates'          // ежедневник, версия базы 2
+];
 const DB_NAME = 'PlannerDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise = null;
 

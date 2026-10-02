@@ -1,486 +1,180 @@
-import { loadAll, putRecords, clearAll } from './db.js';
-import { initSync, scheduleSync, syncNow, deleteAccount } from './sync.js';
+/* Оболочка приложения: разделы, меню, язык, вход.
+   Сами экраны живут в js/views/, общее состояние — в js/store.js. */
+
+import { clearAll, getMeta, setMeta } from './db.js';
+import { initSync, syncNow, deleteAccount } from './sync.js';
 import { requestAccess, login as doLogin, hasSession, logoutAndClear, fetchMe } from './auth.js';
 import { API_BASE } from './config.js';
-import { renderWheel } from './wheel.js';
 import {
-  todayKey, mondayOf, addDays, addMonths, fromKey, isDateKey, weekDays
-} from './core/dates.js';
-import {
-  buildIndex, weekWheel, monthWheel, yearWheel, wheelStats, assessmentAt,
-  versionAt, versionChange, goalWeek
-} from './core/calc.js';
+  state, t, save, reload, onChange, changed, $, h, svgIcon, ICONS,
+  activeSectors, sectorName, seedSectors, round
+} from './store.js';
+import { LANGUAGES, pickLanguage, isLanguage } from './core/i18n.js';
+import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
+import { initDay, renderDay } from './views/day.js';
+import { weekWheel } from './core/calc.js';
+import { mondayOf, todayKey } from './core/dates.js';
 
-const DEFAULT_SECTORS = [
-  'Здоровье и спорт', 'Карьера и бизнес', 'Финансы', 'Семья и любовь',
-  'Окружение и друзья', 'Личностный рост', 'Отдых и яркость жизни',
-  'Духовность и смыслы', 'Уют и пространство'
+const SECTIONS = [
+  { id: 'wheel', icon: ICONS.wheel, title: 'wheel.title', label: 'nav.wheel' },
+  { id: 'quantum', icon: ICONS.quantum, title: 'quantum.title', label: 'nav.quantum' },
+  { id: 'day', icon: ICONS.day, title: 'day.title', label: 'nav.day' },
+  { id: 'money', icon: ICONS.money, title: 'money.title', label: 'nav.money' }
 ];
-const DEFAULT_COUNT = 8;
-const PACE_TEXT = {
-  onTrack: 'по плану', behindLittle: 'немного отстаёшь', behind: 'отстаёшь', over: 'сверх лимита'
-};
-const STATUS_TEXT = {
-  local: 'только на этом устройстве', syncing: 'сохраняю…', synced: 'сохранено',
-  offline: 'нет сети — сохраню позже', error: 'сервер недоступен — сохраню позже', idle: ''
+
+const STATUS_KEY = {
+  local: 'sync.local', syncing: 'sync.syncing', synced: 'sync.synced',
+  offline: 'sync.offline', error: 'sync.error', idle: null
 };
 
-const state = { data: null, index: null, view: 'week', anchor: todayKey(), selected: null, me: null };
+/* ---------- Язык ---------- */
 
-const $ = id => document.getElementById(id);
-const nowIso = () => new Date().toISOString();
-const uuid = () => crypto.randomUUID();
-const round = x => Math.round(x);
-const num = x => (Number.isInteger(x) ? String(x) : String(Math.round(x * 100) / 100));
-const sectorName = s => s.name.trim() || `Сектор ${s.slot}`;
-
-// Элемент DOM; текст — только через textContent, поэтому любые названия безопасны
-function h(tag, props = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === 'class') node.className = v;
-    else if (k === 'dataset') Object.assign(node.dataset, v);
-    else if (k === 'text') node.textContent = v;
-    else if (k.includes('-')) node.setAttribute(k, v);
-    else node[k] = v;
-  }
-  for (const c of children) if (c != null) node.append(c);
-  return node;
-}
-
-/* ---------- Данные ---------- */
-
-function reindex() { state.index = buildIndex(state.data); }
-
-async function save(kind, records) {
-  const stamped = records.map(r => ({ deletedAt: null, ...r, updatedAt: nowIso(), dirty: 1 }));
-  await putRecords(kind, stamped);
-  const byId = new Map(state.data[kind].map(r => [r.id, r]));
-  for (const r of stamped) byId.set(r.id, r);
-  state.data[kind] = [...byId.values()];
-  reindex();
-  render();
-  scheduleSync();
-}
-
-async function seedSectors() {
-  await save('sectors', DEFAULT_SECTORS.map((name, i) => ({
-    id: uuid(), slot: i + 1, name, position: i + 1, active: i < DEFAULT_COUNT, paused: false
-  })));
-}
-
-const thisMonday = () => mondayOf(todayKey());
-
-/* ---------- Период ---------- */
-
-const fmtDay = new Intl.DateTimeFormat('ru', { weekday: 'short', day: 'numeric', month: 'long', timeZone: 'UTC' });
-const fmtShort = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', timeZone: 'UTC' });
-const fmtMonth = new Intl.DateTimeFormat('ru', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-
-function period() {
-  const today = todayKey();
-  const a = state.anchor;
-  switch (state.view) {
-    case 'day': return {
-      label: fmtDay.format(fromKey(a)), end: a, canNext: a < today,
-      week: mondayOf(a), upto: a
-    };
-    case 'week': {
-      const monday = mondayOf(a);
-      const sunday = addDays(monday, 6);
-      return {
-        label: `${fmtShort.format(fromKey(monday))} – ${fmtShort.format(fromKey(sunday))}`,
-        end: sunday < today ? sunday : today, canNext: sunday < today,
-        week: monday, upto: monday === mondayOf(today) ? today : null
-      };
-    }
-    case 'month': {
-      const ym = a.slice(0, 7);
-      const label = fmtMonth.format(fromKey(`${ym}-01`));
-      const last = addDays(`${addMonths(ym, 1)}-01`, -1);
-      return { label: label[0].toUpperCase() + label.slice(1), end: last < today ? last : today, canNext: ym < today.slice(0, 7), month: ym };
-    }
-    default: {
-      const y = a.slice(0, 4);
-      return { label: y, end: `${y}-12-31` < today ? `${y}-12-31` : today, canNext: y < today.slice(0, 4), year: Number(y) };
-    }
-  }
-}
-
-function shift(dir) {
-  const a = state.anchor;
-  const today = todayKey();
-  const next = {
-    day: () => addDays(a, dir),
-    week: () => addDays(a, 7 * dir),
-    month: () => `${addMonths(a.slice(0, 7), dir)}-01`,
-    year: () => `${Number(a.slice(0, 4)) + dir}-01-01`
-  }[state.view]();
-  state.anchor = next > today ? today : next;
+// Подписи, вшитые в разметку: меняются целиком при смене языка
+function applyLanguage() {
+  document.documentElement.lang = state.language;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  const current = LANGUAGES.find(l => l.code === state.language);
+  $('langLabel').textContent = current.label;
+  renderLangMenu();
+  renderNav();
   render();
 }
 
-/* ---------- Отрисовка ---------- */
+function renderLangMenu() {
+  $('langMenu').replaceChildren(...LANGUAGES.map(l => h('button', {
+    type: 'button',
+    'aria-pressed': String(l.code === state.language),
+    onclick: () => setLanguage(l.code)
+  }, h('span', { text: l.name }), h('span', { class: 'code', text: l.label }))));
+}
+
+function setLanguage(code) {
+  if (!isLanguage(code)) return;
+  state.language = code;
+  closeLangMenu();
+  applyLanguage();
+  // Запоминаем в фоне: экран не должен ждать записи в базу — она может
+  // задержаться за идущей синхронизацией, и язык переключался бы с паузой
+  setMeta('language', code).catch(() => {});
+}
+
+const closeLangMenu = () => {
+  $('langMenu').hidden = true;
+  $('langBtn').setAttribute('aria-expanded', 'false');
+};
+
+/* ---------- Разделы и меню ---------- */
+
+function go(section) {
+  state.view = section;
+  closeDrawer();
+  render();
+}
 
 function render() {
-  const p = period();
-  const today = todayKey();
-  let rows, extra = '';
-  if (p.week) {
-    rows = weekWheel(state.index, p.week, p.upto);
-  } else if (p.month) {
-    const m = monthWheel(state.index, p.month, today);
-    rows = m.rows;
-    extra = m.weeks ? `по ${m.weeks} заверш. нед.` : 'завершённых недель в месяце ещё нет';
-  } else {
-    const y = yearWheel(state.index, p.year, today);
-    rows = y.rows;
-    extra = y.months ? `по ${y.months} мес.` : 'данных за год пока нет';
+  // До первой загрузки данных рисовать нечего: applyLanguage() зовёт render()
+  // ещё на экране входа, когда index пуст
+  if (!state.index) return;
+  const current = SECTIONS.find(s => s.id === state.view) || SECTIONS[0];
+  $('screenTitle').textContent = t(current.title);
+  for (const section of SECTIONS) {
+    $(`view${section.id[0].toUpperCase()}${section.id.slice(1)}`).hidden = section.id !== state.view;
   }
+  document.querySelectorAll('#bottomNav button').forEach(b => {
+    if (b.dataset.section === state.view) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
+  $('drawerMain').querySelectorAll('button').forEach(b => {
+    if (b.dataset.section === state.view) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
 
-  document.querySelectorAll('[data-view]').forEach(b =>
-    b.setAttribute('aria-pressed', String(b.dataset.view === state.view)));
-  $('rangeLabel').textContent = p.label;
-  $('next').disabled = !p.canNext;
-
-  const assessment = assessmentAt(state.index, p.end);
-  renderWheel($('wheel'), rows, { scores: assessment?.scores || {}, selected: state.selected });
-  renderSummary(rows, extra);
-  renderNotice();
-  renderList(rows, p);
+  if (state.view === 'wheel') renderWheelView();
+  if (state.view === 'day') renderDay();
+  if (state.view === 'quantum') renderQuantum();
+  if (state.view === 'money') renderMoney();
+  renderDrawerSpheres();
 }
 
-function renderSummary(rows, extra) {
-  const st = wheelStats(rows);
-  const el = $('summary');
-  if (st.avg === null) {
-    el.replaceChildren(extra || 'Пока нет целей — добавь первую в любой сфере.');
-    return;
-  }
-  const names = st.candidates
-    .map(id => rows.find(r => r.sector.id === id)).filter(Boolean)
-    .map(r => sectorName(r.sector)).join(', ');
-  const parts = ['Среднее ', h('b', { text: `${round(st.avg)}%` })];
-  if (st.uniformity !== null) parts.push(` · однородность ${round(st.uniformity)}%`);
-  // «Ниже всех» имеет смысл, только когда есть с чем сравнить
-  const valued = rows.filter(r => r.pct !== null).length;
-  if (names && valued > st.candidates.length) parts.push(`. Ниже всех: ${names}`);
-  if (extra) parts.push(` (${extra})`);
-  el.replaceChildren(...parts);
+function renderNav() {
+  $('bottomNav').replaceChildren(...SECTIONS.map(s => h('button', {
+    type: 'button', dataset: { section: s.id }, onclick: () => go(s.id)
+  }, svgIcon(s.icon, 22), h('span', { text: t(s.label) }))));
+
+  $('drawerMain').replaceChildren(...SECTIONS.map(s => h('button', {
+    type: 'button', dataset: { section: s.id }, onclick: () => go(s.id)
+  }, svgIcon(s.icon, 20), h('span', { text: t(s.label) }))));
+
+  // Служебное прижато вниз — приём из Super Productivity
+  $('drawerService').replaceChildren(
+    h('button', { type: 'button', onclick: () => { closeDrawer(); $('settingsDialog').showModal(); openSettings(); } },
+      svgIcon(ICONS.settings, 20), h('span', { text: t('nav.settings') }))
+  );
 }
 
-function renderNotice() {
-  const box = $('notice');
-  const hasAssessment = state.index.assessments.length > 0;
-  const hasGoals = state.index.goals.length > 0;
-  if (hasAssessment && hasGoals) { box.hidden = true; return; }
-  box.hidden = false;
-  if (hasAssessment) {
-    box.replaceChildren(h('p', { text: 'Добавь первую цель: нажми «+ цель» у любой сферы. Норма на неделю — это 100% сектора.' }));
-  } else {
-    box.replaceChildren(
-      h('p', { text: 'Начни с оценки: как ты сейчас ощущаешь каждую сферу жизни от 1 до 10.' }),
-      h('button', { type: 'button', class: 'btn primary', text: 'Оценить сферы', onclick: openAssess }));
-  }
+function renderDrawerSpheres() {
+  if (!state.index) return;
+  const rows = weekWheel(state.index, mondayOf(todayKey()), todayKey());
+  $('drawerSpheres').replaceChildren(...rows.slice(0, 4).map(row => h('button', {
+    type: 'button', onclick: () => go('wheel')
+  },
+    h('span', { class: `dot s${row.sector.slot}` }),
+    h('span', { text: sectorName(row.sector) }),
+    h('span', { class: 'trailing', text: row.pct === null ? '—' : `${round(row.pct)}%` }))));
 }
 
-function renderList(rows, p) {
-  const list = $('sectorList');
-  list.replaceChildren(...rows.map(row => {
-    const s = row.sector;
-    const head = h('div', { class: 'sector-head', onclick: () => select(s.id) },
-      h('span', { class: `dot s${s.slot}` }),
-      h('span', { class: 'name', text: sectorName(s) }),
-      s.paused ? h('span', { class: 'tag', text: 'не сейчас' }) : null,
-      h('span', { class: 'pct', text: row.pct === null ? '—' : `${round(row.pct)}%` }));
-    const item = h('li', { class: `sector-item${s.id === state.selected ? ' is-selected' : ''}`, dataset: { id: s.id } }, head);
+const openDrawer = () => { $('drawer').hidden = false; $('drawerBack').hidden = false; };
+const closeDrawer = () => {
+  if (window.matchMedia('(min-width: 900px)').matches) return;   // на широком экране панель всегда видна
+  $('drawer').hidden = true;
+  $('drawerBack').hidden = true;
+};
 
-    if (p.week) {
-      if (row.goals.length) item.append(h('ul', { class: 'goals' }, ...row.goals.map(g => goalRow(g, s))));
-      item.append(h('button', { type: 'button', class: 'add-goal', text: '+ цель', onclick: () => openGoal(null, s.id) }));
-    } else if (row.count) {
-      item.append(h('p', { class: 'muted', text: `посчитано по ${row.count} ${p.month ? 'нед.' : 'мес.'}` }));
-    }
-    return item;
-  }));
+/* ---------- Квант и Деньги: пока заглушки с честным текстом ---------- */
+
+function renderQuantum() {
+  $('quantumCard').replaceChildren(
+    h('p', { style: 'margin:0 0 8px;font-weight:600', text: t('quantum.title') }),
+    h('p', { class: 'muted', style: 'margin:0', text: t('quantum.notReady') }),
+    h('p', { class: 'muted', style: 'margin:10px 0 0', text: t('quantum.hint') }));
 }
 
-function goalRow(g, sector) {
-  const unit = g.goal.unit ? ` ${g.goal.unit}` : '';
-  const pace = g.pace ? ` · ${g.version.kind === 'atMost' && g.pace === 'onTrack' ? 'в рамках' : PACE_TEXT[g.pace]}` : '';
-  const bar = h('i', { class: `s${sector.slot}` });
-  bar.style.width = `${Math.min(g.pct, 120) / 1.2}%`;
-  return h('li', { class: 'goal' },
-    h('button', { type: 'button', class: 'goal-open', text: g.goal.title, onclick: () => openGoal(g.goal.id, sector.id) }),
-    h('div', { class: 'goal-meta', text: `${num(g.done)} из ${num(g.target)}${unit} · ${round(g.pct)}%${pace}` }),
-    h('div', { class: 'bar' }, bar),
-    h('button', { type: 'button', class: 'log-btn', text: '+', 'aria-label': `Записать: ${g.goal.title}`, onclick: () => openLog(g.goal.id) }));
+function renderMoney() {
+  $('moneyCard').replaceChildren(
+    h('p', { style: 'margin:0 0 8px;font-weight:600', text: t('money.title') }),
+    h('p', { class: 'muted', style: 'margin:0', text: t('money.empty') }));
 }
-
-function select(id) {
-  state.selected = state.selected === id ? null : id;
-  render();
-  if (state.selected) document.querySelector(`.sector-item[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-}
-
-function renderStatus(status) {
-  $('syncStatus').textContent = STATUS_TEXT[status] ?? '';
-}
-
-/* ---------- Цель ---------- */
-
-let goalCtx = null;
-const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-
-function openGoal(goalId, sectorId) {
-  const goal = goalId ? state.index.goals.find(g => g.id === goalId) : null;
-  const version = goal ? versionAt(state.index, goal.id, thisMonday()) : null;
-  const sector = state.index.sectors.find(s => s.id === sectorId);
-  goalCtx = { goal, sectorId };
-
-  const f = $('goalForm').elements;
-  $('goalHeading').textContent = goal ? 'Цель' : 'Новая цель';
-  $('goalSector').textContent = sectorName(sector);
-  f.title.value = goal?.title || '';
-  f.unit.value = goal?.unit || '';
-  f.target.value = version ? num(version.target) : '';
-  f.kind.value = version?.kind || 'atLeast';
-  f.weight.value = version ? num(version.weight) : '1';
-  $('dayPlan').replaceChildren(...DAYS.map((d, i) => h('label', {}, d,
-    h('input', { type: 'number', min: 0, step: 'any', inputMode: 'decimal', name: `day${i}`,
-      value: version?.dayPlan ? num(version.dayPlan[i]) : '' }))));
-  $('archiveGoal').hidden = !goal;
-  $('deleteGoal').hidden = !goal;
-  $('goalDialog').returnValue = '';
-  $('goalDialog').showModal();
-}
-
-async function saveGoal() {
-  const f = $('goalForm').elements;
-  const target = Number(f.target.value);
-  const weight = Number(f.weight.value) || 1;
-  const plan = DAYS.map((_, i) => f[`day${i}`].value);
-  const dayPlan = plan.every(v => v === '') ? null : plan.map(v => Number(v) || 0);
-  if (!(target > 0)) return;
-
-  const goal = {
-    ...(goalCtx.goal || { id: uuid(), sectorId: goalCtx.sectorId, source: 'manual', sourceMetric: null, archivedFrom: null }),
-    title: f.title.value.trim().slice(0, 80) || 'Цель',
-    unit: f.unit.value.trim().slice(0, 20)
-  };
-  const change = versionChange(state.index, goal.id, thisMonday(), { target, kind: f.kind.value, weight, dayPlan });
-  const version = change.kind === 'create' ? { ...change.version, id: uuid() } : change.version;
-  await save('goals', [goal]);
-  await save('goalVersions', [version]);
-}
-
-$('goalDialog').addEventListener('close', () => {
-  if ($('goalDialog').returnValue === 'save') saveGoal();
-});
-$('archiveGoal').addEventListener('click', async () => {
-  $('goalDialog').close();
-  await save('goals', [{ ...goalCtx.goal, archivedFrom: addDays(thisMonday(), 7) }]);
-});
-$('deleteGoal').addEventListener('click', async () => {
-  if (!confirm('Удалить цель вместе со всей её историей?')) return;
-  $('goalDialog').close();
-  await save('goals', [{ ...goalCtx.goal, deletedAt: nowIso() }]);
-});
-
-/* ---------- Запись ---------- */
-
-let logGoalId = null;
-
-function weekForLog() {
-  const p = period();
-  return p.week || thisMonday();
-}
-
-function openLog(goalId) {
-  logGoalId = goalId;
-  const goal = state.index.goals.find(g => g.id === goalId);
-  const monday = weekForLog();
-  const today = todayKey();
-  const f = $('logForm').elements;
-  $('logHeading').textContent = goal.title;
-  f.amount.value = '';
-  f.note.value = '';
-  const sunday = addDays(monday, 6);
-  f.date.value = state.view === 'day' ? state.anchor : (sunday < today ? sunday : today);
-  f.date.max = today;
-  renderLogDetails();
-  $('logDialog').returnValue = '';
-  $('logDialog').showModal();
-  f.amount.focus();
-}
-
-function renderLogDetails() {
-  const goal = state.index.goals.find(g => g.id === logGoalId);
-  const monday = weekForLog();
-  const g = goalWeek(state.index, goal, monday);
-  const unit = goal.unit ? ` ${goal.unit}` : '';
-  $('logProgress').textContent = g
-    ? `За неделю: ${num(g.done)} из ${num(g.target)}${unit} · ${round(g.pct)}%`
-    : '';
-  const days = new Set(weekDays(monday));
-  const entries = (state.index.entries.get(goal.id) || []).filter(e => days.has(e.date));
-  $('logEntries').replaceChildren(...entries.map(e => h('li', {},
-    h('span', { text: `${fmtShort.format(fromKey(e.date))} — ${num(e.amount)}${unit}${e.note ? ` · ${e.note}` : ''}` }),
-    h('button', { type: 'button', text: 'удалить', onclick: async () => {
-      await save('entries', [{ ...e, deletedAt: nowIso() }]);
-      renderLogDetails();
-    } }))));
-}
-
-$('logDialog').addEventListener('close', async () => {
-  if ($('logDialog').returnValue !== 'save') return;
-  const f = $('logForm').elements;
-  const amount = Number(f.amount.value);
-  const date = f.date.value;
-  if (!(amount >= 0) || !isDateKey(date) || date > todayKey()) return;
-  await save('entries', [{ id: uuid(), goalId: logGoalId, date, amount, note: f.note.value.trim().slice(0, 500) || null }]);
-});
-
-/* ---------- Самооценка ---------- */
-
-function openAssess() {
-  const latest = assessmentAt(state.index, todayKey());
-  const active = state.index.sectors.filter(s => s.active);
-  $('assessList').replaceChildren(...active.map(s => {
-    const value = latest?.scores[s.id] || 5;
-    const out = h('output', { text: String(value) });
-    const range = h('input', { type: 'range', min: 1, max: 10, step: 1, value, name: s.id,
-      'aria-label': sectorName(s), oninput: e => { out.textContent = e.target.value; } });
-    return h('li', { class: 'assess-row' },
-      h('span', { class: `dot s${s.slot}` }), h('span', { class: 'name', text: sectorName(s) }), out, range);
-  }));
-  $('assessDialog').returnValue = '';
-  if ($('settingsDialog').open) $('settingsDialog').close();
-  $('assessDialog').showModal();
-}
-
-$('assessDialog').addEventListener('close', async () => {
-  if ($('assessDialog').returnValue !== 'save') return;
-  const scores = {};
-  $('assessList').querySelectorAll('input[type="range"]').forEach(r => { scores[r.name] = Number(r.value); });
-  const today = todayKey();
-  const existing = state.index.assessments.find(a => a.date === today);
-  await save('assessments', [{ ...(existing || { id: uuid(), date: today }), scores }]);
-});
 
 /* ---------- Настройки ---------- */
 
 function openSettings() {
-  const sectors = state.index.sectors;
-  const count = sectors.filter(s => s.active).length;
+  const count = activeSectors().length;
   $('countButtons').querySelectorAll('button').forEach(b =>
     b.setAttribute('aria-pressed', String(Number(b.dataset.count) === count)));
-  $('sectorEditList').replaceChildren(...sectors.filter(s => s.active).map(s => h('li', { class: 'edit-row' },
+  $('sectorEditList').replaceChildren(...activeSectors().map(s => h('li', { class: 'edit-row' },
     h('span', { class: `dot s${s.slot}` }),
-    h('input', { value: s.name, maxLength: 40, placeholder: `Сектор ${s.slot}`, 'aria-label': `Название сектора ${s.slot}`,
-      onchange: e => save('sectors', [{ ...s, name: e.target.value.trim().slice(0, 40) }]) }),
-    h('label', {}, h('input', { type: 'checkbox', checked: s.paused,
-      onchange: e => save('sectors', [{ ...s, paused: e.target.checked }]) }), 'не сейчас'))));
-  // Три разных случая, которые раньше сливались в один неверный текст:
-  // сервера нет вовсе, вход выполнен, вход есть — но сейчас нет связи
-  if (!API_BASE) {
-    $('accountInfo').textContent = 'Сервер не настроен: данные хранятся только на этом устройстве.';
-    $('logoutBtn').hidden = true;
-  } else if (state.me) {
-    $('accountInfo').textContent = `Вход выполнен: ${state.me.displayName} (${state.me.email}).`;
-    $('logoutBtn').hidden = false;
-  } else {
-    $('accountInfo').textContent = 'Нет связи с сервером. Данные сохраняются на устройстве и уйдут, когда появится сеть.';
-    $('logoutBtn').hidden = false;
-  }
-  $('settingsDialog').showModal();
+    h('input', {
+      value: s.name, maxLength: 40, placeholder: t('common.sectorN', { n: s.slot }),
+      'aria-label': sectorName(s),
+      onchange: e => save('sectors', [{ ...s, name: e.target.value.trim().slice(0, 40) }])
+    }),
+    h('label', {}, h('input', {
+      type: 'checkbox', checked: s.paused,
+      onchange: e => save('sectors', [{ ...s, paused: e.target.checked }])
+    }), t('settings.notNow')))));
+
+  if (!API_BASE) $('accountInfo').textContent = t('settings.serverOff');
+  else if (state.me) $('accountInfo').textContent = t('settings.loggedIn', { name: state.me.displayName, email: state.me.email });
+  else $('accountInfo').textContent = t('settings.noLink');
 }
 
-$('logoutBtn').addEventListener('click', async () => {
-  if (!confirm('Выйти и стереть данные этого человека с устройства? Чтобы продолжить, нужно будет снова войти.')) return;
-  await logoutAndClear();
-  location.reload();
-});
-
-$('countButtons').addEventListener('click', async e => {
-  const n = Number(e.target.dataset.count);
-  if (!n) return;
-  const changed = state.index.sectors
-    .filter(s => s.active !== (s.position <= n))
-    .map(s => ({ ...s, active: s.position <= n }));
-  if (changed.length) await save('sectors', changed);
-  openSettings();
-});
-
-$('deleteData').addEventListener('click', async () => {
-  if (!confirm('Удалить все цели, записи и оценки — на этом устройстве и на сервере? Вернуть их будет нельзя.')) return;
-  try {
-    await deleteAccount();
-  } catch {
-    alert('Не получилось связаться с сервером. Попробуй, когда появится сеть.');
-    return;
-  }
-  await clearAll();
-  location.reload();
-});
-
-/* ---------- Запуск ---------- */
-
-$('openSettings').addEventListener('click', openSettings);
-$('openAssess').addEventListener('click', openAssess);
-$('prev').addEventListener('click', () => shift(-1));
-$('next').addEventListener('click', () => shift(1));
-document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
-  state.view = b.dataset.view;
-  render();
-}));
-$('wheel').addEventListener('click', e => {
-  const g = e.target.closest('g[data-id]');
-  if (g) select(g.dataset.id);
-});
-
-let syncStarted = false;
-
-async function start() {
-  state.data = await loadAll();
-  reindex();
-  // После повторного входа start() вызывается снова, а обработчики событий
-  // (возврат на вкладку, появление сети) вешать второй раз нельзя:
-  // каждая синхронизация шла бы в несколько заходов
-  if (!syncStarted) {
-    syncStarted = true;
-    initSync({
-      status: renderStatus,
-      data: async () => { state.data = await loadAll(); reindex(); render(); },
-      authLost: showGate
-    });
-  } else {
-    syncNow();
-  }
-  if (API_BASE) state.me = await fetchMe();
-  // Сферы по умолчанию — только если их нет и на сервере: иначе после очистки
-  // телефона рядом с вернувшимися сферами появились бы ещё девять
-  if (!state.index.sectors.length) {
-    await syncNow();
-    state.data = await loadAll();
-    reindex();
-    if (!state.index.sectors.length) await seedSectors();
-  }
-  render();
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('[sw]', err.message));
-  }
-}
-
-/* ---------- Вход и заявка на доступ ---------- */
+/* ---------- Вход ---------- */
 
 const LOGIN_ERRORS = {
-  invalid_credentials: 'Неверная почта или пароль.',
-  pending_approval: 'Заявка ещё на рассмотрении у администратора.',
-  blocked: 'Доступ закрыт. Обратись к администратору.'
+  invalid_credentials: 'auth.wrongCredentials',
+  pending_approval: 'auth.pending',
+  blocked: 'auth.blocked'
 };
-// Сервер намеренно отвечает одинаково на первую и повторную заявку,
-// поэтому отдельного текста про «уже подавалась» здесь нет
 
 function showGate() {
   $('appRoot').hidden = true;
@@ -489,6 +183,7 @@ function showGate() {
 function hideGate() {
   $('authGate').hidden = true;
   $('appRoot').hidden = false;
+  if (window.matchMedia('(min-width: 900px)').matches) { $('drawer').hidden = false; }
 }
 
 function gateTab(which) {
@@ -498,50 +193,140 @@ function gateTab(which) {
   $('loginForm').hidden = !loginActive;
   $('requestForm').hidden = loginActive;
 }
-$('gateTabLogin').addEventListener('click', () => gateTab('login'));
-$('gateTabRequest').addEventListener('click', () => gateTab('request'));
 
-$('loginForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const msg = $('loginMsg');
-  msg.className = 'gate-msg';
-  msg.textContent = '';
-  const f = e.target.elements;
-  try {
-    await doLogin(f.email.value, f.password.value);
-    hideGate();
-    start();
-  } catch (err) {
-    msg.className = 'gate-msg is-error';
-    msg.textContent = LOGIN_ERRORS[err.code] || 'Не получилось войти. Проверь подключение к сети.';
-  }
-});
+/* ---------- Запуск ---------- */
 
-$('requestForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const msg = $('requestMsg');
-  msg.className = 'gate-msg';
-  const f = e.target.elements;
-  try {
-    await requestAccess({
-      displayName: f.displayName.value, email: f.email.value,
-      phone: f.phone.value, telegramId: f.telegramId.value
+let syncStarted = false;
+
+async function start() {
+  await reload();
+  // После повторного входа start() зовётся снова, а обработчики событий
+  // синхронизации вешать второй раз нельзя
+  if (!syncStarted) {
+    syncStarted = true;
+    initSync({
+      status: s => { $('syncStatus').textContent = STATUS_KEY[s] ? t(STATUS_KEY[s]) : ''; },
+      data: async () => { await reload(); changed(); },
+      authLost: showGate
     });
-    msg.className = 'gate-msg is-ok';
-    msg.textContent = 'Заявка отправлена. Администратор свяжется и передаст доступ.';
-    e.target.reset();
-  } catch (err) {
-    msg.className = 'gate-msg is-error';
-    msg.textContent = err.status === 400
-      ? 'Проверь имя и адрес почты.'
-      : 'Не получилось отправить заявку. Проверь подключение к сети.';
+  } else {
+    syncNow();
   }
-});
+  if (API_BASE) state.me = await fetchMe();
+
+  // Сферы по умолчанию — только если их нет и на сервере: иначе после очистки
+  // телефона рядом с вернувшимися сферами появились бы ещё девять
+  if (!state.index.sectors.length) {
+    await syncNow();
+    await reload();
+    if (!state.index.sectors.length) await seedSectors();
+  }
+  render();
+
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('[sw]', err.message));
+  }
+}
 
 async function boot() {
+  state.language = pickLanguage(await getMeta('language').catch(() => null), navigator.languages || []);
+
+  initWheel();
+  initDay();
+  onChange(render);
+
+  // Меню, язык, настройки
+  $('openDrawer').addEventListener('click', openDrawer);
+  $('drawerBack').addEventListener('click', closeDrawer);
+  $('langBtn').addEventListener('click', () => {
+    const open = $('langMenu').hidden;
+    $('langMenu').hidden = !open;
+    $('langBtn').setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.lang-wrap')) closeLangMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    closeLangMenu();
+    closeDrawer();
+  });
+
+  $('openAssess').addEventListener('click', openAssess);
+  $('countButtons').addEventListener('click', async e => {
+    const n = Number(e.target.dataset.count);
+    if (!n) return;
+    const changedSectors = state.index.sectors
+      .filter(s => s.active !== (s.position <= n))
+      .map(s => ({ ...s, active: s.position <= n }));
+    if (changedSectors.length) await save('sectors', changedSectors);
+    openSettings();
+  });
+  $('deleteData').addEventListener('click', async () => {
+    if (!confirm(t('settings.deleteConfirm'))) return;
+    try {
+      await deleteAccount();
+    } catch {
+      alert(t('auth.noNetwork'));
+      return;
+    }
+    await clearAll();
+    location.reload();
+  });
+  $('logoutBtn').addEventListener('click', async () => {
+    if (!confirm(t('auth.logoutConfirm'))) return;
+    await logoutAndClear();
+    location.reload();
+  });
+
+  // Вход и заявка
+  $('gateTabLogin').addEventListener('click', () => gateTab('login'));
+  $('gateTabRequest').addEventListener('click', () => gateTab('request'));
+  $('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = $('loginMsg');
+    msg.className = 'gate-msg';
+    msg.textContent = '';
+    const f = e.target.elements;
+    try {
+      await doLogin(f.email.value, f.password.value);
+      hideGate();
+      await start();
+    } catch (err) {
+      msg.className = 'gate-msg is-error';
+      msg.textContent = t(LOGIN_ERRORS[err.code] || 'auth.noNetwork');
+    }
+  });
+  $('requestForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = $('requestMsg');
+    msg.className = 'gate-msg';
+    const f = e.target.elements;
+    try {
+      await requestAccess({
+        displayName: f.displayName.value, email: f.email.value,
+        phone: f.phone.value, telegramId: f.telegramId.value
+      });
+      msg.className = 'gate-msg is-ok';
+      msg.textContent = t('auth.requestSent');
+      e.target.reset();
+    } catch (err) {
+      msg.className = 'gate-msg is-error';
+      msg.textContent = t(err.status === 400 ? 'auth.checkFields' : 'auth.requestFailed');
+    }
+  });
+
+  applyLanguage();
+
   if (API_BASE && !(await hasSession())) { showGate(); return; }
   hideGate();
   await start();
+  if (state.me) {
+    $('drawerUser').hidden = false;
+    $('userInitial').textContent = (state.me.displayName || '?').trim()[0].toUpperCase();
+    $('userName').textContent = state.me.displayName;
+    $('userState').textContent = t('sync.synced');
+  }
 }
 
 boot();
