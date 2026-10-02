@@ -5,7 +5,7 @@ const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'icons/icon.svg',
   'js/app.js', 'js/db.js', 'js/sync.js', 'js/auth.js', 'js/config.js', 'js/wheel.js',
-  'js/core/dates.js', 'js/core/calc.js'
+  'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js'
 ];
 
 self.addEventListener('install', event => {

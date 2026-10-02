@@ -41,7 +41,9 @@
   </div>
 </section>
 
-<div id="appRoot">
+<!-- Скрыт до решения в boot(): иначе приложение на миг мелькает перед экраном входа.
+     Показывается сразу же, если вход не требуется или сессия уже есть. -->
+<div id="appRoot" hidden>
 <header class="top">
   <h1>Квантовый ежедневник</h1>
   <span id="syncStatus" class="sync" role="status"></span>

@@ -381,12 +381,17 @@ function openSettings() {
       onchange: e => save('sectors', [{ ...s, name: e.target.value.trim().slice(0, 40) }]) }),
     h('label', {}, h('input', { type: 'checkbox', checked: s.paused,
       onchange: e => save('sectors', [{ ...s, paused: e.target.checked }]) }), 'не сейчас'))));
-  if (API_BASE && state.me) {
+  // Три разных случая, которые раньше сливались в один неверный текст:
+  // сервера нет вовсе, вход выполнен, вход есть — но сейчас нет связи
+  if (!API_BASE) {
+    $('accountInfo').textContent = 'Сервер не настроен: данные хранятся только на этом устройстве.';
+    $('logoutBtn').hidden = true;
+  } else if (state.me) {
     $('accountInfo').textContent = `Вход выполнен: ${state.me.displayName} (${state.me.email}).`;
     $('logoutBtn').hidden = false;
   } else {
-    $('accountInfo').textContent = 'Сервер пока не подключён: данные хранятся только на этом устройстве.';
-    $('logoutBtn').hidden = true;
+    $('accountInfo').textContent = 'Нет связи с сервером. Данные сохраняются на устройстве и уйдут, когда появится сеть.';
+    $('logoutBtn').hidden = false;
   }
   $('settingsDialog').showModal();
 }
@@ -434,14 +439,24 @@ $('wheel').addEventListener('click', e => {
   if (g) select(g.dataset.id);
 });
 
+let syncStarted = false;
+
 async function start() {
   state.data = await loadAll();
   reindex();
-  initSync({
-    status: renderStatus,
-    data: async () => { state.data = await loadAll(); reindex(); render(); },
-    authLost: showGate
-  });
+  // После повторного входа start() вызывается снова, а обработчики событий
+  // (возврат на вкладку, появление сети) вешать второй раз нельзя:
+  // каждая синхронизация шла бы в несколько заходов
+  if (!syncStarted) {
+    syncStarted = true;
+    initSync({
+      status: renderStatus,
+      data: async () => { state.data = await loadAll(); reindex(); render(); },
+      authLost: showGate
+    });
+  } else {
+    syncNow();
+  }
   if (API_BASE) state.me = await fetchMe();
   // Сферы по умолчанию — только если их нет и на сервере: иначе после очистки
   // телефона рядом с вернувшимися сферами появились бы ещё девять
@@ -464,7 +479,8 @@ const LOGIN_ERRORS = {
   pending_approval: 'Заявка ещё на рассмотрении у администратора.',
   blocked: 'Доступ закрыт. Обратись к администратору.'
 };
-const REQUEST_ERRORS = { already_requested: 'С этой почтой заявка уже подавалась.' };
+// Сервер намеренно отвечает одинаково на первую и повторную заявку,
+// поэтому отдельного текста про «уже подавалась» здесь нет
 
 function showGate() {
   $('appRoot').hidden = true;
@@ -516,12 +532,15 @@ $('requestForm').addEventListener('submit', async e => {
     e.target.reset();
   } catch (err) {
     msg.className = 'gate-msg is-error';
-    msg.textContent = REQUEST_ERRORS[err.code] || 'Не получилось отправить заявку. Проверь подключение к сети.';
+    msg.textContent = err.status === 400
+      ? 'Проверь имя и адрес почты.'
+      : 'Не получилось отправить заявку. Проверь подключение к сети.';
   }
 });
 
 async function boot() {
   if (API_BASE && !(await hasSession())) { showGate(); return; }
+  hideGate();
   await start();
 }
 

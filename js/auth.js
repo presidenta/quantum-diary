@@ -1,10 +1,14 @@
 import { API_BASE } from './config.js';
 import { getMeta, setMeta, clearAll } from './db.js';
+import { sessionChange } from './core/session.js';
 
-async function api(path, body) {
+async function api(path, body, token = null) {
   const res = await fetch(API_BASE + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
     body: JSON.stringify(body)
   });
   const data = res.status === 204 ? null : await res.json().catch(() => null);
@@ -28,11 +32,14 @@ export function requestAccess({ displayName, email, phone, telegramId }) {
   });
 }
 
-// Курсор синхронизации не трогаем: если это та же учётная запись на том же
-// устройстве, прежние данные и курсор остаются в силе, второй раз всё не грузим
 export async function login(email, password) {
-  const { token } = await api('/api/session/login', { email, password });
+  const { token, userId } = await api('/api/session/login', { email, password });
+  const previous = await getMeta('userId');
+  if (sessionChange(previous, userId) === 'clear') {
+    await clearAll();            // стирает и token, и cursor, и все данные
+  }
   await setMeta('token', token);
+  await setMeta('userId', userId);
   return token;
 }
 
@@ -47,8 +54,13 @@ export async function fetchMe() {
   return res.ok ? res.json() : null;
 }
 
-// Явный выход — например, чтобы на этом устройстве войти другим человеком.
-// Стираем и локальные данные: иначе на экране остались бы чужие сферы и цели
+/* Явный выход — например, чтобы на этом устройстве работал другой человек.
+   Закрываем сессию и на сервере: иначе её токен действовал бы и дальше.
+   Локальную копию стираем здесь же, не дожидаясь чужого входа. */
 export async function logoutAndClear() {
+  const token = await getMeta('token');
+  if (API_BASE && token) {
+    await api('/api/session/logout', {}, token).catch(() => {});   // нет сети — выходим хотя бы здесь
+  }
   await clearAll();
 }
