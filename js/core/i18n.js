@@ -146,6 +146,8 @@ const DICT = {
     'quantum.next': 'Дальше',
     'quantum.notReady': 'Квантовый модуль ещё не настроен администратором.',
 
+    'quantum.startTimer': "Запустить таймер",
+    'quantum.stopTimer': "Остановить",
     'quantum.livedShort': "прожито",
     'quantum.lived-it': "Я прожила этот момент",
     'quantum.next-at': "Следующий момент — после {time}",
@@ -346,6 +348,8 @@ const DICT = {
     'quantum.next': 'Далі',
     'quantum.notReady': 'Квантовий модуль ще не налаштовано адміністратором.',
 
+    'quantum.startTimer': "Запустити таймер",
+    'quantum.stopTimer': "Зупинити",
     'quantum.livedShort': "прожито",
     'quantum.lived-it': "Я прожила цей момент",
     'quantum.next-at': "Наступний момент — після {time}",
@@ -546,6 +550,8 @@ const DICT = {
     'quantum.next': 'Next',
     'quantum.notReady': 'The quantum module has not been set up by the administrator yet.',
 
+    'quantum.startTimer': "Start the timer",
+    'quantum.stopTimer': "Stop",
     'quantum.livedShort': "lived",
     'quantum.lived-it': "I lived this moment",
     'quantum.next-at': "Next moment — after {time}",

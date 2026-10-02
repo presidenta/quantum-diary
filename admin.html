@@ -42,6 +42,7 @@
     <div class="segmented" id="adminTabs" role="group" aria-label="Разделы">
       <button type="button" data-tab="people" aria-pressed="true">Люди</button>
       <button type="button" data-tab="content" aria-pressed="false">Содержание</button>
+      <button type="button" data-tab="logs" aria-pressed="false">Сбои</button>
     </div>
 
     <!-- Люди: заявки, действующие, заблокированные -->
@@ -91,6 +92,17 @@
           <span class="muted m0" id="phraseCount"></span>
         </div>
         <ul id="phraseList" class="phrases mt10"></ul>
+      </div>
+    </section>
+
+    <!-- Сбои с устройств: видно раньше, чем о них напишут -->
+    <section id="tabLogs" hidden>
+      <div class="card">
+        <div class="section-head">
+          <h2>Сбои с устройств</h2>
+          <button type="button" id="reloadLogs" class="btn">Обновить</button>
+        </div>
+        <ul id="logList" class="logs mt10"></ul>
       </div>
     </section>
   </main>

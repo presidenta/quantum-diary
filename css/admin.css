@@ -53,3 +53,13 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--gold)
   border-radius: 12px; background: rgba(230, 103, 103, .14);
   border: 1px solid rgba(230, 103, 103, .3); color: var(--danger); font-size: 14px;
 }
+
+.logs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.log-row { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border-left: 3px solid var(--danger); }
+.log-row .msg { font-size: 14px; line-height: 1.4; }
+.log-row .meta { margin-top: 6px; font-size: 11px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 10px; }
+.log-row pre {
+  margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--bg);
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5;
+  color: var(--ink-2); white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow: auto;
+}

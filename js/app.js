@@ -10,6 +10,7 @@ import {
   activeSectors, sectorName, seedSectors, round
 } from './store.js';
 import { LANGUAGES, pickLanguage, isLanguage } from './core/i18n.js';
+import { watchErrors } from './errors.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
@@ -129,14 +130,19 @@ function renderNav() {
   $('bottomNav').replaceChildren(...SECTIONS.map(s => navButton(s, 22)));
   $('drawerMain').replaceChildren(...SECTIONS.map(s => navButton(s, 19)));
 
-  // Служебное прижато вниз за разделителем — приём из того же меню
-  $('drawerService').replaceChildren(
+  // Служебное прижато вниз за разделителем — приём из того же меню.
+  // Кабинет администратора виден только тому, у кого есть на это право:
+  // это не отдельное приложение, а лишние вкладки в том же кабинете
+  const service = [
     h('button', {
       type: 'button',
       onclick: () => { closeDrawer(); openSettings(); $('settingsDialog').showModal(); }
-    }, svgIcon(ICONS.settings, 19), h('span', { text: t('nav.settings') })),
-    h('a', { href: 'admin.html' }, svgIcon(ICONS.admin, 19), h('span', { text: t('nav.admin') }))
-  );
+    }, svgIcon(ICONS.settings, 19), h('span', { text: t('nav.settings') }))
+  ];
+  if (state.me?.role === 'admin') {
+    service.push(h('a', { href: 'admin.html' }, svgIcon(ICONS.admin, 19), h('span', { text: t('nav.admin') })));
+  }
+  $('drawerService').replaceChildren(...service);
 }
 
 function renderDrawerSpheres() {
@@ -153,9 +159,15 @@ function renderDrawerSpheres() {
     h('span', { class: 'trailing', text: row.pct === null ? '—' : `${round(row.pct)}%` }))));
 }
 
+/* Порог «широкого экрана» один на весь проект и совпадает с медиазапросом
+   в app.css. Когда он жил в двух местах, они разошлись: вёрстка считала
+   экран широким, а код — узким, и панель оставалась спрятанной. */
+const WIDE = '(min-width: 768px)';
+const isWide = () => window.matchMedia(WIDE).matches;
+
 const openDrawer = () => { $('drawer').hidden = false; $('drawerBack').hidden = false; };
 const closeDrawer = () => {
-  if (window.matchMedia('(min-width: 900px)').matches) return;   // на широком экране панель всегда видна
+  if (isWide()) return;              // на широком экране панель всегда видна
   $('drawer').hidden = true;
   $('drawerBack').hidden = true;
 };
@@ -206,7 +218,7 @@ function showGate() {
 function hideGate() {
   $('authGate').hidden = true;
   $('appRoot').hidden = false;
-  if (window.matchMedia('(min-width: 900px)').matches) { $('drawer').hidden = false; }
+  if (isWide()) { $('drawer').hidden = false; $('drawerBack').hidden = true; }
 }
 
 function gateTab(which) {
@@ -268,6 +280,13 @@ async function start() {
 }
 
 async function boot() {
+  watchErrors();
+
+  // Повернули телефон или растянули окно — панель должна стать той, какой надо
+  window.matchMedia(WIDE).addEventListener('change', e => {
+    $('drawer').hidden = !e.matches;
+    $('drawerBack').hidden = true;
+  });
   state.language = pickLanguage(await getMeta('language').catch(() => null), navigator.languages || []);
 
   initWheel();

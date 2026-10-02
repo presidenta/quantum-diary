@@ -233,6 +233,34 @@ $('assignDialog').addEventListener('close', async () => {
   }));
 });
 
+/* ---------- Сбои с устройств ---------- */
+
+const fmtLogTime = iso => new Intl.DateTimeFormat('ru', {
+  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit'
+}).format(new Date(iso));
+
+async function loadLogs() {
+  const logs = await api('/api/admin/logs?limit=100');
+  if (!logs.length) {
+    $('logList').replaceChildren(h('li', { class: 'empty', text: 'Сбоев нет — и хорошо' }));
+    return;
+  }
+  $('logList').replaceChildren(...logs.map(l => {
+    const meta = [fmtLogTime(l.happenedAt)];
+    if (l.accountNo) meta.push('кабинет ' + String(l.accountNo).padStart(9, '0'));
+    if (l.displayName) meta.push(l.displayName);
+    if (l.release) meta.push('выкладка ' + l.release);
+    if (l.page) meta.push(l.page);
+    return h('li', { class: 'log-row' },
+      h('div', { class: 'msg', text: l.message }),
+      h('div', { class: 'meta' }, ...meta.map(x => h('span', { text: x }))),
+      l.stack ? h('pre', { text: l.stack }) : null,
+      l.userAgent ? h('div', { class: 'meta' }, h('span', { text: l.userAgent })) : null);
+  }));
+}
+
+$('reloadLogs').addEventListener('click', () => withBusy(loadLogs));
+
 /* ---------- Общее ---------- */
 
 async function withBusy(fn) {
@@ -263,6 +291,8 @@ $('adminTabs').addEventListener('click', e => {
     b.setAttribute('aria-pressed', String(b.dataset.tab === tab)));
   $('tabPeople').hidden = tab !== 'people';
   $('tabContent').hidden = tab !== 'content';
+  $('tabLogs').hidden = tab !== 'logs';
+  if (tab === 'logs') withBusy(loadLogs);
 });
 
 $('statusTabs').addEventListener('click', e => {

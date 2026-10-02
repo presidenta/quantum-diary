@@ -115,6 +115,7 @@ export function renderQuantum() {
    днём — блуждающая кнопка, которую надо удержать восемь секунд. */
 function renderLive(active, day) {
   const live = $('quantumLive');
+  stopPracticeTimers();           // старые таймеры не должны тикать за кадром
   if (!active) { live.hidden = true; live.replaceChildren(); return; }
   live.hidden = false;
 
@@ -122,15 +123,72 @@ function renderLive(active, day) {
     renderWanderButton(live, active, day);
   } else {
     const anchor = active.slot === 'morning' ? 'quantum.doneMudra' : 'quantum.doneBreath';
-    live.replaceChildren(h('div', { class: 'q-overlay' },
-      h('p', { class: 'q-said', text: active.text || t(anchor) }),
-      h('p', { class: 'q-anchor', text: t(anchor) }),
-      h('button', {
-        type: 'button', class: 'btn primary', text: t('quantum.lived-it'),
-        onclick: () => markDone(active)
-      })));
+    live.replaceChildren(practiceScreen(active, anchor));
   }
 }
+
+/* Практика целиком задана сервером: заголовок, картинка, запись голоса,
+   таймер. Пришло пусто — остаётся короткий момент с якорем, как раньше.
+   Ничего из этого здесь не зашито: что прислали, то и показываем. */
+function practiceScreen(moment, anchorKey) {
+  const parts = [];
+
+  if (moment.imageUrl) {
+    parts.push(h('img', {
+      class: 'q-image', src: moment.imageUrl, alt: moment.title || '',
+      loading: 'lazy', onerror: e => { e.target.hidden = true; }
+    }));
+  }
+  if (moment.title) parts.push(h('p', { class: 'q-practice-title', text: moment.title }));
+
+  parts.push(h('p', { class: 'q-said', text: moment.text || t(anchorKey) }));
+  parts.push(h('p', { class: 'q-anchor', text: t(anchorKey) }));
+
+  if (moment.audioUrl) {
+    // Звук не играет сам: это решение человека, а не приложения
+    parts.push(h('audio', { class: 'q-audio', src: moment.audioUrl, controls: true, preload: 'none' }));
+  }
+  if (moment.durationSec > 0) parts.push(practiceTimer(moment.durationSec));
+
+  parts.push(h('button', {
+    type: 'button', class: 'btn primary', text: t('quantum.lived-it'),
+    onclick: () => markDone(moment)
+  }));
+
+  return h('div', { class: 'q-overlay q-practice' }, ...parts);
+}
+
+/* Таймер практики. Тикает раз в секунду и только пока практика открыта:
+   закрыли экран — таймер снимается вместе с ним. */
+function practiceTimer(seconds) {
+  const left = h('span', { class: 'q-timer-left', text: formatLeft(seconds) });
+  let rest = seconds;
+  let timer = null;
+
+  const stop = () => { clearInterval(timer); timer = null; };
+  const button = h('button', { type: 'button', class: 'btn', text: t('quantum.startTimer') });
+  button.addEventListener('click', () => {
+    if (timer) { stop(); button.textContent = t('quantum.startTimer'); return; }
+    button.textContent = t('quantum.stopTimer');
+    timer = setInterval(() => {
+      rest -= 1;
+      left.textContent = formatLeft(rest);
+      if (rest <= 0) {
+        stop();
+        button.textContent = t('quantum.startTimer');
+        try { navigator.vibrate?.(200); } catch { /* нет мотора — не беда */ }
+      }
+    }, 1000);
+  });
+
+  practiceTimers.push(stop);
+  return h('div', { class: 'q-timer' }, left, button);
+}
+
+const practiceTimers = [];
+const stopPracticeTimers = () => { while (practiceTimers.length) practiceTimers.pop()(); };
+
+const formatLeft = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
 
 /* Кнопка появляется в случайном месте — её нельзя ждать в одной точке.
    Место пересчитывается только при появлении, не по таймеру. */
