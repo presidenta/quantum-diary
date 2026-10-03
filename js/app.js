@@ -3,7 +3,7 @@
 
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
-import { requestAccess, login as doLogin, hasSession, logoutAndClear, fetchMe, changeOwnPassword } from './auth.js';
+import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logoutAndClear, fetchMe, changeOwnPassword } from './auth.js';
 import { API_BASE, serverAlive } from './config.js';
 import {
   state, t, save, reload, onChange, changed, $, h, svgIcon, ICONS,
@@ -224,6 +224,9 @@ const LOGIN_ERRORS = {
 function showGate() {
   $('appRoot').hidden = true;
   $('authGate').hidden = false;
+  // Не ждём ответа: экран входа должен появиться сразу, а настройка —
+  // переключить его, когда сервер скажет, что администраторов ещё нет
+  setupMode();
 }
 function hideGate() {
   $('authGate').hidden = true;
@@ -237,6 +240,27 @@ function gateTab(which) {
   $('gateTabRequest').setAttribute('aria-selected', String(!loginActive));
   $('loginForm').hidden = !loginActive;
   $('requestForm').hidden = loginActive;
+}
+
+/* Система ещё не настроена — показываем не вход, а заведение первого кабинета.
+   Вход и заявка в этот момент бессмысленны: входить некому, а заявку
+   рассматривать некому. Как только администратор появился, сервер отвечает
+   «не нужно», и экран навсегда становится обычным. */
+async function setupMode() {
+  if (!API_BASE) return false;
+  let needed = false;
+  try {
+    const res = await fetch(`${API_BASE}/api/setup`, { cache: 'no-store' });
+    if (res.ok) needed = (await res.json()).needed === true;
+  } catch {
+    // Сервер промолчал — показываем обычный вход, а не экран настройки:
+    // предлагать завести администратора там, где некому ответить, незачем
+    return false;
+  }
+  $('gateTabs').hidden = needed;
+  $('setupForm').hidden = !needed;
+  if (needed) { $('loginForm').hidden = true; $('requestForm').hidden = true; }
+  return needed;
 }
 
 /* ---------- Запуск ---------- */
@@ -416,6 +440,33 @@ async function boot() {
     } catch (err) {
       msg.className = 'gate-msg is-error';
       msg.textContent = t(LOGIN_ERRORS[err.code] || 'auth.noNetwork');
+    }
+  });
+  $('setupForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = $('setupMsg');
+    msg.className = 'gate-msg';
+    msg.textContent = '';
+    const f = e.target.elements;
+    // Опечатку в пароле, который нигде больше не записан и который некому
+    // восстановить, человек обнаружил бы уже запертым снаружи
+    if (f.password.value !== f.password2.value) {
+      msg.className = 'gate-msg is-error';
+      msg.textContent = t('auth.passwordsDiffer');
+      return;
+    }
+    try {
+      await createFirstAdmin({
+        displayName: f.displayName.value, email: f.email.value, password: f.password.value
+      });
+      // Кабинет заведён — сразу входим им же, чтобы не набирать пароль дважды
+      await doLogin(f.email.value, f.password.value);
+      hideGate();
+      await start();
+    } catch (err) {
+      msg.className = 'gate-msg is-error';
+      msg.textContent = t(err.status === 409 ? 'auth.setupDone'
+        : err.status === 400 ? 'auth.checkFields' : 'auth.requestFailed');
     }
   });
   $('requestForm').addEventListener('submit', async e => {

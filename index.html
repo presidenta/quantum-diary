@@ -32,7 +32,7 @@
       <p class="muted m0" data-i18n="app.tagline">Пространство осознанного дня</p>
     </div>
 
-    <div class="segmented" role="tablist">
+    <div class="segmented" id="gateTabs" role="tablist">
       <button type="button" id="gateTabLogin" role="tab" aria-selected="true" data-i18n="auth.login">Войти</button>
       <button type="button" id="gateTabRequest" role="tab" aria-selected="false" data-i18n="auth.request">Запросить доступ</button>
     </div>
@@ -52,6 +52,21 @@
       <p class="muted" data-i18n="auth.closedNote">Заявку рассматривает администратор.</p>
       <p class="gate-msg" id="requestMsg" role="alert"></p>
       <button type="submit" class="btn primary" data-i18n="auth.request">Отправить заявку</button>
+    </form>
+
+    <!-- Первичная настройка. Показывается, только пока в системе нет ни одного
+         администратора, и исчезает навсегда, как только он появился: сервер
+         после этого отвечает на /api/setup отказом (см. src/auth.js). Пароль
+         человек задаёт себе сам — он не проходит ни через чьи руки. -->
+    <form id="setupForm" class="gate-form" hidden>
+      <p class="muted" data-i18n="auth.setupNote">Система ещё не настроена. Заведите первый кабинет — он станет администратором.</p>
+      <label><span data-i18n="auth.name">Имя</span><input name="displayName" required maxlength="80" autocomplete="name"></label>
+      <label><span data-i18n="auth.email">Почта</span><input name="email" type="email" required autocomplete="username"></label>
+      <label><span data-i18n="auth.password">Пароль</span><input name="password" type="password" required minlength="10" autocomplete="new-password"></label>
+      <label><span data-i18n="auth.passwordAgain">Пароль ещё раз</span><input name="password2" type="password" required minlength="10" autocomplete="new-password"></label>
+      <p class="muted" data-i18n="auth.setupHint">Не короче десяти символов. Запишите его: восстановить пароль здесь некому.</p>
+      <p class="gate-msg" id="setupMsg" role="alert"></p>
+      <button type="submit" class="btn primary" data-i18n="auth.setupButton">Создать администратора</button>
     </form>
   </div>
 </section>

@@ -21,6 +21,12 @@ async function api(path, body, token = null) {
   return data;
 }
 
+/* Первый администратор. Работает, только пока их нет ни одного: дальше сервер
+   отвечает 409, и этот адрес закрыт навсегда. Пароль задаёт сам человек. */
+export function createFirstAdmin({ displayName, email, password }) {
+  return api('/api/setup', { displayName, email, password });
+}
+
 // Заявка: статус pending, пока администратор не одобрит
 export function requestAccess({ displayName, email, phone, telegramId }) {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
