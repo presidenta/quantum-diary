@@ -126,6 +126,30 @@
   </div>
 </dialog>
 
+<!-- КВАНТОВЫЙ КАБИНЕТ ОДНОГО ЧЕЛОВЕКА.
+
+     Всё, что специалист настраивает лично ему: фазы дня и дни недели, в
+     каждом блоке — текст, звук и картинка, у дня недели ещё и цвет. Человек
+     со своего телефона этого не видит и не меняет: ему приезжает готовое. -->
+<dialog id="quantumDialog">
+  <div class="sheet wide">
+    <h2 data-i18n="adm.quantumCabinet">Квантовый кабинет</h2>
+    <p class="muted m0" id="quantumFor"></p>
+
+    <div class="segmented" id="quantumTabs" role="group">
+      <button type="button" data-qkind="slot" aria-pressed="true" data-i18n="adm.phases">Фазы дня</button>
+      <button type="button" data-qkind="weekday" aria-pressed="false" data-i18n="adm.weekdays">Дни недели</button>
+    </div>
+
+    <div id="quantumBlocks" class="q-blocks"></div>
+
+    <p class="muted m0" data-i18n="adm.quantumHint">Пустое поле — остаётся общее. Звук проигрывается на устройстве, когда наступает момент.</p>
+    <div class="actions">
+      <button type="button" class="btn primary" id="closeQuantum" data-i18n="adm.done">Готово</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="assignDialog">
   <form method="dialog" class="sheet" id="assignForm">
     <h2 data-i18n="adm.personalSet">Персональный набор</h2>

@@ -184,8 +184,12 @@ function renderPerson(person) {
       })
     }));
     actions.push(h('button', {
-      type: 'button', class: 'btn', text: 'Содержание',
+      type: 'button', class: 'btn', text: t('adm.phrases'),
       onclick: () => openAssign(person)
+    }));
+    actions.push(h('button', {
+      type: 'button', class: 'btn', text: t('adm.quantumCabinet'),
+      onclick: () => openQuantum(person)
     }));
     actions.push(h('button', {
       type: 'button', class: 'btn',
@@ -416,3 +420,133 @@ async function boot() {
 }
 
 boot();
+
+
+/* ---------- Квантовый кабинет одного человека ----------
+
+   Фазы дня и дни недели настраиваются раздельно, и в каждом блоке — текст,
+   звук и картинка; у дня недели ещё и цвет. Блоки независимы: правка одного
+   уходит на сервер сама по себе и не трогает остальные. Так специалист может
+   настроить только утро и уйти, ничего не «сохраняя целиком».
+
+   Человек со своего телефона сюда не попадает: сервер пускает только роль
+   администратора (ТЗ, раздел про доступ). */
+
+const SLOT_KEYS = [
+  ['morning', 'adm.slotMorning'],
+  ['day', 'adm.slotDay'],
+  ['evening', 'adm.slotEvening'],
+  ['frame', 'adm.slotFrame']
+];
+// 1 — понедельник, как в ISO и в базе (to_char(date, 'ID'))
+const WEEKDAY_KEYS = [
+  ['1', 'adm.mon'], ['2', 'adm.tue'], ['3', 'adm.wed'], ['4', 'adm.thu'],
+  ['5', 'adm.fri'], ['6', 'adm.sat'], ['7', 'adm.sun']
+];
+
+let quantumPerson = null;
+let quantumKind = 'slot';
+let quantumSettings = [];
+
+async function openQuantum(person) {
+  quantumPerson = person;
+  quantumKind = 'slot';
+  $('quantumFor').textContent = `${person.displayName} · ${person.email}`;
+  await withBusy(async () => {
+    quantumSettings = await api(`/api/admin/users/${person.id}/quantum/settings`);
+  });
+  renderQuantumTabs();
+  renderQuantumBlocks();
+  $('quantumDialog').showModal();
+}
+
+function renderQuantumTabs() {
+  $('quantumTabs').querySelectorAll('button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.qkind === quantumKind)));
+}
+
+const settingOf = (kind, key) =>
+  quantumSettings.find(x => x.kind === kind && x.key === key) || {};
+
+function renderQuantumBlocks() {
+  const keys = quantumKind === 'slot' ? SLOT_KEYS : WEEKDAY_KEYS;
+  $('quantumBlocks').replaceChildren(...keys.map(([key, labelKey]) =>
+    quantumBlock(quantumKind, key, t(labelKey))));
+}
+
+function quantumBlock(kind, key, label) {
+  const value = settingOf(kind, key);
+  const filled = Boolean(value.text || value.color || value.imageUrl || value.audioUrl);
+
+  const field = (name, placeholderKey, type = 'text') => h('label', {},
+    h('span', { text: t(placeholderKey) }),
+    h('input', { type, name, value: value[name] || '' }));
+
+  const body = h('div', { class: 'q-block-body' },
+    h('label', {},
+      h('span', { text: t('adm.text') }),
+      h('textarea', { name: 'text', maxlength: 600, value: value.text || '' })),
+    /* Цвет — только у дня недели: у фазы он берётся из чакры дня.
+
+       Галочка нужна потому, что поле выбора цвета НИКОГДА не бывает пустым:
+       очистить его нельзя, браузер вернёт чёрный. Без галочки «вернуть общий
+       цвет» было бы невозможно — настройка навсегда перекрывала бы чакру. */
+    kind === 'weekday'
+      ? h('div', { class: 'q-color' },
+          h('label', { class: 'q-color-use' },
+            h('input', { type: 'checkbox', name: 'useColor', checked: Boolean(value.color) }),
+            h('span', { text: t('adm.ownColor') })),
+          h('input', { type: 'color', name: 'color', value: value.color || '#2b3a8c' }))
+      : null,
+    field('imageUrl', 'adm.imageUrl', 'url'),
+    field('audioUrl', 'adm.audioUrl', 'url'),
+    h('div', { class: 'q-block-foot' },
+      h('button', {
+        type: 'button', class: 'btn primary', text: t('adm.save'),
+        onclick: e => saveBlock(e.target.closest('.q-block'), kind, key)
+      }),
+      h('span', { class: 'q-block-said', role: 'status' })));
+
+  return h('details', { class: `q-block ${filled ? 'filled' : ''}`, 'data-key': key },
+    h('summary', {},
+      h('b', { text: label }),
+      h('span', { class: 'q-block-mark', text: filled ? t('adm.configured') : t('adm.notSet') })),
+    body);
+}
+
+async function saveBlock(block, kind, key) {
+  const said = block.querySelector('.q-block-said');
+  const read = name => (block.querySelector(`[name=${name}]`) || {}).value || '';
+  const useColor = block.querySelector('[name=useColor]')?.checked;
+  const payload = {
+    kind, key,
+    text: read('text'),
+    // Галочка снята — цвет не отправляем вовсе: вернётся общий цвет чакры
+    color: kind === 'weekday' && useColor ? read('color') : '',
+    imageUrl: read('imageUrl'),
+    audioUrl: read('audioUrl')
+  };
+  try {
+    const saved = await api(`/api/admin/users/${quantumPerson.id}/quantum/settings`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    // Сервер вернул 204 — настройка стёрта, потому что в ней ничего не осталось
+    quantumSettings = quantumSettings.filter(x => !(x.kind === kind && x.key === key));
+    if (saved) quantumSettings.push(saved);
+    said.textContent = saved ? t('adm.saved') : t('adm.cleared');
+    block.classList.toggle('filled', Boolean(saved));
+    block.querySelector('.q-block-mark').textContent = saved ? t('adm.configured') : t('adm.notSet');
+  } catch (err) {
+    said.textContent = err.status === 400 ? t('adm.checkFields') : t('adm.saveFailed');
+  }
+  setTimeout(() => { said.textContent = ''; }, 4000);
+}
+
+$('quantumTabs').addEventListener('click', e => {
+  const kind = e.target.dataset.qkind;
+  if (!kind) return;
+  quantumKind = kind;
+  renderQuantumTabs();
+  renderQuantumBlocks();
+});
+$('closeQuantum').addEventListener('click', () => $('quantumDialog').close());

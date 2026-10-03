@@ -265,33 +265,63 @@ function cancelHold() {
   renderQuantum();
 }
 
+/* ОЗВУЧКА МОМЕНТА.
+
+   Звук задаёт специалист: либо у самой фразы, либо персонально этому человеку
+   на эту фазу дня. Персональный главнее — он назначен лично.
+
+   Играем ТОЛЬКО ЗДЕСЬ, сразу после восьми секунд удержания, и это не
+   случайность: браузеры глушат звук, который заводится сам, без жеста
+   человека. Удержание кнопки — и есть тот жест. Попытка проиграть запись
+   заранее, «к наступлению момента», кончилась бы тишиной на телефоне и
+   ошибкой в консоли.
+
+   Ничего не загружаем, пока не понадобилось: Audio создаётся в этот миг, а не
+   держится в памяти весь день — телефон должен дожить до вечера. */
+function playMoment(moment) {
+  const personal = state.quantum?.settings?.slots?.[moment.slot]?.audioUrl;
+  const src = personal || moment.audioUrl;
+  if (!src) return;
+  try {
+    const sound = new Audio(src);
+    sound.play().catch(() => { /* телефон в беззвучном режиме — это нормально */ });
+  } catch { /* запись не открылась — момент важнее звука */ }
+}
+
 async function finishHold(moment, day) {
   // Вибрация только после явного жеста человека и не везде есть мотор
   try { navigator.vibrate?.(200); } catch { /* нет мотора — не беда */ }
+  playMoment(moment);
 
+  const mine = state.quantum?.settings?.slots?.[moment.slot] || {};
   const live = $('quantumLive');
   live.replaceChildren(h('div', { class: 'q-overlay' },
     h('span', { class: 'q-infinity', text: '∞' }),
-    h('p', { class: 'q-said', text: moment.text || t('quantum.closed') })));
+    h('p', { class: 'q-said', text: mine.text || moment.text || t('quantum.closed') })));
 
   await markDone(moment);
   setTimeout(() => showChromo(day), 1400);
 }
 
 /* Хромотерапия: экран заливается цветом дня на несколько секунд.
-   Сам закрывается — держать его дольше незачем. */
+   Сам закрывается — держать его дольше незачем.
+
+   Цвет и текст могут быть ПЕРСОНАЛЬНЫМИ: специалист настраивает их человеку
+   на каждый день недели (кабинет администратора → Квантовый кабинет). Нет
+   настройки — остаётся общий цвет чакры дня, и это обычный случай. */
 function showChromo(day) {
   const colour = colorOfDay(day.date);
+  const mine = state.quantum?.settings?.weekday || {};
   const live = $('quantumLive');
   live.hidden = false;
   const screen = h('div', { class: 'q-chromo' },
     h('p', { class: 'q-chromo-day', text: `${t(colour.nameKey)} · ${colour.chakra}` }),
-    h('p', { class: 'q-chromo-text', text: t('quantum.warrior') }),
+    h('p', { class: 'q-chromo-text', text: mine.text || t('quantum.warrior') }),
     h('button', {
       type: 'button', class: 'btn q-chromo-close', text: t('quantum.found'),
       onclick: () => { live.hidden = true; renderQuantum(); }
     }));
-  screen.style.setProperty('background', colour.color);
+  screen.style.setProperty('background', mine.color || colour.color);
   live.replaceChildren(screen);
 
   setTimeout(() => {

@@ -78,3 +78,37 @@ body.admin .top .icon-btn { flex: none; min-width: 40px; min-height: 40px; }
   font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
 }
 .lang-select:focus-visible { outline: none; box-shadow: var(--glow-active); }
+
+/* Квантовый кабинет одного человека: блоки фаз и дней недели.
+
+   Каждый блок — свёрнутая строка, которая раскрывается по нажатию. Семь дней
+   и четыре фазы развёрнутыми сразу превратились бы в простыню, по которой
+   пришлось бы искать нужное. Настроенные блоки видно не раскрывая — по метке
+   справа и золотой полосе слева. */
+.sheet.wide { max-width: 640px; }
+.q-blocks { display: grid; gap: 8px; margin: 10px 0; }
+
+.q-block {
+  border: 1px solid var(--line); border-radius: var(--edge);
+  background: var(--surface-2); border-left: 3px solid transparent;
+}
+.q-block.filled { border-left-color: var(--gold); }
+.q-block > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; cursor: pointer; min-height: 44px;
+}
+.q-block > summary::-webkit-details-marker { display: none; }
+.q-block-mark { font-size: 11px; color: var(--ink-2); }
+.q-block.filled .q-block-mark { color: var(--gold); }
+
+.q-block-body { display: grid; gap: 10px; padding: 0 14px 14px; }
+.q-block-body textarea { min-height: 72px; resize: vertical; }
+.q-color { display: flex; align-items: center; gap: 10px; }
+.q-color-use { display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer; }
+.q-color-use input { width: 18px; height: 18px; }
+.q-color input[type="color"] {
+  width: 52px; height: 40px; padding: 2px; border: 1px solid var(--line);
+  border-radius: var(--edge); background: var(--surface); cursor: pointer;
+}
+.q-block-foot { display: flex; align-items: center; gap: 12px; }
+.q-block-said { font-size: 12px; color: var(--gold); }
