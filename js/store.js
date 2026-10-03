@@ -19,7 +19,8 @@ export const state = {
   selected: null,
   me: null,
   language: DEFAULT_LANGUAGE,
-  quantum: null           // день квантового модуля: приходит с сервера
+  quantum: null,          // день квантового модуля: приходит с сервера
+  serverDown: false       // сервер не отвечает: работаем на устройстве
 };
 
 export const t = (key, values) => translate(state.language, key, values);

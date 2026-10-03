@@ -4,7 +4,7 @@
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
 import { requestAccess, login as doLogin, hasSession, logoutAndClear, fetchMe, changeOwnPassword } from './auth.js';
-import { API_BASE } from './config.js';
+import { API_BASE, serverAlive } from './config.js';
 import {
   state, t, save, reload, onChange, changed, $, h, svgIcon, ICONS,
   activeSectors, sectorName, seedSectors, round
@@ -264,19 +264,23 @@ let syncStarted = false;
 
 async function start() {
   await reload();
-  // После повторного входа start() зовётся снова, а обработчики событий
-  // синхронизации вешать второй раз нельзя
-  if (!syncStarted) {
+  /* Сервер не отвечает — синхронизацию не заводим вовсе. Иначе она сама
+     обнаружит отсутствие входа и покажет экран входа, который в этом
+     случае бесполезен: войти всё равно некуда. */
+  if (!syncStarted && !state.serverDown) {
     syncStarted = true;
     initSync({
       status: s => { $('syncStatus').textContent = STATUS_KEY[s] ? t(STATUS_KEY[s]) : ''; },
       data: async () => { await reload(); changed(); },
       authLost: showGate
     });
-  } else {
+  } else if (syncStarted) {
+    // После повторного входа start() зовётся снова, а обработчики событий
+    // синхронизации вешать второй раз нельзя
     syncNow();
   }
-  if (API_BASE) {
+
+  if (API_BASE && !state.serverDown) {
     state.me = await fetchMe();
     renderUser();
     await loadQuantum();     // счётчик моментов нужен сразу, на любом экране
@@ -286,8 +290,10 @@ async function start() {
   // Сферы по умолчанию — только если их нет и на сервере: иначе после очистки
   // телефона рядом с вернувшимися сферами появились бы ещё девять
   if (!state.index.sectors.length) {
-    await syncNow();
-    await reload();
+    if (!state.serverDown) {
+      await syncNow();
+      await reload();
+    }
     if (!state.index.sectors.length) await seedSectors();
   }
   render();
@@ -434,6 +440,18 @@ async function boot() {
   applyLanguage();
   initUpdate();
   initPasswordEyes();
+
+  /* Сервер ещё не поднят — не встречаем человека экраном входа, который
+     всё равно не работает. Приложение живёт на устройстве и говорит об
+     этом строкой состояния. Как только сервер ответит, вход и синхронизация
+     включатся сами, без новой выкладки. */
+  if (API_BASE && !(await serverAlive())) {
+    state.serverDown = true;
+    hideGate();
+    await start();
+    $('syncStatus').textContent = t('sync.local');
+    return;
+  }
 
   if (API_BASE && !(await hasSession())) { showGate(); return; }
   hideGate();
