@@ -40,6 +40,12 @@
     <!-- Язык и обновление живут в шапке, а не внутри форм: это настройки всего
          кабинета, а не одной карточки -->
     <select id="adminLang" class="lang-select head-btn" aria-label="Язык"></select>
+    <!-- «Назад» ведёт в приложение, а не в историю браузера: в кабинет заходят
+         и по прямой ссылке, и тогда история увела бы со страницы вовсе. Та же
+         мысль, что у кнопки «Назад» в кабинете игры. -->
+    <a href="./" id="adminBack" class="icon-btn head-btn" aria-label="Назад" title="Назад">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </a>
     <button type="button" id="adminUpdate" class="icon-btn head-btn" aria-label="Обновить" title="Обновить">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"></path></svg>
     </button>

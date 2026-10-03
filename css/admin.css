@@ -7,7 +7,7 @@ body.admin .segmented { margin-bottom: 12px; }
 
 .people { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .person {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--edge-lg); padding: 14px 16px;
   display: grid; gap: 10px;
 }
 .person.pending { border-color: var(--line-strong); }
