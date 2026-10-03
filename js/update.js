@@ -21,18 +21,6 @@ const SAY = 'planner.updateSay';     // вердикт, который надо 
 
 const noStore = { cache: 'no-store' };
 
-/* Что изменилось в последних выкладках. Отдельный файл, а не вшитый список:
-   он правится при каждой выкладке и не должен тянуть за собой пересборку кода. */
-async function changeLog() {
-  try {
-    const res = await fetch(`changes.json?probe=${Date.now()}`, noStore);
-    const list = await res.json();
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
-}
-
 async function clientVersion() {
   try {
     const res = await fetch(`version.json?probe=${Date.now()}`, noStore);
@@ -83,32 +71,28 @@ const when = iso => {
   }).format(new Date(iso));
 };
 
-/* ОКНО, А НЕ ИСЧЕЗАЮЩАЯ ПОДСКАЗКА.
+/* КОМПАКТНАЯ ПЛАШКА, А НЕ ОКНО.
 
-   Раньше вердикт всплывал на несколько секунд и пропадал — прочитать номер
-   версии человек часто не успевал, а номер на самой кнопке занимал место и
-   ничего не объяснял. Теперь по нажатию открывается окно: какая версия стоит,
-   когда выложена и что в ней изменилось. Закрывает его человек сам. */
-function popup(kind, lines, changes = []) {
+   Сначала здесь была всплывающая подсказка на несколько секунд — прочитать
+   не успевали. Потом окно со списком изменений и временем перезапуска
+   сервера — оно перекрывало пол-экрана, а время перезапуска человеку не
+   говорит ничего. Осталось главное: номер версии и одна строка о том, что
+   произошло. Плашка не держит экран и уходит сама.
+
+   Список изменений убран по решению владельца: он нужен разработчику, а
+   человеку нужен ответ «обновилось или нет». */
+function popup(kind, lines) {
   document.querySelector('.upd-pop')?.remove();
   const box = h('div', { class: `upd-pop ${kind}` },
     h('b', { text: t(`update.${kind}`) }),
     ...lines.map(line => h('i', { text: line })));
-
-  if (changes.length) {
-    box.appendChild(h('div', { class: 'upd-changes' },
-      h('b', { text: t('update.whatChanged') }),
-      h('ul', {}, ...changes.slice(0, 3).map(entry => h('li', {},
-        h('b', { text: `${entry.release} · ${entry.date}` }),
-        h('ul', {}, ...(entry.items || []).map(item => h('li', { text: item }))))))));
-  }
-  if (kind !== 'checking') {
-    box.appendChild(h('button', {
-      type: 'button', class: 'btn upd-close', text: t('update.close'),
-      onclick: () => box.remove()
-    }));
-  }
   document.body.appendChild(box);
+  if (kind !== 'checking') {
+    setTimeout(() => {
+      box.classList.add('out');
+      setTimeout(() => box.remove(), 320);
+    }, 5000);
+  }
   return box;
 }
 
@@ -119,14 +103,11 @@ const write = (key, value) => {
   try { sessionStorage.setItem(key, JSON.stringify(value)); } catch { /* приватный режим */ }
 };
 
+/* Одна строка вместо трёх. Время перезапуска сервера и число миграций
+   человеку ничего не говорят — это были цифры для разработчика. */
 function techLines(client, server) {
   const lines = [`${t('update.client')} ${client?.release ?? '—'}`];
-  if (server) {
-    lines.push(`${t('update.server')} ${server.release} · ${t('update.restarted')} ${when(server.startedAt)}`);
-    lines.push(`${t('update.migrations')} ${(server.migrations || []).length}`);
-  } else if (API_BASE) {
-    lines.push(t('update.noServer'));
-  }
+  if (!server && API_BASE) lines.push(t('update.noServer'));
   return lines;
 }
 
@@ -155,7 +136,7 @@ export async function initUpdate(buttonId = 'updateBtn') {
   if (said) {
     sessionStorage.removeItem(SAY);
     if (Date.now() - (said.at || 0) < 30000) {
-      setTimeout(() => popup(said.kind, said.lines || [], said.changes || []), 400);
+      setTimeout(() => popup(said.kind, said.lines || []), 400);
     }
   }
 
@@ -185,7 +166,7 @@ export async function initUpdate(buttonId = 'updateBtn') {
     const stamp = stampOf(nowClient, nowServer, nowClient?.tag);
     const kind = !seen ? 'done' : (seen === stamp ? 'same' : 'new');
 
-    write(SAY, { kind, lines, changes: await changeLog(), at: Date.now() });
+    write(SAY, { kind, lines, at: Date.now() });
     await wipeCaches();
     location.reload();
   });

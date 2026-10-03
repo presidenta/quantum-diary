@@ -1,12 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -100 200 200">
-  <rect x="-100" y="-100" width="200" height="200" rx="44" fill="#1a1a19"/>
-  <path d="M0 0L0 -70A70 70 0 0 1 49.5 -49.5Z" fill="#3987e5"/>
-  <path d="M0 0L42.4 -42.4A60 60 0 0 1 60 0Z" fill="#e66767"/>
-  <path d="M0 0L50 0A50 50 0 0 1 35.4 35.4Z" fill="#9085e9"/>
-  <path d="M0 0L46 46A65 65 0 0 1 0 65Z" fill="#d95926"/>
-  <path d="M0 0L0 55A55 55 0 0 1 -38.9 38.9Z" fill="#199e70"/>
-  <path d="M0 0L-49.5 49.5A70 70 0 0 1 -70 0Z" fill="#c98500"/>
-  <path d="M0 0L-45 0A45 45 0 0 1 -31.8 -31.8Z" fill="#d55181"/>
-  <path d="M0 0L-42.4 -42.4A60 60 0 0 1 0 -60Z" fill="#008300"/>
-  <circle r="62" fill="none" stroke="#ffffff" stroke-width="5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Квантовый ежедневник">
+  <!-- Значок: обсидиан и золото, те же, что в «Игре мудрецов».
+       Раскрытый ежедневник, на развороте цветок жизни, поверх — орбита
+       электрона. Сакральная геометрия и квант на одной обложке.
+       Без текста: на значке приложения подпись всё равно не читается. -->
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F9D976"/>
+      <stop offset="30%" stop-color="#EAA82C"/>
+      <stop offset="60%" stop-color="#C18825"/>
+      <stop offset="85%" stop-color="#7A4B11"/>
+      <stop offset="100%" stop-color="#B88428"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="#C9A34E" stop-opacity=".22"/>
+      <stop offset="100%" stop-color="#C9A34E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="#0b0a0f"/>
+  <rect width="512" height="512" fill="url(#halo)"/>
+
+  <!-- Разворот: корешок по центру, две страницы -->
+  <g stroke="url(#gold)" fill="none" stroke-width="11" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M256 152c-34-23-74-31-116-26-10 1-18 9-18 19v178c0 11 10 20 21 18 38-5 76 3 113 23"/>
+    <path d="M256 152c34-23 74-31 116-26 10 1 18 9 18 19v178c0 11-10 20-21 18-38-5-76 3-113 23"/>
+    <path d="M256 152v212"/>
+  </g>
+
+  <!-- Цветок жизни: центральный круг и шесть по кольцу -->
+  <g stroke="url(#gold)" fill="none" stroke-width="6" opacity=".9">
+    <circle cx="256" cy="248" r="33"/>
+    <circle cx="256" cy="215" r="33"/>
+    <circle cx="256" cy="281" r="33"/>
+    <circle cx="285" cy="232" r="33"/>
+    <circle cx="285" cy="265" r="33"/>
+    <circle cx="227" cy="232" r="33"/>
+    <circle cx="227" cy="265" r="33"/>
+  </g>
+
+  <!-- Орбита электрона поверх геометрии -->
+  <ellipse cx="256" cy="248" rx="98" ry="38" transform="rotate(-28 256 248)"
+           fill="none" stroke="#F6C147" stroke-width="5" opacity=".75"/>
+  <circle cx="338" cy="207" r="11" fill="#FFF2B2"/>
 </svg>

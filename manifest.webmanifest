@@ -1,14 +1,22 @@
 {
-  "name": "Планер — колесо баланса",
-  "short_name": "Планер",
-  "description": "Ежедневник и трекер привычек на основе колеса баланса.",
+  "name": "Квантовый ежедневник",
+  "short_name": "Квант",
+  "description": "Пространство осознанного дня: колесо жизни, девять квантовых моментов, ежедневник и деньги.",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#111110",
-  "theme_color": "#1a1a19",
+  "orientation": "portrait",
+  "background_color": "#0b0a0f",
+  "theme_color": "#0b0a0f",
   "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Квант", "short_name": "Квант", "url": "./#quantum" },
+    { "name": "Колесо жизни", "short_name": "Колесо", "url": "./#wheel" }
   ]
 }

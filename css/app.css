@@ -5,22 +5,31 @@
    — ДЕВЯТЬ ЦВЕТОВ СЕКТОРОВ — язык данных. Их порядок подобран проверкой на
      различимость соседей по кругу при дальтонизме (протанопия, дейтеранопия).
      Менять порядок нельзя без повторной проверки validate_palette.js. */
+/* ИМЕНА ЕЖЕДНЕВНИКА — ЗНАЧЕНИЯ ИГРЫ.
+
+   Цвета больше не подбираются здесь: каждое имя указывает на токен из
+   game-tokens.css, то есть на то же золото и тот же обсидиан, что в «Игре
+   мудрецов». Два продукта должны выглядеть одним.
+
+   Имена оставлены свои, и это не упрямство: на них опирается весь остальной
+   файл и девять цветов секторов. Переименовывать всё ради единообразия
+   значило бы переписать вёрстку целиком и проверять её заново — а меняем мы
+   палитру, не разметку. */
 :root {
   color-scheme: dark;
 
-  --bg: #0A0A0C;
-  --surface: #121216;
-  --surface-2: #17171c;
-  --ink: #FFFFFF;
-  --ink-2: #8E8E93;
-  --line: rgba(212, 175, 55, .14);
-  --line-strong: rgba(212, 175, 55, .3);
+  --bg: var(--bg-2);               /* #100e16 — чуть светлее самого тёмного */
+  --surface: var(--panel);
+  --surface-2: var(--panel-2);
+  --ink: var(--text);
+  --ink-2: var(--muted);
+  --line-strong: var(--gold-line);
 
-  --gold: #D4AF37;
-  --gold-bright: #FFD700;
-  --gold-fill: rgba(212, 175, 55, .14);
-  --gold-gradient: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%);
-  --glow: 0 0 20px rgba(212, 175, 55, .15);
+  --gold: var(--gold-text);
+  --gold-bright: var(--gold-line-lit);
+  --gold-fill: rgba(201, 163, 78, .14);
+  --gold-gradient: var(--gold-3d);
+  --glow: 0 0 20px var(--gold-glow);
 
   --danger: #ff9b9b;
   --ok: #199e70;
@@ -64,18 +73,17 @@
   color: var(--gold-bright);
   transition: border-color .2s, box-shadow .3s, transform .2s;
 }
+/* Только свечение, без изменения размера.
+
+   Сначала кнопка подрастала при наведении и сжималась при нажатии — взято у
+   игры и показалось живым. На деле соседние кнопки стоят в ряд вплотную, и
+   прыгающий размер дёргает всю шапку. Владелец попросил убрать: размер
+   статичный, золото загорается. */
 @media (hover: hover) {
-  .head-btn:hover {
-    border-color: #F6C147;
-    box-shadow: 0 0 12px rgb(246 193 71 / 40%);
-    transform: scale(1.06);
-  }
+  .head-btn:hover { border-color: #F6C147; box-shadow: 0 0 12px rgb(246 193 71 / 40%); }
 }
-.head-btn:active { border-color: #F6C147; transform: scale(.92); }
-@media (prefers-reduced-motion: reduce) {
-  .head-btn { transition: none; }
-  .head-btn:hover, .head-btn:active { transform: none; }
-}
+.head-btn:active { border-color: #F6C147; box-shadow: 0 0 14px rgb(246 193 71 / 55%); }
+@media (prefers-reduced-motion: reduce) { .head-btn { transition: none; } }
 
 /* Отклик на нажатие — общий для всего управления. Золото загорается в тот
    момент, когда палец касается, и гаснет, когда отпускают. */
@@ -92,14 +100,32 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
+/* ФОН — ЗВЁЗДНАЯ СЕТКА ИГРЫ.
+
+   Взята из web/style.css «Игры мудрецов» (.star-layer): точки радиальным
+   градиентом, шаг 38 пикселей, второй слой смещён на половину клетки — от
+   этого рисунок читается шахматкой, а не рядами. Сверху те же два отсвета,
+   что в кабинете игры: золотой справа вверху, фиолетовый слева внизу.
+
+   МЕРЦАНИЯ НЕТ, И ЭТО РЕШЕНИЕ, А НЕ УПУЩЕНИЕ. В игре звёзды мигают: там
+   тридцать четыре элемента с анимацией живут весь сеанс. Здесь человек
+   открывает экран по девять раз в день, и телефон должен дожить до вечера —
+   поэтому фон рисуется один раз средствами CSS и дальше не стоит ничего:
+   ни кадров, ни таймеров, ни узлов в разметке. Подтверждено владельцем. */
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(rgba(255, 255, 255, .22) 1px, transparent 1.4px) 0 0 / 38px 38px,
+    radial-gradient(rgba(255, 235, 180, .13) 1px, transparent 1.4px) 19px 19px / 38px 38px,
+    radial-gradient(1200px 700px at 78% -8%, rgba(201, 163, 78, .10), transparent 60%),
+    radial-gradient(900px 600px at 8% 108%, rgba(120, 84, 196, .09), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;        /* сетка не едет при прокрутке */
   color: var(--ink);
-  font: 15px/1.45 Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.45 var(--sans);
   -webkit-text-size-adjust: 100%;
 }
-h1, h2, .display { font-family: "Playfair Display", Georgia, serif; font-weight: 600; }
+h1, h2, .display { font-family: var(--serif); font-weight: 600; }
 h1 { margin: 0; font-size: 20px; }
 h2 { margin: 0 0 8px; font-size: 18px; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -366,7 +392,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .date-row .what b { display: block; font-size: 15px; }
 .date-row .what span { font-size: 12px; color: var(--ink-2); }
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.section-head h2 { margin: 0; font-size: 14px; font-family: Manrope, system-ui, sans-serif; font-weight: 600; color: var(--ink-2); }
+.section-head h2 { margin: 0; font-size: 14px; font-family: var(--sans); font-weight: 600; color: var(--ink-2); }
 
 /* Широкий экран: боковая панель вместо нижней */
 @media (min-width: 768px) {
@@ -402,7 +428,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .q-arcana {
   width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--gold);
   display: flex; align-items: center; justify-content: center; flex: none;
-  font-family: "Playfair Display", Georgia, serif; font-size: 18px; color: var(--gold-bright);
+  font-family: var(--serif); font-size: 18px; color: var(--gold-bright);
 }
 .q-label { font-size: 12px; }
 .q-arcana-name { margin: 2px 0 0; font-size: 16px; font-weight: 600; }
@@ -440,8 +466,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   width: 190px; height: 190px; border-radius: 50%; border: 2px solid var(--line-strong);
   display: flex; align-items: center; justify-content: center;
 }
-.q-count { font-family: "Playfair Display", Georgia, serif; font-size: 78px; color: var(--gold-bright); }
-.q-infinity { font-family: "Playfair Display", Georgia, serif; font-size: 92px; color: var(--gold-bright); line-height: 1; }
+.q-count { font-family: var(--serif); font-size: 78px; color: var(--gold-bright); }
+.q-infinity { font-family: var(--serif); font-size: 92px; color: var(--gold-bright); line-height: 1; }
 
 /* Блуждающая кнопка: место выбирается при появлении, не по таймеру */
 .q-field { position: absolute; inset: 0; background: rgba(10, 10, 12, .92); }
@@ -476,7 +502,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 /* Практика: картинка, запись голоса, таймер — всё приходит с сервера */
 .q-practice { gap: 16px; overflow-y: auto; padding: 32px; }
 .q-image { max-width: 220px; max-height: 220px; border-radius: 16px; border: 1px solid var(--line-strong); object-fit: contain; }
-.q-practice-title { margin: 0; font-family: "Playfair Display", Georgia, serif; font-size: 22px; font-weight: 600; }
+.q-practice-title { margin: 0; font-family: var(--serif); font-size: 22px; font-weight: 600; }
 .q-audio { width: 100%; max-width: 320px; height: 44px; }
 .q-timer { display: flex; align-items: center; gap: 14px; }
 .q-timer-left { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 30px; font-weight: 700; color: var(--gold-bright); font-variant-numeric: tabular-nums; }
@@ -488,13 +514,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .upd-btn { padding: 0; width: 36px; justify-content: center; }
 .upd-btn svg { width: 17px; height: 17px; stroke: var(--gold-bright); stroke-width: 2; fill: none; stroke-linecap: round; }
 .upd-btn.spin svg { animation: upd-spin 1s linear infinite; }
-/* Список изменений внутри окна обновления: что именно приехало с выкладкой.
-   Вложенные списки — по выкладкам и по пунктам внутри каждой. */
-.upd-changes { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
-.upd-changes ul { margin: 4px 0 0; padding-left: 16px; }
-.upd-changes li { margin: 3px 0; }
-.upd-changes > ul > li > b { color: var(--gold); font-size: 12px; }
-.upd-close { min-height: 38px; margin-top: 12px; width: 100%; font-size: 13px; }
+
 @keyframes upd-spin { to { transform: rotate(360deg); } }
 
 /* Окошко с вердиктом: цифры видно сразу, само уходит через несколько секунд */

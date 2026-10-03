@@ -1,0 +1,65 @@
+/* ============================================================================
+   ТОКЕНЫ ИГРЫ — ВЗЯТЫ КАК ЕСТЬ, НЕ ПРАВИТЬ ЗДЕСЬ.
+
+   Это копия web/shared/tokens.css из «Игры мудрецов». Ежедневник и игра
+   должны выглядеть одним продуктом, а не двумя похожими, поэтому золото,
+   обсидиан и типографика берутся оттуда, а не подбираются заново.
+
+   Правка идёт в игре и копируется сюда целиком. Своё — в app.css, ниже по
+   каскаду: там имена ежедневника переопределяются через эти значения.
+
+   Что убрано из копии: правила для body и общих классов (.btn, .card,
+   .container) — у ежедневника своя вёрстка, и чужие правила ломали бы её.
+   Оставлены ТОЛЬКО переменные, сброс коробки и уважение к выключенной
+   анимации.
+   ========================================================================== */
+:root{
+  /* ── золото Game of Sages ──────────────────────────────────────────────── */
+  --gold-3d: linear-gradient(145deg,#F9D976 0%,#EAA82C 30%,#C18825 60%,#7A4B11 85%,#B88428 100%);
+  --gold-3d-shadow: inset 0 2.5px 4px rgba(255,255,255,.7),
+                    inset 0 -3px 6px rgba(122,75,17,.8),
+                    0 8px 20px rgba(0,0,0,.8);
+  --gold-ink:#381D02;        /* текст НА золоте */
+  --gold-text:#D39D3C;
+  --gold-text-lit:#FFF2B2;
+  --gold-line:#A8721A;
+  --gold-line-lit:#F6C147;
+  --accent-gold:#fbbf24;
+  --gold-glow:rgba(246,193,71,.28);
+
+  /* ── обсидиан и нейтрали (тёплые, с фиолетовым уклоном — выбраны, не по умолчанию) ── */
+  --bg:#0b0a0f;
+  --bg-2:#100e16;
+  --panel:#16131f;
+  --panel-2:#1d1927;
+  --line:rgba(201,163,78,.14);
+  --line-soft:rgba(232,228,221,.07);
+  --text:#ece7de;
+  --muted:#a89fb2;
+  --faint:#6f6880;
+
+  /* ── чакры: центр агента + шесть лепестков ────────────────────────────── */
+  --chakra-root:#c1443e;     /* центр — сам агент */
+  --chakra-1:#e0873c;
+  --chakra-2:#e8c25a;
+  --chakra-3:#5fbf8f;
+  --chakra-4:#4fa9d8;
+  --chakra-5:#5566c6;
+  --chakra-6:#9161c9;
+
+  /* ── статусы ───────────────────────────────────────────────────────────── */
+  --good:#5fbf8f;
+  --warn:#e0a942;
+  --crit:#e0655f;
+
+  /* ── типографика и метрика ─────────────────────────────────────────────── */
+  --serif:'Cormorant Garamond','Iowan Old Style',Georgia,'Times New Roman',serif;
+  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,'Cascadia Mono',Menlo,monospace;
+  --radius:14px;
+  --maxw:1120px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+:focus-visible{outline:2px solid var(--gold-line-lit);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

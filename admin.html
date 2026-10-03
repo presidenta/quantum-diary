@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http://localhost:8580; base-uri 'none'; form-action 'self'">
-<meta name="theme-color" content="#0A0A0C">
+<meta name="theme-color" content="#0b0a0f">
 <title>Кабинет администратора</title>
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<!-- Токены игры идут ПЕРВЫМИ: app.css ниже по каскаду переопределяет
+     ими свои имена (см. :root в app.css) -->
+<link rel="stylesheet" href="css/game-tokens.css">
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/admin.css">
 <script type="module" src="js/admin.js"></script>
