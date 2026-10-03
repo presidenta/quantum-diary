@@ -11,6 +11,7 @@ import {
 } from './store.js';
 import { LANGUAGES, pickLanguage, isLanguage } from './core/i18n.js';
 import { watchErrors } from './errors.js';
+import { initUpdate } from './update.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
@@ -389,6 +390,7 @@ async function boot() {
   });
 
   applyLanguage();
+  initUpdate();
 
   if (API_BASE && !(await hasSession())) { showGate(); return; }
   hideGate();

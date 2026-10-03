@@ -195,9 +195,16 @@
 
   <div class="lang-wrap">
     <div class="lang-menu" id="langMenu" hidden role="group" aria-label="Язык"></div>
-    <button type="button" id="langBtn" class="lang-btn" aria-expanded="false">
-      <span id="langLabel">Рус</span><span class="arrow" aria-hidden="true">▲</span>
-    </button>
+    <div class="bottom-row">
+      <!-- Обновление рядом с языком — как в игре. Отвечает цифрами на вопрос
+           «обновилось или нет» и выбрасывает запас страниц -->
+      <button type="button" id="updateBtn" class="lang-btn upd-btn" aria-label="Обновить" title="Обновить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"></path></svg>
+      </button>
+      <button type="button" id="langBtn" class="lang-btn" aria-expanded="false">
+        <span id="langLabel">Рус</span><span class="arrow" aria-hidden="true">▲</span>
+      </button>
+    </div>
   </div>
 </div>
 
