@@ -8,11 +8,11 @@
    Как только сервер ответит — вход и синхронизация включатся сами, без
    новой выкладки. Решает это проверка в boot(), см. js/app.js. */
 
-const const PRODUCTION_API = 'https://game.coreviaflow.space/genesisystem';
+const PRODUCTION_API = 'https://game.coreviaflow.space/genesisystem';
 
 export const API_BASE = ['localhost', '127.0.0.1'].includes(location.hostname)
   ? 'http://localhost:8580'
-  : PRODUCTION_API;
+const PRODUCTION_API = 'https://game.coreviaflow.space/genesisystem';
 
 /* Сервер отвечает? Ждём недолго: человеку нужен работающий экран, а не
    ожидание. Не ответил — живём на устройстве и скажем об этом. */
