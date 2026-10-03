@@ -176,11 +176,22 @@
 
     <!-- День -->
     <section id="viewDay" hidden>
+      <!-- Переключатель вида: день, неделя, месяц. Устройство экранов взято
+           у Super Productivity (MIT) — неделя колонками, месяц сеткой. -->
+      <div class="segmented" id="dayViews" role="group">
+        <button type="button" data-dayview="day" aria-pressed="true" data-i18n="wheel.day">День</button>
+        <button type="button" data-dayview="week" aria-pressed="false" data-i18n="wheel.week">Неделя</button>
+        <button type="button" data-dayview="month" aria-pressed="false" data-i18n="wheel.month">Месяц</button>
+      </div>
+
       <div class="range">
         <button type="button" id="dayPrev" class="icon-btn plain" aria-label="Назад">‹</button>
         <span id="dayLabel"></span>
         <button type="button" id="dayNext" class="icon-btn plain" aria-label="Вперёд">›</button>
       </div>
+
+      <!-- Календарь: показывается в видах «неделя» и «месяц» -->
+      <div class="card" id="calendarCard" hidden></div>
 
       <div class="card">
         <div class="section-head">

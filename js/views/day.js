@@ -7,6 +7,9 @@ import {
   todayKey, addDays, fromKey, isDateKey
 } from '../core/dates.js';
 import {
+  weekDays, monthGrid, isSameMonth, taskCounts, periodLabel, shift, isToday
+} from '../core/calendar.js';
+import {
   tasksOfDay, nextPosition, taskProgress, overdueTasks, noteOfDay, upcomingDates
 } from '../core/diary.js';
 
@@ -18,14 +21,84 @@ let noteTimer = null;
 export function renderDay() {
   const date = state.day;
   const today = todayKey();
+  const view = state.dayView || 'day';
 
-  const label = fmtDay().format(fromKey(date));
-  $('dayLabel').textContent = label[0].toUpperCase() + label.slice(1);
-  $('dayNext').disabled = date >= today;
+  $('dayViews').querySelectorAll('button').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.dayview === view)));
+
+  if (view === 'day') {
+    const label = fmtDay().format(fromKey(date));
+    $('dayLabel').textContent = label[0].toUpperCase() + label.slice(1);
+    // Вперёд дальше сегодняшнего не ходим: планировать можно, а отмечать
+    // сделанное в будущем — нет
+    $('dayNext').disabled = date >= today;
+    $('calendarCard').hidden = true;
+  } else {
+    $('dayLabel').textContent = periodLabel(view, date, state.language);
+    $('dayNext').disabled = false;
+    $('calendarCard').hidden = false;
+    renderCalendar(view, date);
+  }
 
   renderTasks(date);
   renderNote(date);
   renderDates(date);
+}
+
+/* ---------- Календарь ----------
+
+   Неделя — колонки дней, месяц — сетка по семь: так устроено расписание в
+   Super Productivity (MIT), и так же это выглядит в любом ежедневнике. Их код
+   на Angular и к нам не переносится, но раскладка там сделана привычно, и
+   выдумывать свою незачем.
+
+   Внутри клетки не список задач, а их счёт: в клетку размером с ноготь список
+   не влезет, а «1/3» читается сразу. Нажатие открывает день целиком. */
+function renderCalendar(view, anchor) {
+  const counts = taskCounts(state.data.tasks);
+  const weeks = view === 'week' ? [weekDays(anchor)] : monthGrid(anchor);
+  const names = new Intl.DateTimeFormat(state.language, { weekday: 'short', timeZone: 'UTC' });
+
+  const head = h('div', { class: 'cal-head' },
+    ...weeks[0].map(day => h('span', { text: names.format(fromKey(day)) })));
+
+  const body = h('div', { class: 'cal' },
+    ...weeks.flat().map(day => dayCell(day, anchor, view, counts.get(day))));
+
+  $('calendarCard').replaceChildren(head, body);
+}
+
+function stepPeriod(direction) {
+  const view = state.dayView || 'day';
+  if (view === 'day') {
+    // Вперёд дальше сегодняшнего не ходим — отмечать сделанное в будущем нечего
+    if (direction > 0 && state.day >= todayKey()) return;
+    state.day = addDays(state.day, direction);
+  } else {
+    state.day = shift(view, state.day, direction);
+  }
+  renderDay();
+}
+
+function dayCell(day, anchor, view, count) {
+  const classes = ['cal-day'];
+  if (view === 'month' && !isSameMonth(day, anchor)) classes.push('other');
+  if (isToday(day)) classes.push('today');
+  if (day === state.day) classes.push('picked');
+
+  const parts = [h('b', { text: String(Number(day.slice(8))) })];
+  if (count) {
+    const left = count.total - count.done;
+    parts.push(h('span', {
+      class: left ? 'cal-count' : 'cal-count all-done',
+      text: left ? count.done + '/' + count.total : String(count.total)
+    }));
+  }
+
+  return h('button', {
+    type: 'button', class: classes.join(' '),
+    onclick: () => { state.day = day; state.dayView = 'day'; renderDay(); }
+  }, ...parts);
 }
 
 /* ---------- Задачи ---------- */
@@ -179,12 +252,22 @@ $('dateDialog').addEventListener('close', async () => {
 /* ---------- Запуск ---------- */
 
 export function initDay() {
+  /* Переключатель вида. Открывая неделю или месяц, остаёмся на том же дне:
+     человек смотрит «а что вокруг», а не прыгает в начало периода. */
+  $('dayViews').addEventListener('click', e => {
+    const view = e.target.dataset.dayview;
+    if (!view || view === state.dayView) return;
+    state.dayView = view;
+    renderDay();
+  });
+
   $('addTask').addEventListener('click', openTaskDialog);
   $('addDate').addEventListener('click', openDateDialog);
-  $('dayPrev').addEventListener('click', () => { state.day = addDays(state.day, -1); renderDay(); });
-  $('dayNext').addEventListener('click', () => {
-    if (state.day < todayKey()) { state.day = addDays(state.day, 1); renderDay(); }
-  });
+  /* Стрелки шагают тем периодом, который открыт: днём — по дням, неделей —
+     по неделям, месяцем — по месяцам. Иначе, листая месяц, пришлось бы жать
+     тридцать раз. */
+  $('dayPrev').addEventListener('click', () => { stepPeriod(-1); });
+  $('dayNext').addEventListener('click', () => { stepPeriod(1); });
 
   // Голосом — только там, где браузер это умеет; на телефоне проще диктовать
   // кнопкой микрофона на клавиатуре, поэтому своя кнопка здесь не обязательна

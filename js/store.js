@@ -16,6 +16,7 @@ export const state = {
   period: 'week',         // период колеса
   anchor: todayKey(),     // какой день/неделя/месяц показываем
   day: todayKey(),        // какой день открыт в ежедневнике
+  dayView: 'day',         // как показан ежедневник: day | week | month
   selected: null,
   me: null,
   language: DEFAULT_LANGUAGE,

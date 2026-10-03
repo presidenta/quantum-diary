@@ -634,3 +634,32 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 }
 .seg-radio input:checked + span { background: var(--gold-fill); color: var(--gold-bright); }
 .seg-radio input:focus-visible + span { box-shadow: var(--glow-active); }
+
+/* КАЛЕНДАРЬ в разделе «День».
+
+   Неделя — одна строка из семи колонок, месяц — та же сетка в несколько
+   строк. Раскладка взята у расписания Super Productivity: так это выглядит в
+   любом ежедневнике, и человеку не нужно разбираться заново.
+
+   В клетке не список задач, а их счёт: в клетку размером с ноготь список не
+   влезет, а «1/3» читается сразу. */
+.cal-head, .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-head { margin-bottom: 6px; }
+.cal-head span { text-align: center; font-size: 11px; color: var(--ink-2); text-transform: capitalize; }
+
+.cal-day {
+  min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 4px 2px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid transparent; border-radius: 10px;
+  color: var(--ink); font: inherit;
+}
+.cal-day b { font-size: 14px; font-weight: 600; }
+/* Дни соседних месяцев видны, но приглушены: сетка с дырами читается хуже */
+.cal-day.other { opacity: .35; }
+.cal-day.today { border-color: var(--gold); }
+.cal-day.picked { background: var(--gold-fill); }
+.cal-day:hover { border-color: var(--line-strong); }
+
+.cal-count { font-size: 10px; color: var(--ink-2); line-height: 1; }
+/* Всё сделано — счёт золотом: по одному взгляду видно закрытые дни */
+.cal-count.all-done { color: var(--gold); }
