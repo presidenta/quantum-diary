@@ -239,6 +239,31 @@
      приложения на телефон, выход и удаление. Раньше смена пароля и удаление
      жили в самом низу настроек, а выход — иконкой рядом с именем, где его
      задевали случайно. -->
+<!-- Запись о деньгах. Одна форма и на расход, и на приход: разница между
+     ними — одно поле, а поля, даты и категории общие. -->
+<dialog id="moneyDialog">
+  <form method="dialog" class="sheet" id="moneyForm">
+    <div class="sheet-head">
+      <button type="button" class="icon-btn plain back-btn" id="moneyBack" aria-label="Назад">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      </button>
+      <h2 data-i18n="money.entry">Запись</h2>
+    </div>
+    <div class="segmented" role="group">
+      <label class="seg-radio"><input type="radio" name="kind" value="expense" checked><span data-i18n="money.expense">Расход</span></label>
+      <label class="seg-radio"><input type="radio" name="kind" value="income"><span data-i18n="money.income">Приход</span></label>
+    </div>
+    <label><span data-i18n="money.amount">Сумма</span><input name="amount" type="text" inputmode="decimal" required></label>
+    <label><span data-i18n="money.category">Категория</span><select name="category"></select></label>
+    <label><span data-i18n="money.note">Заметка</span><input name="note" maxlength="300"></label>
+    <label><span data-i18n="money.date">Дата</span><input name="date" type="date" required></label>
+    <menu>
+      <button value="cancel" formnovalidate class="btn" data-i18n="adm.cancel">Отмена</button>
+      <button value="save" class="btn primary" data-i18n="adm.save">Сохранить</button>
+    </menu>
+  </form>
+</dialog>
+
 <dialog id="profileDialog">
   <div class="sheet">
     <div class="sheet-head">

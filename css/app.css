@@ -586,3 +586,51 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .profile-photo-actions { display: flex; gap: 8px; }
 .profile-photo-actions .btn { flex: 1; min-height: 42px; font-size: 13px; }
 .profile-rows { display: grid; gap: 8px; margin-top: 12px; }
+
+/* ДЕНЬГИ.
+
+   Три числа сверху — потрачено, пришло, осталось: это то, ради чего раздел
+   открывают. Полоса под ними показывает, куда уходит больше всего, без
+   отдельного экрана отчётов. */
+.money-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.money-total {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--edge); padding: 10px 12px; text-align: center;
+}
+.money-total b { display: block; font-size: 17px; font-family: var(--serif); }
+.money-total span { font-size: 11px; color: var(--ink-2); }
+.money-total.earned b { color: var(--ok); }
+.money-total.minus b { color: var(--danger); }
+.money-total.left b { color: var(--gold-bright); }
+
+.money-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.money-actions .grow { flex: 1; }
+
+/* Микрофон: красная точка горит, пока слушаем — видно, что приложение ждёт */
+.money-mic { display: inline-flex; align-items: center; gap: 8px; }
+.money-mic-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-2); flex: none; }
+.money-mic.listening .money-mic-dot { background: var(--danger); }
+.money-mic.listening { border-color: var(--danger); }
+
+.money-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,.06); }
+.money-bar i { display: block; height: 100%; }
+.money-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 12px; font-size: 12px; color: var(--ink-2); }
+.money-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+
+.money-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.money-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--edge); background: var(--surface-2); }
+.money-what { flex: 1; min-width: 0; }
+.money-what b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.money-what span { font-size: 11px; }
+.money-sum { font-family: var(--serif); font-size: 15px; white-space: nowrap; }
+.money-row.income .money-sum { color: var(--ok); }
+
+/* Переключатель «расход / приход»: радиокнопки, но выглядят как вкладки */
+.seg-radio { flex: 1; display: block; position: relative; }
+.seg-radio input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-radio span {
+  display: block; text-align: center; padding: 9px 4px; border-radius: 10px;
+  font-weight: 600; font-size: 13px; color: var(--ink-2); cursor: pointer;
+}
+.seg-radio input:checked + span { background: var(--gold-fill); color: var(--gold-bright); }
+.seg-radio input:focus-visible + span { box-shadow: var(--glow-active); }

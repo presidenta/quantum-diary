@@ -17,6 +17,7 @@ import { initPasswordEyes } from './password-eye.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
+import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
 
@@ -180,13 +181,7 @@ const closeDrawer = () => {
   $('drawerBack').hidden = true;
 };
 
-/* ---------- Квант и Деньги: пока заглушки с честным текстом ---------- */
-
-function renderMoney() {
-  $('moneyCard').replaceChildren(
-    h('p', { style: 'margin:0 0 8px;font-weight:600', text: t('money.title') }),
-    h('p', { class: 'muted', style: 'margin:0', text: t('money.empty') }));
-}
+/* Раздел «Деньги» живёт в views/money.js — там же правила счёта и голос */
 
 /* ---------- Настройки ---------- */
 
@@ -430,6 +425,15 @@ async function boot() {
     await clearAll();
     location.reload();
   });
+  /* ---------- Деньги ---------- */
+
+  // Список категорий заполняется один раз и обновляется при смене языка
+  fillCategorySelect($('moneyForm').elements.category);
+  $('moneyBack').addEventListener('click', () => $('moneyDialog').close());
+  $('moneyDialog').addEventListener('close', async () => {
+    if ($('moneyDialog').returnValue === 'save') await saveEntry();
+  });
+
   /* ---------- Профиль ---------- */
 
   $('drawerUser').addEventListener('click', () => { closeDrawer(); $('profileDialog').showModal(); });
