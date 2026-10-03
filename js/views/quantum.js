@@ -195,12 +195,16 @@ const formatLeft = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0,
 function renderWanderButton(live, moment, day) {
   const x = 6 + Math.random() * 52;          // проценты, чтобы не вылезти за край
   const y = 10 + Math.random() * 60;
+  /* На кнопке висит только нажатие. Отпускание слушается на окне (startHold).
+
+     Раньше здесь были ещё pointerup, pointercancel и pointerleave — и
+     удержание отменялось само, не дожив до второй секунды: startHold
+     перерисовывал экран целиком, кнопка исчезала из-под пальца, браузер
+     считал, что указатель покинул элемент, и слал leave прямо в отмену.
+     Снаружи это выглядело так, будто кнопка не работает вовсе. */
   const button = h('button', {
     type: 'button', class: 'q-teleport',
-    onpointerdown: e => startHold(e, moment, day),
-    onpointerup: cancelHold,
-    onpointercancel: cancelHold,
-    onpointerleave: cancelHold
+    onpointerdown: e => startHold(e, moment, day)
   },
     h('span', { class: 'q-teleport-text', text: t('quantum.teleport') }),
     h('span', { class: 'q-teleport-hold', text: t('quantum.hold') }));
@@ -213,17 +217,26 @@ function startHold(event, moment, day) {
   event.preventDefault();
   if (holdTimer) return;
   holdCount = 0;
+
+  /* Счёт показываем ПОВЕРХ поля, не стирая кнопку: палец всё это время лежит
+     на ней, и убирать из-под него элемент нельзя. */
   const live = $('quantumLive');
-  live.replaceChildren(holdScreen(1));
+  const overlay = holdScreen(1);
+  live.appendChild(overlay);
+  const counter = overlay.querySelector('.q-count');
+
+  // Отпустить могут где угодно — палец за восемь секунд успевает съехать с
+  // кнопки, а на телефоне ещё и прокрутить экран
+  window.addEventListener('pointerup', cancelHold);
+  window.addEventListener('pointercancel', cancelHold);
 
   holdTimer = setInterval(() => {
     holdCount += 1;
     if (holdCount >= HOLD_SECONDS) {
-      clearInterval(holdTimer);
-      holdTimer = null;
+      stopHold();
       finishHold(moment, day);
     } else {
-      live.replaceChildren(holdScreen(holdCount + 1));
+      counter.textContent = String(holdCount + 1);
     }
   }, 1000);
 }
@@ -235,12 +248,20 @@ function holdScreen(count) {
     h('button', { type: 'button', class: 'btn', text: t('quantum.release'), onclick: cancelHold }));
 }
 
-// Отпустили раньше восьми секунд — ничего не засчитано, следа не остаётся
-function cancelHold() {
-  if (!holdTimer) return;
+// Остановить счёт и снять слушателей окна — одним местом, чтобы они не
+// копились от удержания к удержанию
+function stopHold() {
   clearInterval(holdTimer);
   holdTimer = null;
   holdCount = 0;
+  window.removeEventListener('pointerup', cancelHold);
+  window.removeEventListener('pointercancel', cancelHold);
+}
+
+// Отпустили раньше восьми секунд — ничего не засчитано, следа не остаётся
+function cancelHold() {
+  if (!holdTimer) return;
+  stopHold();
   renderQuantum();
 }
 
