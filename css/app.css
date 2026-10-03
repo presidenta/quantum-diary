@@ -277,6 +277,12 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .gate-form { display: grid; gap: 11px; }
 .gate-msg { margin: 0; font-size: 13px; min-height: 18px; color: var(--ink-2); }
 .gate-msg.is-error { color: var(--danger); }
+/* ОБЯЗАТЕЛЬНОЕ ПОЛЕ ВИДНО ЗАРАНЕЕ, а не после того, как браузер ругнулся.
+   Человек заполняет форму один раз и не должен угадывать, что из неё нужно. */
+.gate-form label:has(input[required]) > span::after,
+.sheet label:has(input[required]) > span::after {
+  content: " *"; color: var(--danger); font-weight: 600;
+}
 .gate-msg.is-ok { color: var(--ok); }
 
 /* День */

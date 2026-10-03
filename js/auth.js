@@ -38,8 +38,9 @@ export function requestAccess({ displayName, email, phone, telegramId }) {
   });
 }
 
-export async function login(email, password) {
-  const { token, userId } = await api('/api/session/login', { email, password });
+// Входят почтой или номером кабинета — что из этого, разбирает сервер
+export async function login(login, password) {
+  const { token, userId } = await api('/api/session/login', { login, password });
   const previous = await getMeta('userId');
   if (sessionChange(previous, userId) === 'clear') {
     await clearAll();            // стирает и token, и cursor, и все данные

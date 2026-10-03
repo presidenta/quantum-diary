@@ -434,7 +434,7 @@ async function boot() {
     msg.textContent = '';
     const f = e.target.elements;
     try {
-      await doLogin(f.email.value, f.password.value);
+      await doLogin(f.login.value, f.password.value);
       hideGate();
       await start();
     } catch (err) {
