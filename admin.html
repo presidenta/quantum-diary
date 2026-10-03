@@ -14,14 +14,17 @@
 </head>
 <body class="admin">
 
-<!-- Вход по токену: он лежит в .env сервера, человек его не придумывает -->
+<!-- Обычный путь сюда — своя учётная запись с ролью администратора; этот
+     экран показывается, только если её нет. Служебный ключ — запасной путь на
+     случай, когда администраторов не осталось вовсе. -->
 <section id="tokenGate" class="gate" hidden>
   <form class="gate-card" id="tokenForm">
     <div class="gate-brand">
       <h1>Кабинет администратора</h1>
-      <p class="muted m0">Доступ по токену из <code>.env</code> сервера</p>
+      <p class="muted m0">Войдите в ежедневник записью с ролью администратора — и эта страница откроется сама.</p>
     </div>
-    <label><span>ADMIN_TOKEN</span><input name="token" type="password" required autocomplete="off"></label>
+    <p class="muted">Служебный ключ нужен, только если администраторов не осталось. Он создаётся сервером при первом запуске и виден один раз в журнале контейнера.</p>
+    <label><span>Служебный ключ</span><input name="token" type="password" required autocomplete="off"></label>
     <p class="gate-msg" id="tokenMsg" role="alert"></p>
     <button type="submit" class="btn primary">Войти</button>
   </form>

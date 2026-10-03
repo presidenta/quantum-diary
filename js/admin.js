@@ -1,11 +1,21 @@
 /* Кабинет администратора: заявки, пароли, блокировки и содержание
-   квантового модуля. Вход — по токену из .env сервера (ADMIN_TOKEN).
+   квантового модуля.
 
-   Токен хранится в sessionStorage, а не в localStorage: закрыли вкладку —
-   он пропал. Это ключ от чужих заявок, ему не место в долгой памяти браузера. */
+   ВХОД — СВОЕЙ УЧЁТНОЙ ЗАПИСЬЮ, служебный ключ остался запасным путём.
+   Сервер пускает сюда по роли: requireAdmin принимает либо ADMIN_TOKEN, либо
+   сессию человека с ролью admin (server/src/auth.js). Страница же продолжала
+   требовать ключ — и администратор, уже вошедший в приложение, упирался в
+   запертую дверь и шёл искать ключ, который лежит в журнале контейнера на
+   сервере, куда доступа нет. Теперь сначала пробуем сессию.
+
+   Служебный ключ нужен ровно в одном случае: администраторов нет вовсе или
+   все заблокированы. Он хранится в sessionStorage, а не в localStorage:
+   закрыли вкладку — пропал. Это ключ от чужих заявок и паролей, ему не место
+   в долгой памяти браузера. */
 
 import { API_BASE } from './config.js';
 import { h, setStyle } from './store.js';
+import { getMeta } from './db.js';
 import { initPasswordEyes } from './password-eye.js';
 
 const $ = id => document.getElementById(id);
@@ -329,19 +339,41 @@ $('statusTabs').addEventListener('click', e => {
   withBusy(loadPeople);
 });
 
+/* Пробует ключ и говорит, подошёл ли. Ошибку связи от отказа отличаем:
+   «сервер не отвечает» и «не пускают» лечатся по-разному. */
+async function keyWorks(candidate) {
+  const previous = token;
+  token = candidate;
+  try {
+    await api('/api/admin/registrations?status=pending');
+    return true;
+  } catch (err) {
+    token = previous;
+    if (err.status !== 401) throw err;      // связь, а не отказ
+    return false;
+  }
+}
+
 async function boot() {
   // setStyle подключён, чтобы стили шли мимо запрета inline-style в CSP
   setStyle(document.body, 'min-height: 100vh');
   initPasswordEyes();
-  token = sessionStorage.getItem(KEY);
-  if (!token) { showGate(); return; }
+
+  // По порядку: служебный ключ этой вкладки, затем своя учётная запись
+  const candidates = [sessionStorage.getItem(KEY), await getMeta('token').catch(() => null)];
   try {
-    await api('/api/admin/registrations?status=pending');
-    showAdmin();
-    await refresh();
-  } catch (err) {
-    token = null;
-    showGate(err.status === 401 ? 'Токен не подошёл.' : 'Сервер не отвечает. Он запущен?');
+    for (const candidate of candidates) {
+      if (!candidate || !looksLikeToken(candidate)) continue;
+      if (await keyWorks(candidate)) {
+        showAdmin();
+        await refresh();
+        return;
+      }
+    }
+    // Своя сессия есть, но роль не администраторская — это не повод молчать
+    showGate(candidates[1] ? 'Этот кабинет не администраторский.' : '');
+  } catch {
+    showGate('Сервер не отвечает. Он запущен?');
   }
 }
 
