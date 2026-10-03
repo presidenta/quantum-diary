@@ -134,6 +134,45 @@
      Всё, что специалист настраивает лично ему: фазы дня и дни недели, в
      каждом блоке — текст, звук и картинка, у дня недели ещё и цвет. Человек
      со своего телефона этого не видит и не меняет: ему приезжает готовое. -->
+<!-- НАСТРОЙКИ КЛИЕНТА — под шестерёнкой.
+
+     В карточке было пять кнопок в ряд, и среди них «Заблокировать» красным:
+     список людей выглядел пультом, а не списком людей. На виду осталось то,
+     ради чего сюда заходят каждый день, остальное — здесь. -->
+<dialog id="personDialog">
+  <div class="sheet">
+    <div class="sheet-head">
+      <button type="button" class="icon-btn plain back-btn" id="personBack" aria-label="Назад">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      </button>
+      <h2 data-i18n="adm.personSettings">Настройки клиента</h2>
+    </div>
+    <p class="muted m0" id="personFor"></p>
+
+    <div class="card mt10">
+      <h3 data-i18n="adm.password">Пароль</h3>
+      <p class="muted m0" id="personPasswordState"></p>
+      <button type="button" class="btn mt10" id="personNewPassword" data-i18n="adm.newPassword">Выдать новый пароль</button>
+    </div>
+
+    <div class="card mt10">
+      <h3 data-i18n="adm.access">Доступ</h3>
+      <p class="muted m0" id="personAccessState"></p>
+      <button type="button" class="btn mt10" id="personAccess" data-i18n="adm.accessUntil">Срок доступа</button>
+    </div>
+
+    <div class="card mt10">
+      <h3 data-i18n="adm.status">Состояние</h3>
+      <p class="muted m0" id="personStatusState"></p>
+      <button type="button" class="btn danger mt10" id="personBlock"></button>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="personClose" data-i18n="adm.done">Готово</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="quantumDialog">
   <div class="sheet wide">
     <h2 data-i18n="adm.quantumCabinet">Квантовый кабинет</h2>
@@ -142,6 +181,7 @@
     <div class="segmented" id="quantumTabs" role="group">
       <button type="button" data-qkind="slot" aria-pressed="true" data-i18n="adm.phases">Фазы дня</button>
       <button type="button" data-qkind="weekday" aria-pressed="false" data-i18n="adm.weekdays">Дни недели</button>
+      <button type="button" data-qkind="phrases" aria-pressed="false" data-i18n="adm.phrases">Фразы</button>
     </div>
 
     <div id="quantumBlocks" class="q-blocks"></div>
@@ -153,18 +193,6 @@
   </div>
 </dialog>
 
-<dialog id="assignDialog">
-  <form method="dialog" class="sheet" id="assignForm">
-    <h2 data-i18n="adm.personalSet">Персональный набор</h2>
-    <p class="muted m0" id="assignFor"></p>
-    <ul id="assignList" class="phrases"></ul>
-    <p class="muted m0" data-i18n="adm.nothingPicked">Ничего не отмечено — человек получает общие фразы.</p>
-    <div class="actions">
-      <button value="cancel" formnovalidate class="btn" data-i18n="adm.cancel">Отмена</button>
-      <button value="save" class="btn primary" data-i18n="adm.save">Сохранить</button>
-    </div>
-  </form>
-</dialog>
 
 </body>
 </html>

@@ -14,7 +14,7 @@
    в долгой памяти браузера. */
 
 import { API_BASE } from './config.js';
-import { h, setStyle } from './store.js';
+import { h, setStyle, svgIcon, ICONS } from './store.js';
 import { getMeta, setMeta } from './db.js';
 import { LANGUAGES, DEFAULT_LANGUAGE, isLanguage, pickLanguage, translate } from './core/i18n.js';
 import { initPasswordEyes } from './password-eye.js';
@@ -176,42 +176,18 @@ function renderPerson(person) {
       })
     }));
   } else {
+    /* На виду — то, ради чего сюда заходят каждый день. Всё остальное под
+       шестерёнкой: пять кнопок в ряд, среди них «Заблокировать» красным,
+       превращали список людей в пульт. */
     actions.push(h('button', {
-      type: 'button', class: 'btn grow', text: 'Новый пароль',
-      onclick: () => withBusy(async () => {
-        const result = await api(`/api/admin/users/${person.id}/reset-password`, { method: 'POST' });
-        showPassword(result.password, `${result.displayName} · ${result.email}`);
-      })
-    }));
-    actions.push(h('button', {
-      type: 'button', class: 'btn', text: t('adm.phrases'),
-      onclick: () => openAssign(person)
-    }));
-    actions.push(h('button', {
-      type: 'button', class: 'btn', text: t('adm.quantumCabinet'),
+      type: 'button', class: 'btn grow', text: t('adm.quantumCabinet'),
       onclick: () => openQuantum(person)
     }));
     actions.push(h('button', {
-      type: 'button', class: 'btn',
-      text: person.accessUntil ? `Срок: ${fmtDate(person.accessUntil)}` : 'Срок доступа',
-      onclick: () => askAccess(person)
-    }));
-    actions.push(person.status === 'blocked'
-      ? h('button', {
-          type: 'button', class: 'btn', text: 'Разблокировать',
-          onclick: () => withBusy(async () => {
-            await api(`/api/admin/users/${person.id}/unblock`, { method: 'POST' });
-            await loadPeople();
-          })
-        })
-      : h('button', {
-          type: 'button', class: 'btn danger', text: 'Заблокировать',
-          onclick: () => withBusy(async () => {
-            if (!confirm(`Закрыть доступ для ${person.displayName}? Все его входы оборвутся сразу.`)) return;
-            await api(`/api/admin/users/${person.id}/block`, { method: 'POST' });
-            await loadPeople();
-          })
-        }));
+      type: 'button', class: 'icon-btn head-btn', 'aria-label': t('adm.personSettings'),
+      title: t('adm.personSettings'),
+      onclick: () => openPerson(person)
+    }, svgIcon(ICONS.gear, 19)));
   }
 
   /* Лицо в списке: специалист ведёт людей, а не строки с почтой. Фотографию
@@ -288,29 +264,8 @@ $('phraseForm').addEventListener('submit', async e => {
   });
 });
 
-let assignUser = null;
-
-async function openAssign(person) {
-  assignUser = person;
-  $('assignFor').textContent = `${person.displayName} · ${person.email}`;
-  const assigned = new Set(await api(`/api/admin/users/${person.id}/quantum/phrases`));
-  $('assignList').replaceChildren(...phrases.map(p => h('li', { class: 'phrase' },
-    h('input', { type: 'checkbox', value: p.id, checked: assigned.has(p.id), 'aria-label': p.text }),
-    h('div', {},
-      h('span', { class: 'text', text: p.text }),
-      h('span', { class: 'meta', text: `${SLOTS[p.slot]} · ${LANGS[p.language]}` })),
-    h('span', {}))));
-  $('assignDialog').returnValue = '';
-  $('assignDialog').showModal();
-}
-
-$('assignDialog').addEventListener('close', async () => {
-  if ($('assignDialog').returnValue !== 'save' || !assignUser) return;
-  const ids = [...$('assignList').querySelectorAll('input:checked')].map(i => i.value);
-  await withBusy(() => api(`/api/admin/users/${assignUser.id}/quantum/phrases`, {
-    method: 'POST', body: JSON.stringify({ phraseIds: ids })
-  }));
-});
+/* Персональный набор фраз переехал вкладкой в квантовый кабинет —
+   см. renderAssignBlock выше. Отдельный диалог убран вместе с кнопкой. */
 
 /* ---------- Сбои с устройств ---------- */
 
@@ -476,10 +431,54 @@ function renderQuantumTabs() {
 const settingOf = (kind, key) =>
   quantumSettings.find(x => x.kind === kind && x.key === key) || {};
 
-function renderQuantumBlocks() {
+/* Третья вкладка — персональный набор фраз. Раньше он жил отдельной кнопкой
+   в карточке и путал: снаружи было непонятно, чем «Фразы» отличаются от
+   «Содержания». Это одно и то же про одного человека, поэтому и место одно. */
+async function renderQuantumBlocks() {
+  if (quantumKind === 'phrases') return renderAssignBlock();
   const keys = quantumKind === 'slot' ? SLOT_KEYS : WEEKDAY_KEYS;
   $('quantumBlocks').replaceChildren(...keys.map(([key, labelKey]) =>
     quantumBlock(quantumKind, key, t(labelKey))));
+}
+
+async function renderAssignBlock() {
+  const box = $('quantumBlocks');
+  box.replaceChildren(h('p', { class: 'muted m0', text: t('adm.loading') }));
+  let assigned;
+  try {
+    assigned = new Set(await api(`/api/admin/users/${quantumPerson.id}/quantum/phrases`));
+  } catch {
+    box.replaceChildren(h('p', { class: 'muted m0', text: t('adm.saveFailed') }));
+    return;
+  }
+  if (!phrases.length) {
+    box.replaceChildren(h('p', { class: 'muted m0', text: t('adm.noPhrasesYet') }));
+    return;
+  }
+  box.replaceChildren(
+    h('p', { class: 'muted m0', text: t('adm.assignNote') }),
+    h('ul', { class: 'phrases mt10' }, ...phrases.map(p => h('li', { class: 'phrase' },
+      h('input', {
+        type: 'checkbox', value: p.id, checked: assigned.has(p.id), 'aria-label': p.text,
+        onchange: saveAssigned
+      }),
+      h('div', {},
+        h('span', { class: 'text', text: p.text }),
+        h('span', { class: 'meta', text: `${SLOTS[p.slot]} · ${LANGS[p.language]}` })),
+      h('span', {})))));
+}
+
+// Отметку сохраняем сразу: отдельная кнопка «Сохранить» на списке галочек —
+// лишний шаг, о котором забывают, и набор молча остаётся прежним
+async function saveAssigned() {
+  const ids = [...$('quantumBlocks').querySelectorAll('input:checked')].map(i => i.value);
+  try {
+    await api(`/api/admin/users/${quantumPerson.id}/quantum/phrases`, {
+      method: 'POST', body: JSON.stringify({ phraseIds: ids })
+    });
+  } catch {
+    showError(t('adm.saveFailed'));
+  }
 }
 
 function quantumBlock(kind, key, label) {
@@ -558,3 +557,54 @@ $('quantumTabs').addEventListener('click', e => {
   renderQuantumBlocks();
 });
 $('closeQuantum').addEventListener('click', () => $('quantumDialog').close());
+
+/* ---------- Настройки клиента: всё, что было в карточке ----------
+
+   ПАРОЛЬ ПОКАЗАТЬ НЕЛЬЗЯ, И ЭТО НЕ НЕДОРАБОТКА. В базе лежит только его хэш —
+   строка, из которой пароль не восстанавливается. Так сделано намеренно:
+   утечка базы не даёт войти ни в один кабинет. Поэтому здесь видно не сам
+   пароль, а его состояние — выданный администратором или уже сменённый
+   человеком, — и кнопку выдать новый. Новый показывается один раз. */
+
+let personOpen = null;
+
+function openPerson(person) {
+  personOpen = person;
+  $('personFor').textContent = `${person.displayName} · ${person.email}`;
+
+  $('personPasswordState').textContent = person.passwordChangedAt
+    ? t('adm.passwordOwn')
+    : t('adm.passwordIssuedStill');
+
+  $('personAccessState').textContent = person.accessUntil
+    ? t('adm.accessUntilDate', { date: fmtDate(person.accessUntil) })
+    : t('adm.accessForever');
+
+  const blocked = person.status === 'blocked';
+  $('personStatusState').textContent = blocked ? t('adm.isBlocked') : t('adm.isActive');
+  $('personBlock').textContent = blocked ? t('adm.unblock') : t('adm.block');
+  $('personBlock').classList.toggle('danger', !blocked);
+
+  $('personDialog').showModal();
+}
+
+$('personNewPassword').addEventListener('click', () => withBusy(async () => {
+  const result = await api(`/api/admin/users/${personOpen.id}/reset-password`, { method: 'POST' });
+  showPassword(result.password, `${result.displayName} · ${result.email}`);
+  $('personPasswordState').textContent = t('adm.passwordIssuedStill');
+}));
+
+$('personAccess').addEventListener('click', () => {
+  $('personDialog').close();
+  askAccess(personOpen);
+});
+
+$('personBlock').addEventListener('click', () => withBusy(async () => {
+  const blocked = personOpen.status === 'blocked';
+  await api(`/api/admin/users/${personOpen.id}/${blocked ? 'unblock' : 'block'}`, { method: 'POST' });
+  $('personDialog').close();
+  await loadPeople();
+}));
+
+$('personBack').addEventListener('click', () => $('personDialog').close());
+$('personClose').addEventListener('click', () => $('personDialog').close());
