@@ -3,7 +3,7 @@
 
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
-import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logoutAndClear, fetchMe, changeOwnPassword } from './auth.js';
+import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, logoutAndClear, fetchMe, changeOwnPassword } from './auth.js';
 import { API_BASE, serverAlive } from './config.js';
 import {
   state, t, save, reload, onChange, changed, $, h, svgIcon, ICONS,
@@ -19,11 +19,16 @@ import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
 
+/* Порядок разделов — порядок дня, а не порядок разработки.
+
+   Квант стоит первым и открывается при запуске: это то, ради чего человек
+   берёт телефон девять раз в день, и ждать отклика он должен сразу. Колесо
+   ушло в конец: это итог недели, его смотрят раз, а не между делом. */
 const SECTIONS = [
-  { id: 'wheel', icon: ICONS.wheel, title: 'wheel.title', label: 'nav.wheel' },
   { id: 'quantum', icon: ICONS.quantum, title: 'quantum.title', label: 'nav.quantum' },
   { id: 'day', icon: ICONS.day, title: 'day.title', label: 'nav.day' },
-  { id: 'money', icon: ICONS.money, title: 'money.title', label: 'nav.money' }
+  { id: 'money', icon: ICONS.money, title: 'money.title', label: 'nav.money' },
+  { id: 'wheel', icon: ICONS.wheel, title: 'wheel.title', label: 'nav.wheel' }
 ];
 
 const STATUS_KEY = {
@@ -418,9 +423,11 @@ async function boot() {
     await clearAll();
     location.reload();
   });
+  /* Выход без вопросов: он ничего не теряет. Записи остаются на устройстве,
+     закрывается только вход. Спрашивать подтверждение у действия, которое
+     легко отменить обратным входом, — значит пугать на ровном месте. */
   $('logoutBtn').addEventListener('click', async () => {
-    if (!confirm(t('auth.logoutConfirm'))) return;
-    await logoutAndClear();
+    await logout();
     location.reload();
   });
 

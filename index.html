@@ -102,7 +102,10 @@
 
     <!-- Заголовок группы с действиями прямо в строке — приём из того меню -->
     <div class="drawer-group">
-      <button type="button" id="spheresToggle" class="group-caption" aria-expanded="true">
+      <!-- Свёрнуто по умолчанию: девять сфер занимали весь экран меню, и за ними
+           терялись сами разделы. Разворачивается нажатием и остаётся развёрнутым,
+           пока человек не свернёт обратно. -->
+      <button type="button" id="spheresToggle" class="group-caption" aria-expanded="false">
         <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
         <span data-i18n="nav.spheres">Сферы жизни</span>
       </button>

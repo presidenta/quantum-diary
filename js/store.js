@@ -12,7 +12,7 @@ import { translate, DEFAULT_LANGUAGE } from './core/i18n.js';
 export const state = {
   data: null,
   index: null,
-  view: 'wheel',          // раздел: wheel | quantum | day | money
+  view: 'quantum',        // раздел: quantum | day | money | wheel; квант открывается первым
   period: 'week',         // период колеса
   anchor: todayKey(),     // какой день/неделя/месяц показываем
   day: todayKey(),        // какой день открыт в ежедневнике
@@ -99,6 +99,20 @@ export function h(tag, props = {}, ...children) {
     else node[k] = v;
   }
   for (const c of children) if (c != null) node.append(c);
+  return node;
+}
+
+/* Замена содержимого, которая не боится пропусков.
+
+   replaceChildren(null) НЕ отбрасывает пустое значение, как делает h(), а
+   вставляет текстовый узел со словом «null» — и оно появляется на экране.
+   Именно так на «Пульте управления реальностью» под списком моментов
+   вылезало слово null: там стоит `условие ? элемент : null`.
+
+   Здесь пустые значения отбрасываются, как и в h(). Вызывать нужно её, а не
+   replaceChildren напрямую, везде, где среди детей бывает условие. */
+export function fill(node, ...children) {
+  node.replaceChildren(...children.filter(c => c != null));
   return node;
 }
 

@@ -6,7 +6,7 @@
    Про батарею: ни одного вечного таймера. Один setTimeout до ближайшего
    момента, и во время удержания — отсчёт раз в секунду, ровно восемь раз. */
 
-import { state, t, $, h, changed } from '../store.js';
+import { state, t, $, h, fill, changed } from '../store.js';
 import { API_BASE } from '../config.js';
 import { getMeta } from '../db.js';
 import {
@@ -74,7 +74,7 @@ export function renderQuantum() {
   const day = state.quantum;
 
   if (!day) {
-    card.replaceChildren(
+    fill(card,
       h('p', { class: 'q-title', text: t('quantum.title') }),
       h('p', { class: 'muted m0', text: API_BASE ? t('quantum.notReady') : t('settings.serverOff') }));
     scheduleWake(null);
@@ -86,7 +86,7 @@ export function renderQuantum() {
   const active = activeMoment(day.moments, now);
   const next = nextMoment(day.moments, now);
 
-  card.replaceChildren(
+  fill(card,
     h('div', { class: 'q-head' },
       h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
       h('div', {},
