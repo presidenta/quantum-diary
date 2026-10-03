@@ -563,3 +563,28 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 }
 @keyframes hold-fill { to { --hold-turn: 360deg; } }
 @media (prefers-reduced-motion: reduce) { .q-ring-live { animation: none; } }
+
+/* ПРОФИЛЬ.
+
+   Фотография показывается кружком и в меню, и в профиле — один вид в обоих
+   местах, чтобы человек узнавал себя. Нет фотографии — первая буква имени. */
+.drawer-user { width: 100%; text-align: left; border: 0; background: none; cursor: pointer; }
+.drawer-user .chev { margin-left: auto; color: var(--ink-2); font-size: 20px; line-height: 1; }
+
+.avatar.has-photo, .profile-photo.has-photo { padding: 0; overflow: hidden; }
+.avatar.has-photo img, .profile-photo.has-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.sheet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.sheet-head h2 { margin: 0; }
+.back-btn svg { width: 22px; height: 22px; stroke: var(--gold); stroke-width: 2; fill: none; stroke-linecap: round; }
+
+.profile-top { display: flex; align-items: center; gap: 14px; margin: 6px 0 10px; }
+.profile-photo {
+  width: 72px; height: 72px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; font-family: var(--serif); font-size: 28px;
+  color: var(--gold-ink); background: var(--gold-3d);
+}
+.profile-who b { display: block; font-size: 17px; }
+.profile-photo-actions { display: flex; gap: 8px; }
+.profile-photo-actions .btn { flex: 1; min-height: 42px; font-size: 13px; }
+.profile-rows { display: grid; gap: 8px; margin-top: 12px; }

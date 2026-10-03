@@ -85,16 +85,17 @@
   <nav id="drawer" class="drawer" hidden aria-label="Меню">
     <!-- Кабинет сверху: кто вошёл и под каким номером. Номер нужен, чтобы
          человек и администратор говорили об одном и том же кабинете -->
-    <div class="drawer-user" id="drawerUser">
+    <!-- Кабинет открывает профиль. Выход, смена пароля и удаление ушли внутрь
+         него: это редкие действия, и на виду они только мешали, а кнопка
+         выхода рядом с именем нажималась по ошибке. -->
+    <button type="button" class="drawer-user" id="drawerUser">
       <span class="avatar" id="userInitial">·</span>
       <span class="who">
         <b id="userName" data-i18n="app.name">Квантовый ежедневник</b>
         <span id="userAccount"></span>
       </span>
-      <button type="button" id="logoutBtn" class="icon-btn plain" aria-label="Выйти" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4v16h-4M11 15l3-3-3-3M14 12H4"></path></svg>
-      </button>
-    </div>
+      <span class="chev" aria-hidden="true">›</span>
+    </button>
 
     <div class="drawer-list" id="drawerMain"></div>
 
@@ -232,6 +233,45 @@
   </div>
 </div>
 
+<!-- ПРОФИЛЬ: всё о себе в одном месте.
+
+     Сюда собрано то, что было раскидано: фотография, смена пароля, установка
+     приложения на телефон, выход и удаление. Раньше смена пароля и удаление
+     жили в самом низу настроек, а выход — иконкой рядом с именем, где его
+     задевали случайно. -->
+<dialog id="profileDialog">
+  <div class="sheet">
+    <div class="sheet-head">
+      <button type="button" class="icon-btn plain back-btn" id="profileBack" aria-label="Назад">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      </button>
+      <h2 data-i18n="profile.title">Профиль</h2>
+    </div>
+
+    <div class="profile-top">
+      <span class="profile-photo" id="profilePhoto">·</span>
+      <div class="profile-who">
+        <b id="profileName"></b>
+        <span class="muted" id="profileAccount"></span>
+      </div>
+    </div>
+    <div class="profile-photo-actions">
+      <button type="button" class="btn" id="photoPick" data-i18n="profile.photoPick">Загрузить фото</button>
+      <button type="button" class="btn" id="photoClear" data-i18n="profile.photoClear">Убрать</button>
+      <input type="file" id="photoFile" accept="image/*" hidden>
+    </div>
+    <p class="gate-msg" id="photoMsg" role="status"></p>
+
+    <div class="profile-rows">
+      <button type="button" class="btn" id="installApp" hidden data-i18n="profile.install">Установить приложение</button>
+      <button type="button" class="btn" id="changePassword" hidden data-i18n="password.change">Сменить пароль</button>
+      <button type="button" class="btn" id="profileLogout" data-i18n="auth.logout">Выйти</button>
+      <button type="button" class="btn danger" id="deleteData" data-i18n="profile.removeApp">Удалить приложение</button>
+    </div>
+    <p class="muted m0" data-i18n="profile.removeNote">Удаление стирает все записи на этом устройстве. Если вход сохранён на сервере, они вернутся при следующем входе.</p>
+  </div>
+</dialog>
+
 <dialog id="settingsDialog">
   <form method="dialog" class="sheet">
     <h2 data-i18n="settings.title">Настройки</h2>
@@ -246,8 +286,7 @@
     <ul id="sectorEditList" class="edit-list"></ul>
     <button type="button" id="openAssess" class="btn" data-i18n="assess.open">Оценить сферы 1–10</button>
     <p class="muted" id="accountInfo"></p>
-    <button type="button" id="changePassword" class="btn" hidden data-i18n="password.change">Сменить пароль</button>
-    <button type="button" id="deleteData" class="btn danger" data-i18n="settings.deleteAll">Удалить все мои данные</button>
+    <!-- Смена пароля и удаление переехали в профиль -->
     <div class="actions"><button value="close" class="btn primary" data-i18n="settings.done">Готово</button></div>
   </form>
 </dialog>

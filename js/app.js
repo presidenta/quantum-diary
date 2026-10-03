@@ -3,7 +3,8 @@
 
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
-import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, logoutAndClear, fetchMe, changeOwnPassword } from './auth.js';
+import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, logoutAndClear, fetchMe, changeOwnPassword, saveAvatar } from './auth.js';
+import { shrinkPhoto, paintAvatar, watchInstall, installed } from './profile.js';
 import { API_BASE, serverAlive } from './config.js';
 import {
   state, t, save, reload, onChange, changed, $, h, svgIcon, ICONS,
@@ -274,11 +275,17 @@ async function setupMode() {
    и когда сессия уже была, и когда человек только что ввёл пароль. */
 function renderUser() {
   if (!state.me) return;
-  $('userInitial').textContent = (state.me.displayName || '?').trim()[0].toUpperCase();
+  const account = String(state.me.accountNo ?? 0).padStart(9, '0');
+  paintAvatar($('userInitial'), state.me.avatar, state.me.displayName);
   $('userName').textContent = state.me.displayName;
   // Номер кабинета девятью цифрами — его можно продиктовать администратору
-  $('userAccount').textContent = String(state.me.accountNo ?? 0).padStart(9, '0');
-  $('logoutBtn').hidden = false;
+  $('userAccount').textContent = account;
+
+  paintAvatar($('profilePhoto'), state.me.avatar, state.me.displayName);
+  $('profileName').textContent = state.me.displayName;
+  $('profileAccount').textContent = account;
+  $('changePassword').hidden = false;
+  $('photoClear').hidden = !state.me.avatar;
 }
 
 function showPasswordError(text) {
@@ -423,13 +430,49 @@ async function boot() {
     await clearAll();
     location.reload();
   });
+  /* ---------- Профиль ---------- */
+
+  $('drawerUser').addEventListener('click', () => { closeDrawer(); $('profileDialog').showModal(); });
+  $('profileBack').addEventListener('click', () => $('profileDialog').close());
+
   /* Выход без вопросов: он ничего не теряет. Записи остаются на устройстве,
      закрывается только вход. Спрашивать подтверждение у действия, которое
      легко отменить обратным входом, — значит пугать на ровном месте. */
-  $('logoutBtn').addEventListener('click', async () => {
+  $('profileLogout').addEventListener('click', async () => {
     await logout();
     location.reload();
   });
+
+  // Фотография: выбрали файл — сжали на устройстве — отправили строкой
+  $('photoPick').addEventListener('click', () => $('photoFile').click());
+  $('photoFile').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';                       // чтобы тот же файл можно было выбрать снова
+    if (!file) return;
+    const msg = $('photoMsg');
+    msg.className = 'gate-msg';
+    msg.textContent = t('profile.photoWorking');
+    try {
+      const small = await shrinkPhoto(file);
+      state.me.avatar = await saveAvatar(small);
+      renderUser();
+      msg.className = 'gate-msg is-ok';
+      msg.textContent = t('profile.photoSaved');
+    } catch (err) {
+      msg.className = 'gate-msg is-error';
+      msg.textContent = t(err.status === 413 || err.status === 400 ? 'profile.photoTooBig' : 'profile.photoFailed');
+    }
+    setTimeout(() => { msg.textContent = ''; }, 4000);
+  });
+  $('photoClear').addEventListener('click', async () => {
+    try {
+      state.me.avatar = await saveAvatar('');
+      renderUser();
+    } catch { /* не убралась — остаётся как была */ }
+  });
+
+  // Кнопка установки появляется, только когда браузер готов её предложить
+  watchInstall($('installApp'));
 
   // Вход и заявка
   $('gateTabLogin').addEventListener('click', () => gateTab('login'));

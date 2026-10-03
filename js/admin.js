@@ -214,9 +214,17 @@ function renderPerson(person) {
         }));
   }
 
+  /* Лицо в списке: специалист ведёт людей, а не строки с почтой. Фотографию
+     присылает само устройство человека уже сжатой — отдельного запроса за
+     ней нет, она приходит вместе со списком. */
+  const face = h('span', { class: `person-photo${person.avatar ? ' has-photo' : ''}` });
+  if (person.avatar) face.appendChild(h('img', { src: person.avatar, alt: '' }));
+  else face.textContent = (person.displayName || '·').trim().charAt(0).toUpperCase();
+
   return h('li', { class: `person ${person.status}` },
     h('div', { class: 'person-head' },
-      h('div', {},
+      face,
+      h('div', { class: 'person-who' },
         h('b', { text: person.displayName }),
         h('span', { class: 'contacts', text: contacts })),
       h('time', { text: fmtWhen(person.approvedAt || person.createdAt) })),

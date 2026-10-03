@@ -81,6 +81,23 @@ export async function fetchMe() {
    при следующем входе login() сравнивает его с вошедшим — другой человек
    получает чистое устройство (см. sessionChange). Стереть всё по своей воле
    можно отдельной кнопкой в профиле. */
+/* Фотография: пустая строка её убирает. Сжатие делает устройство (profile.js),
+   сюда приходит уже готовая строка — сервер больших снимков не принимает. */
+export async function saveAvatar(avatar) {
+  const token = await getMeta('token');
+  const res = await fetch(`${API_BASE}/api/me/avatar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ avatar })
+  });
+  if (!res.ok) {
+    const err = new Error('avatar_failed');
+    err.status = res.status;
+    throw err;
+  }
+  return (await res.json()).avatar;
+}
+
 export async function logout() {
   const token = await getMeta('token');
   if (API_BASE && token) {
