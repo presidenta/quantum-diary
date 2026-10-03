@@ -63,3 +63,11 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--gold)
   font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5;
   color: var(--ink-2); white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow: auto;
 }
+
+/* Язык в шапке кабинета: та же строгая форма, что у кнопок рядом */
+.lang-select {
+  min-height: 44px; padding: 0 6px; border-radius: var(--edge); text-align: center;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.lang-select:focus-visible { outline: none; box-shadow: var(--glow-active); }

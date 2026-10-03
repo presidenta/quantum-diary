@@ -21,6 +21,18 @@ const SAY = 'planner.updateSay';     // вердикт, который надо 
 
 const noStore = { cache: 'no-store' };
 
+/* Что изменилось в последних выкладках. Отдельный файл, а не вшитый список:
+   он правится при каждой выкладке и не должен тянуть за собой пересборку кода. */
+async function changeLog() {
+  try {
+    const res = await fetch(`changes.json?probe=${Date.now()}`, noStore);
+    const list = await res.json();
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
 async function clientVersion() {
   try {
     const res = await fetch(`version.json?probe=${Date.now()}`, noStore);
@@ -71,20 +83,32 @@ const when = iso => {
   }).format(new Date(iso));
 };
 
-/* Окошко с вердиктом. Цифры показываем всегда: именно их человек и просил —
-   чтобы своими глазами видеть, какая версия стоит. */
-function popup(kind, lines) {
+/* ОКНО, А НЕ ИСЧЕЗАЮЩАЯ ПОДСКАЗКА.
+
+   Раньше вердикт всплывал на несколько секунд и пропадал — прочитать номер
+   версии человек часто не успевал, а номер на самой кнопке занимал место и
+   ничего не объяснял. Теперь по нажатию открывается окно: какая версия стоит,
+   когда выложена и что в ней изменилось. Закрывает его человек сам. */
+function popup(kind, lines, changes = []) {
   document.querySelector('.upd-pop')?.remove();
   const box = h('div', { class: `upd-pop ${kind}` },
     h('b', { text: t(`update.${kind}`) }),
     ...lines.map(line => h('i', { text: line })));
-  document.body.appendChild(box);
-  if (kind !== 'checking') {
-    setTimeout(() => {
-      box.classList.add('out');
-      setTimeout(() => box.remove(), 320);
-    }, 6000);
+
+  if (changes.length) {
+    box.appendChild(h('div', { class: 'upd-changes' },
+      h('b', { text: t('update.whatChanged') }),
+      h('ul', {}, ...changes.slice(0, 3).map(entry => h('li', {},
+        h('b', { text: `${entry.release} · ${entry.date}` }),
+        h('ul', {}, ...(entry.items || []).map(item => h('li', { text: item }))))))));
   }
+  if (kind !== 'checking') {
+    box.appendChild(h('button', {
+      type: 'button', class: 'btn upd-close', text: t('update.close'),
+      onclick: () => box.remove()
+    }));
+  }
+  document.body.appendChild(box);
   return box;
 }
 
@@ -122,8 +146,8 @@ async function wipeCaches() {
   } catch { /* служебный работник не обязателен */ }
 }
 
-export async function initUpdate() {
-  const button = $('updateBtn');
+export async function initUpdate(buttonId = 'updateBtn') {
+  const button = $(buttonId);
   if (!button) return;
 
   // Вердикт с прошлой перезагрузки: показать один раз и стереть
@@ -131,7 +155,7 @@ export async function initUpdate() {
   if (said) {
     sessionStorage.removeItem(SAY);
     if (Date.now() - (said.at || 0) < 30000) {
-      setTimeout(() => popup(said.kind, said.lines || []), 400);
+      setTimeout(() => popup(said.kind, said.lines || [], said.changes || []), 400);
     }
   }
 
@@ -139,11 +163,7 @@ export async function initUpdate() {
   const [client, server] = await Promise.all([clientVersion(), serverVersion()]);
   write(SEEN, { stamp: stampOf(client, server, client?.tag) });
 
-  /* Номер выкладки прямо на кнопке. Раньше его показывало только окошко после
-     нажатия, и на вопрос «какая версия сейчас стоит» нужно было сперва нажать.
-     Теперь видно сразу, не трогая экран. */
-  const num = $('updateNum');
-  if (num) num.textContent = client?.release ?? '';
+
 
   button.addEventListener('click', async () => {
     if (button.dataset.busy) return;
@@ -165,7 +185,7 @@ export async function initUpdate() {
     const stamp = stampOf(nowClient, nowServer, nowClient?.tag);
     const kind = !seen ? 'done' : (seen === stamp ? 'same' : 'new');
 
-    write(SAY, { kind, lines, at: Date.now() });
+    write(SAY, { kind, lines, changes: await changeLog(), at: Date.now() });
     await wipeCaches();
     location.reload();
   });

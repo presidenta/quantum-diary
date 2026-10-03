@@ -30,6 +30,33 @@
   --s7: #d55181; --s8: #008300; --s9: #c35bb0;
 
   --nav-h: 64px;
+
+  /* ГЕОМЕТРИЯ УПРАВЛЕНИЯ — одно место на весь интерфейс.
+
+     Строгая форма вместо скруглений: углы прямые, у залитых элементов срезаны
+     два по диагонали. Поменять форму всех кнопок разом — поменять эти три
+     строки, логики это не касается.
+
+     Срез делается clip-path, и поэтому он стоит ТОЛЬКО на залитых элементах
+     (золотая кнопка, нажатая вкладка). clip-path режет и рамку тоже: у кнопки
+     с границей линия обрывалась бы на срезе и угол выглядел бы недорисованным.
+     Элементам с рамкой достаётся строгий прямой угол — этого довольно. */
+  --cut: 10px;
+  --cut-corners: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  --edge: 2px;                                   /* прямой угол с едва заметным смягчением */
+  --glow-active: 0 0 0 1px var(--gold), 0 0 18px rgba(212, 175, 55, .45);
+}
+
+/* Отклик на нажатие — общий для всего управления. Золото загорается в тот
+   момент, когда палец касается, и гаснет, когда отпускают. */
+.btn, .icon-btn, .lang-btn, .segmented button, .tabs button {
+  transition: box-shadow .18s ease, background-color .18s ease, color .18s ease;
+}
+.btn:active, .icon-btn:active, .lang-btn:active,
+.segmented button:active, .tabs button:active { box-shadow: var(--glow-active); }
+.btn:focus-visible, .icon-btn:focus-visible, .lang-btn:focus-visible,
+.segmented button:focus-visible, .tabs button:focus-visible {
+  outline: none; box-shadow: var(--glow-active);
 }
 
 * { box-sizing: border-box; }
@@ -60,19 +87,22 @@ main > section { display: grid; gap: 12px; }
 
 .icon-btn {
   border: 1px solid var(--line); background: var(--surface);
-  min-width: 44px; min-height: 44px; border-radius: 11px; cursor: pointer;
+  min-width: 44px; min-height: 44px; border-radius: var(--edge); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; font-size: 20px; line-height: 1;
 }
 .icon-btn svg { width: 20px; height: 20px; stroke: var(--gold); stroke-width: 1.8; fill: none; stroke-linecap: round; }
 .icon-btn:disabled { opacity: .3; cursor: default; }
 .icon-btn.plain { border-color: transparent; background: none; }
 
-.segmented { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 3px; }
+.segmented { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: var(--edge); padding: 3px; }
 .segmented button {
   flex: 1; border: 0; background: none; color: var(--ink-2); font-weight: 600; font-size: 13px;
-  min-height: 38px; min-width: 44px; border-radius: 9px; cursor: pointer;
+  min-height: 38px; min-width: 44px; border-radius: 0; cursor: pointer;
 }
-.segmented button[aria-pressed="true"] { background: var(--gold-fill); color: var(--gold-bright); }
+/* Нажатая вкладка залита — ей срез идёт, рамки у неё нет */
+.segmented button[aria-pressed="true"] {
+  background: var(--gold-fill); color: var(--gold-bright); clip-path: var(--cut-corners);
+}
 
 .range { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 10px; }
 .range span { font-weight: 600; }
@@ -252,10 +282,13 @@ input[type="range"] { accent-color: var(--gold); }
 details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-height: 44px; display: flex; align-items: center; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .btn {
-  min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line-strong);
+  min-height: 48px; padding: 0 16px; border-radius: var(--edge); border: 1px solid var(--line-strong);
   background: var(--surface-2); cursor: pointer; font-weight: 600;
 }
-.btn.primary { background: var(--gold-gradient); color: #0A0A0C; border-color: transparent; box-shadow: var(--glow); }
+.btn.primary {
+  background: var(--gold-gradient); color: #0A0A0C; border-color: transparent;
+  box-shadow: var(--glow); border-radius: 0; clip-path: var(--cut-corners);
+}
 .btn.danger { color: var(--danger); border-color: rgba(230, 103, 103, .3); }
 .field-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .edit-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
@@ -422,14 +455,16 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 
 /* Кнопка обновления рядом с языком */
 .bottom-row { display: flex; gap: 6px; align-items: center; }
-.upd-btn { padding: 0 8px; min-width: 36px; justify-content: center; }
+.upd-btn { padding: 0; width: 36px; justify-content: center; }
 .upd-btn svg { width: 17px; height: 17px; stroke: var(--gold-bright); stroke-width: 2; fill: none; stroke-linecap: round; }
 .upd-btn.spin svg { animation: upd-spin 1s linear infinite; }
-/* Номер выкладки на самой кнопке: виден сразу, не перекрывает значок.
-   Кнопка стала чуть шире — цифра встаёт справа от стрелки, а не поверх неё. */
-.upd-btn { gap: 4px; }
-.upd-num { font-size: 11px; line-height: 1; color: var(--gold-bright); opacity: .75; }
-.upd-num:empty { display: none; }
+/* Список изменений внутри окна обновления: что именно приехало с выкладкой.
+   Вложенные списки — по выкладкам и по пунктам внутри каждой. */
+.upd-changes { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.upd-changes ul { margin: 4px 0 0; padding-left: 16px; }
+.upd-changes li { margin: 3px 0; }
+.upd-changes > ul > li > b { color: var(--gold); font-size: 12px; }
+.upd-close { min-height: 38px; margin-top: 12px; width: 100%; font-size: 13px; }
 @keyframes upd-spin { to { transform: rotate(360deg); } }
 
 /* Окошко с вердиктом: цифры видно сразу, само уходит через несколько секунд */

@@ -15,13 +15,44 @@
 
 import { API_BASE } from './config.js';
 import { h, setStyle } from './store.js';
-import { getMeta } from './db.js';
+import { getMeta, setMeta } from './db.js';
+import { LANGUAGES, DEFAULT_LANGUAGE, isLanguage, pickLanguage, translate } from './core/i18n.js';
 import { initPasswordEyes } from './password-eye.js';
+import { initUpdate } from './update.js';
 
 const $ = id => document.getElementById(id);
 const KEY = 'planner.adminToken';
 const SLOTS = { morning: 'Утро', day: 'День', evening: 'Вечер', frame: 'Кадр' };
 const LANGS = { ru: 'RU', uk: 'UK', en: 'EN' };
+
+/* ---------- Язык кабинета ----------
+
+   Тот же словарь, что и у приложения, и та же память: человек выбрал язык в
+   ежедневнике — кабинет открывается на нём же, отдельно переключать не нужно.
+   Выбранный здесь язык заодно становится языком НОВЫХ ФРАЗ: раньше на экране
+   было два разных выбора языка, и они путались. */
+let language = DEFAULT_LANGUAGE;
+const t = (key, values) => translate(language, key, values);
+
+function applyLanguage() {
+  document.documentElement.lang = language;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  const select = $('adminLang');
+  if (select.options.length !== LANGUAGES.length) {
+    // Короткий код, а не полное название: в шапке рядом с двумя кнопками
+    // «Українська» не помещается и обрезается многоточием
+    select.replaceChildren(...LANGUAGES.map(l => h('option', { value: l.code, text: l.label })));
+  }
+  select.value = language;
+}
+
+function setLanguage(code) {
+  if (!isLanguage(code) || code === language) return;
+  language = code;
+  applyLanguage();
+  // В фоне: экран не должен ждать записи в базу
+  setMeta('language', code).catch(() => {});
+}
 
 let token = null;
 let status = 'pending';
@@ -236,7 +267,7 @@ $('phraseForm').addEventListener('submit', async e => {
     await api('/api/admin/quantum/phrases', {
       method: 'POST',
       body: JSON.stringify({
-        slot: f.slot.value, language: f.language.value, text, isCommon: f.isCommon.checked
+        slot: f.slot.value, language, text, isCommon: f.isCommon.checked
       })
     });
     f.text.value = '';
@@ -358,6 +389,12 @@ async function boot() {
   // setStyle подключён, чтобы стили шли мимо запрета inline-style в CSP
   setStyle(document.body, 'min-height: 100vh');
   initPasswordEyes();
+
+  // Язык берём тот же, что в ежедневнике; нет выбора — по браузеру
+  language = pickLanguage(await getMeta('language').catch(() => null), navigator.languages);
+  applyLanguage();
+  $('adminLang').addEventListener('change', e => setLanguage(e.target.value));
+  initUpdate('adminUpdate');
 
   // По порядку: служебный ключ этой вкладки, затем своя учётная запись
   const candidates = [sessionStorage.getItem(KEY), await getMeta('token').catch(() => null)];

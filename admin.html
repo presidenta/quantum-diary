@@ -20,7 +20,7 @@
 <section id="tokenGate" class="gate" hidden>
   <form class="gate-card" id="tokenForm">
     <div class="gate-brand">
-      <h1>Кабинет администратора</h1>
+      <h1 data-i18n="adm.title">Кабинет администратора</h1>
       <p class="muted m0">Войдите в ежедневник записью с ролью администратора — и эта страница откроется сама.</p>
     </div>
     <p class="muted">Служебный ключ нужен, только если администраторов не осталось. Он создаётся сервером при первом запуске и виден один раз в журнале контейнера.</p>
@@ -32,8 +32,14 @@
 
 <div id="adminRoot" hidden>
   <header class="top">
-    <h1>Кабинет администратора</h1>
+    <h1 data-i18n="adm.title">Кабинет администратора</h1>
     <span class="sync" id="adminCount"></span>
+    <!-- Язык и обновление живут в шапке, а не внутри форм: это настройки всего
+         кабинета, а не одной карточки -->
+    <select id="adminLang" class="lang-select" aria-label="Язык"></select>
+    <button type="button" id="adminUpdate" class="icon-btn" aria-label="Обновить" title="Обновить">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"></path></svg>
+    </button>
     <button type="button" id="adminLogout" class="icon-btn" aria-label="Выйти">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4v16h-4M11 15l3-3-3-3M14 12H4"></path></svg>
     </button>
@@ -43,17 +49,17 @@
 
   <main class="screen">
     <div class="segmented" id="adminTabs" role="group" aria-label="Разделы">
-      <button type="button" data-tab="people" aria-pressed="true">Люди</button>
-      <button type="button" data-tab="content" aria-pressed="false">Содержание</button>
-      <button type="button" data-tab="logs" aria-pressed="false">Сбои</button>
+      <button type="button" data-tab="people" aria-pressed="true" data-i18n="adm.clients">Клиенты</button>
+      <button type="button" data-tab="content" aria-pressed="false" data-i18n="adm.content">Содержание</button>
+      <button type="button" data-tab="logs" aria-pressed="false" data-i18n="adm.faults">Сбои</button>
     </div>
 
-    <!-- Люди: заявки, действующие, заблокированные -->
+    <!-- Клиенты: заявки, действующие, заблокированные -->
     <section id="tabPeople">
       <div class="segmented" id="statusTabs" role="group" aria-label="Статус">
-        <button type="button" data-status="pending" aria-pressed="true">Заявки</button>
-        <button type="button" data-status="active" aria-pressed="false">Действующие</button>
-        <button type="button" data-status="blocked" aria-pressed="false">Заблокированные</button>
+        <button type="button" data-status="pending" aria-pressed="true" data-i18n="adm.requests">Заявки</button>
+        <button type="button" data-status="active" aria-pressed="false" data-i18n="adm.activeOnes">Действующие</button>
+        <button type="button" data-status="blocked" aria-pressed="false" data-i18n="adm.blockedOnes">Заблокированные</button>
       </div>
       <ul id="peopleList" class="people"></ul>
     </section>
@@ -61,37 +67,33 @@
     <!-- Содержание квантового модуля -->
     <section id="tabContent" hidden>
       <div class="card">
-        <h2>Новая фраза</h2>
+        <h2 data-i18n="adm.newPhrase">Новая фраза</h2>
         <form id="phraseForm" class="gate-form">
           <div class="two">
-            <label><span>Когда</span>
+            <label><span data-i18n="adm.when">Когда</span>
               <select name="slot">
-                <option value="morning">Утро — замыкание контура</option>
-                <option value="day">День — мирный воин</option>
-                <option value="evening">Вечер — сброс потенциала</option>
-                <option value="frame">Кадр будущего</option>
-              </select>
-            </label>
-            <label><span>Язык</span>
-              <select name="language">
-                <option value="ru">Русский</option>
-                <option value="uk">Українська</option>
-                <option value="en">English</option>
+                <option value="morning" data-i18n="adm.slotMorning">Утро — замыкание контура</option>
+                <option value="day" data-i18n="adm.slotDay">День — мирный воин</option>
+                <option value="evening" data-i18n="adm.slotEvening">Вечер — сброс потенциала</option>
+                <option value="frame" data-i18n="adm.slotFrame">Кадр будущего</option>
               </select>
             </label>
           </div>
-          <label><span>Текст</span><textarea name="text" required maxlength="600"></textarea></label>
+          <!-- Языка здесь больше нет: фраза заводится на том языке, который
+               выбран в шапке кабинета. Два разных выбора языка на одном экране
+               путали — один про интерфейс, другой про текст фразы. -->
+          <label><span data-i18n="adm.text">Текст</span><textarea name="text" required maxlength="600"></textarea></label>
           <label class="row-check">
             <input type="checkbox" name="isCommon" checked>
-            <span>Общая — достаётся всем, у кого нет своего набора</span>
+            <span data-i18n="adm.commonNote">Общая — достаётся всем, у кого нет своего набора</span>
           </label>
-          <button type="submit" class="btn primary">Добавить</button>
+          <button type="submit" class="btn primary" data-i18n="adm.add">Добавить</button>
         </form>
       </div>
 
       <div class="card">
         <div class="section-head">
-          <h2>Библиотека</h2>
+          <h2 data-i18n="adm.library">Библиотека</h2>
           <span class="muted m0" id="phraseCount"></span>
         </div>
         <ul id="phraseList" class="phrases mt10"></ul>
@@ -102,8 +104,8 @@
     <section id="tabLogs" hidden>
       <div class="card">
         <div class="section-head">
-          <h2>Сбои с устройств</h2>
-          <button type="button" id="reloadLogs" class="btn">Обновить</button>
+          <h2 data-i18n="adm.faultsTitle">Сбои с устройств</h2>
+          <button type="button" id="reloadLogs" class="btn" data-i18n="adm.refresh">Обновить</button>
         </div>
         <ul id="logList" class="logs mt10"></ul>
       </div>
@@ -113,26 +115,26 @@
 
 <dialog id="passwordDialog">
   <div class="sheet">
-    <h2>Пароль выдан</h2>
-    <p class="muted m0">Запишите его сейчас — больше он нигде не показывается. Передайте человеку лично.</p>
+    <h2 data-i18n="adm.passwordIssued">Пароль выдан</h2>
+    <p class="muted m0" data-i18n="adm.passwordNote">Запишите его сейчас — больше он нигде не показывается. Передайте человеку лично.</p>
     <p class="password" id="passwordValue"></p>
     <p class="muted m0" id="passwordFor"></p>
     <div class="actions">
-      <button type="button" class="btn" id="copyPassword">Скопировать</button>
-      <button type="button" class="btn primary" id="closePassword">Готово</button>
+      <button type="button" class="btn" id="copyPassword" data-i18n="adm.copy">Скопировать</button>
+      <button type="button" class="btn primary" id="closePassword" data-i18n="adm.done">Готово</button>
     </div>
   </div>
 </dialog>
 
 <dialog id="assignDialog">
   <form method="dialog" class="sheet" id="assignForm">
-    <h2>Персональный набор</h2>
+    <h2 data-i18n="adm.personalSet">Персональный набор</h2>
     <p class="muted m0" id="assignFor"></p>
     <ul id="assignList" class="phrases"></ul>
-    <p class="muted m0">Ничего не отмечено — человек получает общие фразы.</p>
+    <p class="muted m0" data-i18n="adm.nothingPicked">Ничего не отмечено — человек получает общие фразы.</p>
     <div class="actions">
-      <button value="cancel" formnovalidate class="btn">Отмена</button>
-      <button value="save" class="btn primary">Сохранить</button>
+      <button value="cancel" formnovalidate class="btn" data-i18n="adm.cancel">Отмена</button>
+      <button value="save" class="btn primary" data-i18n="adm.save">Сохранить</button>
     </div>
   </form>
 </dialog>
