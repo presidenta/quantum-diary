@@ -442,6 +442,23 @@ async function boot() {
       msg.textContent = t(LOGIN_ERRORS[err.code] || 'auth.noNetwork');
     }
   });
+  /* Пароль придумывает устройство, а не человек. Показываем его открытым:
+     записать можно только то, что видно, а восстановить этот пароль потом
+     будет некому — самостоятельного сброса в системе нет. */
+  $('setupGenerate').addEventListener('click', () => {
+    const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz';
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    const made = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
+    const f = $('setupForm').elements;
+    f.password.value = made;
+    f.password2.value = made;
+    f.password.type = 'text';
+    f.password2.type = 'text';
+    const msg = $('setupMsg');
+    msg.className = 'gate-msg is-ok';
+    msg.textContent = t('auth.passwordMade');
+  });
+
   $('setupForm').addEventListener('submit', async e => {
     e.preventDefault();
     const msg = $('setupMsg');

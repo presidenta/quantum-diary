@@ -139,6 +139,12 @@ export async function initUpdate() {
   const [client, server] = await Promise.all([clientVersion(), serverVersion()]);
   write(SEEN, { stamp: stampOf(client, server, client?.tag) });
 
+  /* Номер выкладки прямо на кнопке. Раньше его показывало только окошко после
+     нажатия, и на вопрос «какая версия сейчас стоит» нужно было сперва нажать.
+     Теперь видно сразу, не трогая экран. */
+  const num = $('updateNum');
+  if (num) num.textContent = client?.release ?? '';
+
   button.addEventListener('click', async () => {
     if (button.dataset.busy) return;
     button.dataset.busy = '1';

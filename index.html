@@ -60,10 +60,13 @@
          человек задаёт себе сам — он не проходит ни через чьи руки. -->
     <form id="setupForm" class="gate-form" hidden>
       <p class="muted" data-i18n="auth.setupNote">Система ещё не настроена. Заведите первый кабинет — он станет администратором.</p>
-      <label><span data-i18n="auth.name">Имя</span><input name="displayName" required maxlength="80" autocomplete="name"></label>
-      <label><span data-i18n="auth.email">Почта</span><input name="email" type="email" required autocomplete="username"></label>
+      <label><span data-i18n="auth.name">Имя</span><input name="displayName" required maxlength="80" autocomplete="name" value="Администратор"></label>
+      <label><span data-i18n="auth.email">Почта</span><input name="email" type="email" required autocomplete="username" value="admin@genesisystem.local"></label>
       <label><span data-i18n="auth.password">Пароль</span><input name="password" type="password" required minlength="10" autocomplete="new-password"></label>
       <label><span data-i18n="auth.passwordAgain">Пароль ещё раз</span><input name="password2" type="password" required minlength="10" autocomplete="new-password"></label>
+      <!-- Придумывать пароль на ходу не нужно: устройство придумает само и
+           покажет открытым, чтобы его можно было сразу записать -->
+      <button type="button" class="btn ghost" id="setupGenerate" data-i18n="auth.generatePassword">Придумать пароль за меня</button>
       <p class="muted" data-i18n="auth.setupHint">Не короче десяти символов. Запишите его: восстановить пароль здесь некому.</p>
       <p class="gate-msg" id="setupMsg" role="alert"></p>
       <button type="submit" class="btn primary" data-i18n="auth.setupButton">Создать администратора</button>
@@ -215,6 +218,9 @@
            «обновилось или нет» и выбрасывает запас страниц -->
       <button type="button" id="updateBtn" class="lang-btn upd-btn" aria-label="Обновить" title="Обновить">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"></path></svg>
+        <!-- Номер выкладки виден сразу, без нажатия: по просьбе владельца.
+             Подставляется из version.json при запуске (js/update.js) -->
+        <span class="upd-num" id="updateNum"></span>
       </button>
       <button type="button" id="langBtn" class="lang-btn" aria-expanded="false">
         <span id="langLabel">Рус</span><span class="arrow" aria-hidden="true">▲</span>

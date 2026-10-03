@@ -416,9 +416,14 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 
 /* Кнопка обновления рядом с языком */
 .bottom-row { display: flex; gap: 6px; align-items: center; }
-.upd-btn { padding: 0; width: 36px; justify-content: center; }
+.upd-btn { padding: 0 8px; min-width: 36px; justify-content: center; }
 .upd-btn svg { width: 17px; height: 17px; stroke: var(--gold-bright); stroke-width: 2; fill: none; stroke-linecap: round; }
 .upd-btn.spin svg { animation: upd-spin 1s linear infinite; }
+/* Номер выкладки на самой кнопке: виден сразу, не перекрывает значок.
+   Кнопка стала чуть шире — цифра встаёт справа от стрелки, а не поверх неё. */
+.upd-btn { gap: 4px; }
+.upd-num { font-size: 11px; line-height: 1; color: var(--gold-bright); opacity: .75; }
+.upd-num:empty { display: none; }
 @keyframes upd-spin { to { transform: rotate(360deg); } }
 
 /* Окошко с вердиктом: цифры видно сразу, само уходит через несколько секунд */
