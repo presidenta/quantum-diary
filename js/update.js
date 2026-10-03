@@ -32,15 +32,14 @@ async function clientVersion() {
   }
 }
 
-// Отпечаток самого приложения: ловит правки без поднятия номера
-async function clientStamp() {
-  try {
-    const res = await fetch(`js/app.js?probe=${Date.now()}`, { method: 'HEAD', ...noStore });
-    return res.headers.get('etag') || res.headers.get('last-modified') || '';
-  } catch {
-    return '';
-  }
-}
+/* Отдельного запроса за отпечатком приложения нет намеренно.
+
+   Сначала он был: HEAD на js/app.js ловил правки, при которых забыли поднять
+   номер выкладки. Но это лишний запрос при каждом запуске, и он обрывается,
+   если страницу закрыть сразу после открытия. Вместо него берём отпечаток
+   version.json — он всё равно читается, — а номер выкладки поднимается при
+   каждой правке. Это дисциплина, а не случайность: номер живёт рядом с кодом
+   и проверяется глазами в окошке обновления. */
 
 /* Сервер спрашиваем в обход любых запасов и не дольше семи секунд:
    честное «нет связи» полезнее вечного кручения значка. */
@@ -137,8 +136,8 @@ export async function initUpdate() {
   }
 
   // Запоминаем отпечаток, с которым живёт этот экран — иначе сравнивать не с чем
-  const [client, server, tag] = await Promise.all([clientVersion(), serverVersion(), clientStamp()]);
-  write(SEEN, { stamp: stampOf(client, server, tag) });
+  const [client, server] = await Promise.all([clientVersion(), serverVersion()]);
+  write(SEEN, { stamp: stampOf(client, server, client?.tag) });
 
   button.addEventListener('click', async () => {
     if (button.dataset.busy) return;
@@ -146,7 +145,7 @@ export async function initUpdate() {
     button.classList.add('spin');
     popup('checking', []);
 
-    const [nowClient, nowServer, nowTag] = await Promise.all([clientVersion(), serverVersion(), clientStamp()]);
+    const [nowClient, nowServer] = await Promise.all([clientVersion(), serverVersion()]);
     const lines = techLines(nowClient, nowServer);
 
     if (!nowClient && !nowServer) {
@@ -157,7 +156,7 @@ export async function initUpdate() {
     }
 
     const seen = read(SEEN)?.stamp || '';
-    const stamp = stampOf(nowClient, nowServer, nowTag);
+    const stamp = stampOf(nowClient, nowServer, nowClient?.tag);
     const kind = !seen ? 'done' : (seen === stamp ? 'same' : 'new');
 
     write(SAY, { kind, lines, at: Date.now() });

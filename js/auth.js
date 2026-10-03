@@ -43,6 +43,13 @@ export async function login(email, password) {
   return token;
 }
 
+/* Смена своего пароля. Старый спрашиваем обязательно, а после смены
+   остальные устройства выходят — это делает сервер. */
+export async function changeOwnPassword(currentPassword, newPassword) {
+  const token = await getMeta('token');
+  return api('/api/me/password', { currentPassword, newPassword }, token);
+}
+
 export async function hasSession() {
   return Boolean(await getMeta('token'));
 }

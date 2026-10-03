@@ -437,3 +437,14 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .upd-pop.offline b { color: var(--danger); }
 .upd-pop.out { opacity: 0; transition: opacity .3s; }
 @media (min-width: 768px) { .upd-pop { left: auto; right: 16px; width: 360px; bottom: 74px; } }
+
+/* Глазик внутри поля с паролем */
+.eye-wrap { position: relative; display: block; }
+.eye-wrap input { padding-right: 48px; }
+.eye-btn {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 40px; border: 0; border-radius: 10px; background: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.eye-btn svg { width: 20px; height: 20px; stroke: var(--ink-2); stroke-width: 1.7; fill: none; stroke-linecap: round; }
+.eye-btn[aria-pressed="true"] svg { stroke: var(--gold-bright); }

@@ -3,7 +3,7 @@
 
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
-import { requestAccess, login as doLogin, hasSession, logoutAndClear, fetchMe } from './auth.js';
+import { requestAccess, login as doLogin, hasSession, logoutAndClear, fetchMe, changeOwnPassword } from './auth.js';
 import { API_BASE } from './config.js';
 import {
   state, t, save, reload, onChange, changed, $, h, svgIcon, ICONS,
@@ -12,6 +12,7 @@ import {
 import { LANGUAGES, pickLanguage, isLanguage } from './core/i18n.js';
 import { watchErrors } from './errors.js';
 import { initUpdate } from './update.js';
+import { initPasswordEyes } from './password-eye.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
@@ -199,9 +200,17 @@ function openSettings() {
       onchange: e => save('sectors', [{ ...s, paused: e.target.checked }])
     }), t('settings.notNow')))));
 
-  if (!API_BASE) $('accountInfo').textContent = t('settings.serverOff');
-  else if (state.me) $('accountInfo').textContent = t('settings.loggedIn', { name: state.me.displayName, email: state.me.email });
-  else $('accountInfo').textContent = t('settings.noLink');
+  // Свой пароль можно сменить только когда есть сервер и вход выполнен
+  if (!API_BASE) {
+    $('accountInfo').textContent = t('settings.serverOff');
+    $('changePassword').hidden = true;
+  } else if (state.me) {
+    $('accountInfo').textContent = t('settings.loggedIn', { name: state.me.displayName, email: state.me.email });
+    $('changePassword').hidden = false;
+  } else {
+    $('accountInfo').textContent = t('settings.noLink');
+    $('changePassword').hidden = true;
+  }
 }
 
 /* ---------- Вход ---------- */
@@ -241,6 +250,14 @@ function renderUser() {
   // Номер кабинета девятью цифрами — его можно продиктовать администратору
   $('userAccount').textContent = String(state.me.accountNo ?? 0).padStart(9, '0');
   $('logoutBtn').hidden = false;
+}
+
+function showPasswordError(text) {
+  const msg = $('passwordMsg');
+  msg.textContent = text;
+  msg.className = 'gate-msg is-error';
+  $('passwordDialog').returnValue = '';
+  $('passwordDialog').showModal();
 }
 
 let syncStarted = false;
@@ -325,6 +342,31 @@ async function boot() {
     $('settingsDialog').showModal();
   });
 
+  // Свой пароль человек меняет сам; администратор выдаёт только первый
+  $('changePassword').addEventListener('click', () => {
+    $('passwordForm').reset();
+    $('passwordMsg').textContent = '';
+    $('passwordMsg').className = 'gate-msg';
+    $('settingsDialog').close();
+    $('passwordDialog').returnValue = '';
+    $('passwordDialog').showModal();
+  });
+
+  $('passwordDialog').addEventListener('close', async () => {
+    if ($('passwordDialog').returnValue !== 'save') return;
+    const f = $('passwordForm').elements;
+    const next = f.newPassword.value;
+    const msg = $('passwordMsg');
+    if (next !== f.repeatPassword.value) { showPasswordError(t('password.mismatch')); return; }
+    if (next.length < 8) { showPasswordError(t('password.tooShort')); return; }
+    try {
+      await changeOwnPassword(f.currentPassword.value, next);
+      alert(t('password.saved'));
+    } catch (err) {
+      showPasswordError(t(err.code === 'wrong_current_password' ? 'password.wrongCurrent' : 'password.failed'));
+    }
+  });
+
   $('openAssess').addEventListener('click', openAssess);
   $('countButtons').addEventListener('click', async e => {
     const n = Number(e.target.dataset.count);
@@ -391,6 +433,7 @@ async function boot() {
 
   applyLanguage();
   initUpdate();
+  initPasswordEyes();
 
   if (API_BASE && !(await hasSession())) { showGate(); return; }
   hideGate();

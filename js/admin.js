@@ -6,6 +6,7 @@
 
 import { API_BASE } from './config.js';
 import { h, setStyle } from './store.js';
+import { initPasswordEyes } from './password-eye.js';
 
 const $ = id => document.getElementById(id);
 const KEY = 'planner.adminToken';
@@ -89,6 +90,25 @@ $('adminLogout').addEventListener('click', () => {
 
 const fmtWhen = iso => new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   .format(new Date(iso));
+const fmtDate = iso => new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: '2-digit' })
+  .format(new Date(iso));
+
+/* Срок доступа к кабинету. Пусто — бессрочно; дата в прошлом закрывает вход
+   сразу, в том числе на уже открытом устройстве. */
+async function askAccess(person) {
+  const current = person.accessUntil ? String(person.accessUntil).slice(0, 10) : '';
+  const answer = prompt(
+    `До какой даты открыт кабинет ${person.displayName}?\nФормат 2026-12-31, пусто — бессрочно`,
+    current
+  );
+  if (answer === null) return;
+  const until = answer.trim() || null;
+  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) { showError('Дата в виде 2026-12-31'); return; }
+  await withBusy(async () => {
+    await api(`/api/admin/users/${person.id}/access`, { method: 'POST', body: JSON.stringify({ until }) });
+    await loadPeople();
+  });
+}
 
 async function loadPeople() {
   const people = await api(`/api/admin/registrations?status=${status}`);
@@ -124,6 +144,11 @@ function renderPerson(person) {
     actions.push(h('button', {
       type: 'button', class: 'btn', text: 'Содержание',
       onclick: () => openAssign(person)
+    }));
+    actions.push(h('button', {
+      type: 'button', class: 'btn',
+      text: person.accessUntil ? `Срок: ${fmtDate(person.accessUntil)}` : 'Срок доступа',
+      onclick: () => askAccess(person)
     }));
     actions.push(person.status === 'blocked'
       ? h('button', {
@@ -307,6 +332,7 @@ $('statusTabs').addEventListener('click', e => {
 async function boot() {
   // setStyle подключён, чтобы стили шли мимо запрета inline-style в CSP
   setStyle(document.body, 'min-height: 100vh');
+  initPasswordEyes();
   token = sessionStorage.getItem(KEY);
   if (!token) { showGate(); return; }
   try {

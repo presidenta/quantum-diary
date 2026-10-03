@@ -222,6 +222,7 @@
     <ul id="sectorEditList" class="edit-list"></ul>
     <button type="button" id="openAssess" class="btn" data-i18n="assess.open">Оценить сферы 1–10</button>
     <p class="muted" id="accountInfo"></p>
+    <button type="button" id="changePassword" class="btn" hidden data-i18n="password.change">Сменить пароль</button>
     <button type="button" id="deleteData" class="btn danger" data-i18n="settings.deleteAll">Удалить все мои данные</button>
     <div class="actions"><button value="close" class="btn primary" data-i18n="settings.done">Готово</button></div>
   </form>
@@ -313,6 +314,21 @@
       <option value="3">за три дня</option>
       <option value="7">за неделю</option>
     </select></label>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
+      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="passwordDialog">
+  <form method="dialog" class="sheet" id="passwordForm">
+    <h2 data-i18n="password.change">Сменить пароль</h2>
+    <p class="muted m0" data-i18n="password.hint">Первый пароль выдаёт администратор. Дальше вы меняете его сами.</p>
+    <label><span data-i18n="password.current">Нынешний пароль</span><input name="currentPassword" type="password" required autocomplete="current-password"></label>
+    <label><span data-i18n="password.new">Новый пароль</span><input name="newPassword" type="password" required minlength="8" autocomplete="new-password"></label>
+    <label><span data-i18n="password.repeat">Ещё раз</span><input name="repeatPassword" type="password" required minlength="8" autocomplete="new-password"></label>
+    <p class="gate-msg" id="passwordMsg" role="alert"></p>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
       <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
