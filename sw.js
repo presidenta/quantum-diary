@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 27;
+const RELEASE = 28;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   './', 'index.html', 'css/game-tokens.css', 'css/app.css', 'manifest.webmanifest',
@@ -21,10 +21,31 @@ self.addEventListener('activate', event => {
     .then(() => self.clients.claim()));
 });
 
+/* СВОИ ФАЙЛЫ БЕРЁМ С ПРОВЕРКОЙ У СЕРВЕРА.
+
+   Обычный fetch отдаёт файл из браузерного кэша, не спрашивая сервер. GitHub
+   Pages держит статику десять минут — и всё это время браузер мог вернуть
+   новый admin.html вместе со старым admin.js. Разметка от новой выкладки,
+   код от старой: кнопка есть, обработчика нет, экран не открывается. Так и
+   случилось после выкладки 27.
+
+   cache: 'no-cache' не значит «не кэшировать»: файл по-прежнему хранится, но
+   перед выдачей браузер спрашивает сервер отпечатком (ETag). Не изменился —
+   приходит пустой ответ 304 и файл берётся с диска. Лишнего трафика это почти
+   не добавляет, зато смеси версий больше не бывает.
+
+   Нет сети — ответ придёт из запаса, как и раньше. */
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== location.origin) return;
-  event.respondWith(fetch(event.request)
+  /* Запрос пересобираем по адресу, а не копированием: у перехода по ссылке
+     режим navigate, и копия с другими настройками кэша для него недопустима —
+     браузер отверг бы её. По адресу же получается обычный запрос, ответ на
+     который подходит и для перехода. */
+  const fresh = new Request(event.request.url, {
+    cache: 'no-cache', credentials: 'same-origin', headers: event.request.headers
+  });
+  event.respondWith(fetch(fresh)
     .then(res => {
       if (res.ok) {
         const copy = res.clone();
