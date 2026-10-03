@@ -4,7 +4,20 @@
    только то, что нужно посчитать на экране: какой момент сейчас, сколько
    прожито, какого цвета день. */
 
-export const HOLD_SECONDS = 8;
+/* Сколько держать кнопку. Было восемь секунд — владелец попросил три:
+   восемь на вытянутой руке с телефоном это долго, и люди отпускали раньше. */
+export const HOLD_SECONDS = 3;
+
+/* СКОЛЬКО ЖИВЁТ МОМЕНТ.
+
+   Сигнал приходит в случайную минуту и ждёт человека сорок минут. Не застал —
+   момент упущен, и это нормально: смысл практики в том, чтобы откликнуться
+   сейчас, а не отработать список к ночи.
+
+   Без этого окна просроченные моменты копились очередью: открыв приложение
+   вечером, человек проживал один — и тут же вставал следующий, потом ещё, и
+   так шесть раз подряд. Снаружи это выглядит как заевшая кнопка. */
+export const MOMENT_WINDOW_MINUTES = 40;
 
 /* Цвет дня недели. Чистый спектр на весь экран слепит и не даёт прочесть
    текст, поэтому цвета приглушены: белые буквы на них читаются. */
@@ -48,9 +61,28 @@ export const livedCount = moments => moments.filter(m => m.doneAt).length;
 /* Текущий момент: самый поздний непрожитый, время которого уже наступило.
    Раньше времени момент не появляется — в этом вся суть: его нельзя
    подготовить заранее. */
-export function activeMoment(moments, nowHHMM) {
-  const due = moments.filter(m => !m.doneAt && m.at <= nowHHMM);
-  return due.length ? due[due.length - 1] : null;
+const toMinutes = hhmm => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+
+/* Момент, который сейчас ждёт человека: наступил и ещё не просрочен.
+   Их не может быть двое — окно короче промежутка между моментами. */
+export function activeMoment(moments, nowHHMM, windowMinutes = MOMENT_WINDOW_MINUTES) {
+  const now = toMinutes(nowHHMM);
+  const live = moments.filter(m => {
+    if (m.doneAt) return false;
+    const at = toMinutes(m.at);
+    return at <= now && now - at < windowMinutes;
+  });
+  return live.length ? live[live.length - 1] : null;
+}
+
+// Упущенные: время вышло, а человек не откликнулся. Нужны, чтобы честно
+// показать, сколько моментов прошло мимо, а не делать вид, что их не было
+export function missedMoments(moments, nowHHMM, windowMinutes = MOMENT_WINDOW_MINUTES) {
+  const now = toMinutes(nowHHMM);
+  return moments.filter(m => !m.doneAt && now - toMinutes(m.at) >= windowMinutes);
 }
 
 export const nextMoment = (moments, nowHHMM) =>

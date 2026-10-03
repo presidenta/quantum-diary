@@ -544,3 +544,22 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 }
 .eye-btn svg { width: 20px; height: 20px; stroke: var(--ink-2); stroke-width: 1.7; fill: none; stroke-linecap: round; }
 .eye-btn[aria-pressed="true"] svg { stroke: var(--gold-bright); }
+
+/* Кольцо удержания: заполняется ровно за HOLD_SECONDS и растёт плавно.
+
+   Рисуется коническим градиентом по маске — одно свойство в анимации, без
+   узлов и без перерисовки разметки: телефон в это время держат в руке, и
+   греть его незачем. */
+@property --hold-turn {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.q-ring-live {
+  position: relative;
+  background:
+    conic-gradient(var(--gold-line-lit) var(--hold-turn), transparent 0) border-box;
+  animation: hold-fill var(--hold, 3s) linear forwards;
+}
+@keyframes hold-fill { to { --hold-turn: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .q-ring-live { animation: none; } }

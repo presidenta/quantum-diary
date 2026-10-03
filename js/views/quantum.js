@@ -49,9 +49,14 @@ export async function loadQuantum() {
   }
 }
 
-async function markDone(moment) {
+/* Отметка «прожито».
+
+   redraw=false нужен, когда отметка ставится в конце удержания: там на экране
+   уже показан знак бесконечности, и перерисовка стирала бы его в тот же миг.
+   Экран в этом случае ведёт finishHold — он сам решает, что показать дальше. */
+async function markDone(moment, { redraw = true } = {}) {
   moment.doneAt = new Date().toISOString();
-  renderQuantum();
+  if (redraw) renderQuantum();
   changed();
   try {
     await api(`/api/quantum/moments/${moment.id}/done`, { method: 'POST', body: '{}' });
@@ -191,10 +196,25 @@ const stopPracticeTimers = () => { while (practiceTimers.length) practiceTimers.
 const formatLeft = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
 
 /* Кнопка появляется в случайном месте — её нельзя ждать в одной точке.
-   Место пересчитывается только при появлении, не по таймеру. */
+
+   МЕСТО ЗАПОМИНАЕТСЯ ЗА МОМЕНТОМ и больше не меняется. Раньше координаты
+   бросались заново при каждой перерисовке экрана, а перерисовка случается и
+   во время удержания — кнопка уезжала из-под пальца, и попасть по ней
+   второй раз было делом удачи. Новое место — только у нового момента. */
+const spotOf = new Map();
+
+function spotFor(momentId) {
+  if (!spotOf.has(momentId)) {
+    spotOf.set(momentId, {
+      x: 6 + Math.random() * 52,             // проценты, чтобы не вылезти за край
+      y: 10 + Math.random() * 60
+    });
+  }
+  return spotOf.get(momentId);
+}
+
 function renderWanderButton(live, moment, day) {
-  const x = 6 + Math.random() * 52;          // проценты, чтобы не вылезти за край
-  const y = 10 + Math.random() * 60;
+  const { x, y } = spotFor(moment.id);
   /* На кнопке висит только нажатие. Отпускание слушается на окне (startHold).
 
      Раньше здесь были ещё pointerup, pointercancel и pointerleave — и
@@ -241,9 +261,14 @@ function startHold(event, moment, day) {
   }, 1000);
 }
 
+/* Кольцо заполняется ровно за время удержания. Цифры остались внутри —
+   по ним видно, сколько осталось, — но главное теперь само кольцо: оно
+   растёт плавно, а не скачет раз в секунду. */
 function holdScreen(count) {
+  const ring = h('div', { class: 'q-ring q-ring-live' }, h('span', { class: 'q-count', text: String(count) }));
+  ring.style.setProperty('--hold', `${HOLD_SECONDS}s`);
   return h('div', { class: 'q-overlay' },
-    h('div', { class: 'q-ring' }, h('span', { class: 'q-count', text: String(count) })),
+    ring,
     h('p', { class: 'q-said', text: t('quantum.holding') }),
     h('button', { type: 'button', class: 'btn', text: t('quantum.release'), onclick: cancelHold }));
 }
@@ -299,7 +324,7 @@ async function finishHold(moment, day) {
     h('span', { class: 'q-infinity', text: '∞' }),
     h('p', { class: 'q-said', text: mine.text || moment.text || t('quantum.closed') })));
 
-  await markDone(moment);
+  await markDone(moment, { redraw: false });
   setTimeout(() => showChromo(day), 1400);
 }
 
