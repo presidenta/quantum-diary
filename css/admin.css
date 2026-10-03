@@ -64,10 +64,17 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--gold)
   color: var(--ink-2); white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow: auto;
 }
 
-/* Язык в шапке кабинета: та же строгая форма, что у кнопок рядом */
+/* Шапка кабинета: заголовок тянется, кнопки — нет.
+
+   Без flex: none выбор языка растягивался на всю свободную ширину и
+   превращался в поле во весь экран с одиноким словом посередине. */
+body.admin .top { gap: 8px; }
+body.admin .top h1 { flex-grow: 1; min-width: 0; }
+body.admin .top .icon-btn { flex: none; min-width: 40px; min-height: 40px; }
+
 .lang-select {
-  min-height: 44px; padding: 0 6px; border-radius: var(--edge); text-align: center;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
-  font: inherit; font-weight: 600; cursor: pointer;
+  flex: none; width: auto; min-height: 40px; padding: 0 8px;
+  border-radius: var(--edge); text-align: center;
+  font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
 }
 .lang-select:focus-visible { outline: none; box-shadow: var(--glow-active); }

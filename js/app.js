@@ -38,7 +38,7 @@ function applyLanguage() {
   document.documentElement.lang = state.language;
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   const current = LANGUAGES.find(l => l.code === state.language);
-  $('langLabel').textContent = current.label;
+  $('langLabel').textContent = `${current.flag} ${current.label}`;
   renderLangMenu();
   renderNav();
   render();
@@ -49,7 +49,7 @@ function renderLangMenu() {
     type: 'button',
     'aria-pressed': String(l.code === state.language),
     onclick: () => setLanguage(l.code)
-  }, h('span', { text: l.name }), h('span', { class: 'code', text: l.label }))));
+  }, h('span', { text: `${l.flag} ${l.name}` }), h('span', { class: 'code', text: l.label }))));
 }
 
 function setLanguage(code) {

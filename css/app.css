@@ -47,6 +47,36 @@
   --glow-active: 0 0 0 1px var(--gold), 0 0 18px rgba(212, 175, 55, .45);
 }
 
+/* КНОПКИ ШАПКИ — язык, обновление, выход.
+
+   Поведение взято у кнопки с домиком из кабинета игры (cabinet.css, .ms-go)
+   и не выдумано заново: тёмная плашка, тонкая золотая обводка, при наведении
+   граница загорается и добавляется свечение, при нажатии кнопка сжимается.
+   Оттуда же порядок переходов и уважение к отключённой анимации — человеку,
+   которому движение мешает, система говорит об этом, и мы слушаем.
+
+   Изменено ровно одно: при наведении кнопка ещё и чуть подрастает. Цвет
+   плашки взят из своей палитры, а не из игры: там она фиолетовая, здесь
+   обсидиановая, и чужой оттенок был бы виден сразу. */
+.head-btn {
+  background: var(--surface-2);
+  border: 1px solid rgb(201 163 78 / 40%);
+  color: var(--gold-bright);
+  transition: border-color .2s, box-shadow .3s, transform .2s;
+}
+@media (hover: hover) {
+  .head-btn:hover {
+    border-color: #F6C147;
+    box-shadow: 0 0 12px rgb(246 193 71 / 40%);
+    transform: scale(1.06);
+  }
+}
+.head-btn:active { border-color: #F6C147; transform: scale(.92); }
+@media (prefers-reduced-motion: reduce) {
+  .head-btn { transition: none; }
+  .head-btn:hover, .head-btn:active { transform: none; }
+}
+
 /* Отклик на нажатие — общий для всего управления. Золото загорается в тот
    момент, когда палец касается, и гаснет, когда отпускают. */
 .btn, .icon-btn, .lang-btn, .segmented button, .tabs button {

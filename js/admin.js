@@ -39,9 +39,10 @@ function applyLanguage() {
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   const select = $('adminLang');
   if (select.options.length !== LANGUAGES.length) {
-    // Короткий код, а не полное название: в шапке рядом с двумя кнопками
-    // «Українська» не помещается и обрезается многоточием
-    select.replaceChildren(...LANGUAGES.map(l => h('option', { value: l.code, text: l.label })));
+    /* Флаг и короткий код. Полное название в шапке рядом с двумя кнопками
+       не помещается и обрезается многоточием, а флаг узнаётся без чтения. */
+    select.replaceChildren(...LANGUAGES.map(l =>
+      h('option', { value: l.code, text: `${l.flag} ${l.label}` })));
   }
   select.value = language;
 }

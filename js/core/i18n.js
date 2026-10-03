@@ -4,10 +4,12 @@
    переведено, а что забыли. Пропуск в переводе отдаёт русский текст, а не
    пустоту и не ключ — человек увидит понятное слово, пусть и не на своём языке. */
 
+// Флаги теми же эмодзи, что в кабинете игры (cabinet/i18n.js): один язык —
+// один значок во всех наших продуктах
 export const LANGUAGES = [
-  { code: 'ru', label: 'Рус', name: 'Русский' },
-  { code: 'uk', label: 'Укр', name: 'Українська' },
-  { code: 'en', label: 'Eng', name: 'English' }
+  { code: 'ru', label: 'Рус', name: 'Русский', flag: '🇷🇺' },
+  { code: 'uk', label: 'Укр', name: 'Українська', flag: '🇺🇦' },
+  { code: 'en', label: 'Eng', name: 'English', flag: '🇬🇧' }
 ];
 
 export const DEFAULT_LANGUAGE = 'ru';
