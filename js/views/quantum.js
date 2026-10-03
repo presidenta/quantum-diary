@@ -14,6 +14,7 @@ import {
   livedCount, activeMoment, nextMoment, timeNow, msUntil
 } from '../core/quantum.js';
 import { todayKey } from '../core/dates.js';
+import { localMedia, warmUp } from '../core/media.js';
 
 let wakeTimer = null;
 let holdTimer = null;
@@ -43,10 +44,24 @@ export async function loadQuantum() {
   if (!API_BASE) { state.quantum = null; return; }
   try {
     state.quantum = await api('/api/quantum/today');
+    /* Картинки и звуки дня качаем сразу, пока сеть есть: момент наступит в
+       зале или в метро, и тянуть файл в ту секунду будет поздно. Ждать этого
+       экран не должен — поэтому без await. */
+    warmUpToday(state.quantum);
   } catch {
     // Нет сети — экран покажет, что день ещё не получен; данные не теряются
     state.quantum = null;
   }
+}
+
+function warmUpToday(day) {
+  if (!day) return;
+  const urls = [];
+  for (const m of day.moments || []) urls.push(m.imageUrl, m.audioUrl);
+  for (const s of Object.values(day.settings?.slots || {})) urls.push(s.imageUrl, s.audioUrl);
+  const weekday = day.settings?.weekday;
+  if (weekday) urls.push(weekday.imageUrl, weekday.audioUrl);
+  warmUp(urls).catch(() => {});
 }
 
 /* Отметка «прожито».
@@ -138,11 +153,20 @@ function renderLive(active, day) {
 function practiceScreen(moment, anchorKey) {
   const parts = [];
 
+  /* Картинка и звук берутся с устройства: политика страницы не пропускает
+     чужой адрес в src, да и в метро его было бы не скачать. Пока файл ищется
+     в хранилище, место под него не занимаем — он появится сам. */
   if (moment.imageUrl) {
-    parts.push(h('img', {
-      class: 'q-image', src: moment.imageUrl, alt: moment.title || '',
-      loading: 'lazy', onerror: e => { e.target.hidden = true; }
-    }));
+    const img = h('img', {
+      class: 'q-image', alt: moment.title || '',
+      loading: 'lazy', hidden: true, onerror: e => { e.target.hidden = true; }
+    });
+    parts.push(img);
+    localMedia(moment.imageUrl).then(src => {
+      if (!src) return;
+      img.src = src;
+      img.hidden = false;
+    });
   }
   if (moment.title) parts.push(h('p', { class: 'q-practice-title', text: moment.title }));
 
@@ -151,7 +175,13 @@ function practiceScreen(moment, anchorKey) {
 
   if (moment.audioUrl) {
     // Звук не играет сам: это решение человека, а не приложения
-    parts.push(h('audio', { class: 'q-audio', src: moment.audioUrl, controls: true, preload: 'none' }));
+    const audio = h('audio', { class: 'q-audio', controls: true, preload: 'none', hidden: true });
+    parts.push(audio);
+    localMedia(moment.audioUrl).then(src => {
+      if (!src) return;
+      audio.src = src;
+      audio.hidden = false;
+    });
   }
   if (moment.durationSec > 0) parts.push(practiceTimer(moment.durationSec));
 
@@ -303,9 +333,13 @@ function cancelHold() {
 
    Ничего не загружаем, пока не понадобилось: Audio создаётся в этот миг, а не
    держится в памяти весь день — телефон должен дожить до вечера. */
-function playMoment(moment) {
+async function playMoment(moment) {
   const personal = state.quantum?.settings?.slots?.[moment.slot]?.audioUrl;
-  const src = personal || moment.audioUrl;
+  const url = personal || moment.audioUrl;
+  if (!url) return;
+  // Берём скачанную копию: в метро по ссылке звук не достать, да и политика
+  // страницы чужой адрес не пропустит
+  const src = await localMedia(url);
   if (!src) return;
   try {
     const sound = new Audio(src);

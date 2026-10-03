@@ -1,6 +1,7 @@
 import { API_BASE } from './config.js';
 import { getMeta, setMeta, clearAll } from './db.js';
 import { sessionChange } from './core/session.js';
+import { forgetMedia } from './core/media.js';
 
 async function api(path, body, token = null) {
   const res = await fetch(API_BASE + path, {
@@ -44,6 +45,9 @@ export async function login(login, password) {
   const previous = await getMeta('userId');
   if (sessionChange(previous, userId) === 'clear') {
     await clearAll();            // стирает и token, и cursor, и все данные
+    // Скачанные практики предыдущего человека тоже убираем: они лежат в
+    // отдельном хранилище, и clearAll() до них не достаёт
+    await forgetMedia();
   }
   await setMeta('token', token);
   await setMeta('userId', userId);
