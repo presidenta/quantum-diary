@@ -121,7 +121,8 @@ function sectionBadge(id) {
     const left = state.data.tasks.filter(x => !x.deletedAt && x.date === state.day && !x.done).length;
     return left || null;
   }
-  if (id === 'quantum') return state.quantum ? state.quantum.moments.filter(m => !m.doneAt).length || null : null;
+  // Выключенные моменты не ждут человека — их нет и в счётчике
+  if (id === 'quantum') return state.quantum ? state.quantum.moments.filter(m => !m.doneAt && !m.offAt).length || null : null;
   return null;
 }
 

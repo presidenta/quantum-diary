@@ -56,7 +56,21 @@ export function groupBySlot(moments) {
   }));
 }
 
-export const livedCount = moments => moments.filter(m => m.doneAt).length;
+/* ВЫКЛЮЧЕННЫЕ МОМЕНТЫ.
+
+   Человек сам решает, сколько раз в день его окликнуть: крестик на времени
+   гасит момент. Выключенный момент не наступает, не считается прожитым и не
+   попадает в счётчик раздела. На экране расписания он остаётся — перечёркнутым,
+   чтобы его можно было вернуть. */
+export const isOff = moment => Boolean(moment.offAt);
+
+// Моменты, которые сегодня ещё работают
+export const liveMoments = moments => moments.filter(m => !isOff(m));
+
+// Сколько моментов человек оставил себе на сегодня: знаменатель счётчика
+export const plannedCount = moments => liveMoments(moments).length;
+
+export const livedCount = moments => moments.filter(m => m.doneAt && !isOff(m)).length;
 
 /* Текущий момент: самый поздний непрожитый, время которого уже наступило.
    Раньше времени момент не появляется — в этом вся суть: его нельзя
@@ -71,7 +85,7 @@ const toMinutes = hhmm => {
 export function activeMoment(moments, nowHHMM, windowMinutes = MOMENT_WINDOW_MINUTES) {
   const now = toMinutes(nowHHMM);
   const live = moments.filter(m => {
-    if (m.doneAt) return false;
+    if (m.doneAt || isOff(m)) return false;
     const at = toMinutes(m.at);
     return at <= now && now - at < windowMinutes;
   });
@@ -82,11 +96,11 @@ export function activeMoment(moments, nowHHMM, windowMinutes = MOMENT_WINDOW_MIN
 // показать, сколько моментов прошло мимо, а не делать вид, что их не было
 export function missedMoments(moments, nowHHMM, windowMinutes = MOMENT_WINDOW_MINUTES) {
   const now = toMinutes(nowHHMM);
-  return moments.filter(m => !m.doneAt && now - toMinutes(m.at) >= windowMinutes);
+  return moments.filter(m => !m.doneAt && !isOff(m) && now - toMinutes(m.at) >= windowMinutes);
 }
 
 export const nextMoment = (moments, nowHHMM) =>
-  moments.find(m => !m.doneAt && m.at > nowHHMM) || null;
+  moments.find(m => !m.doneAt && !isOff(m) && m.at > nowHHMM) || null;
 
 export const timeNow = (date = new Date()) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;

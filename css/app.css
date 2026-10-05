@@ -442,12 +442,27 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .q-slot { margin: 0 0 7px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--gold); }
 .q-times { display: flex; gap: 7px; }
 .q-time {
-  flex: 1; padding: 9px 0; text-align: center; border-radius: 10px;
+  flex: 1; display: flex; align-items: center; gap: 2px;
+  padding: 4px; border-radius: 10px;
   background: var(--surface-2); border: 1px solid rgba(255, 255, 255, .08);
   font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
+.q-time-at { flex: 1; text-align: center; }
 .q-time.done { background: var(--gold-fill); border-color: var(--line-strong); color: var(--ink); font-weight: 600; }
 .q-time.active { border-color: var(--gold-bright); color: var(--gold-bright); font-weight: 700; }
+
+/* Выключенное время видно, но перечёркнуто: его можно вернуть одним нажатием */
+.q-time.off { opacity: .55; }
+.q-time.off .q-time-at { text-decoration: line-through; }
+
+/* Крестик. Палец толще значка, поэтому у кнопки свои 30 пикселей высоты:
+   попадать в неё надо с первого раза, а не с третьего. */
+.q-time-off {
+  flex: none; width: 26px; height: 30px; padding: 0; border: 0; border-radius: 8px;
+  background: none; color: var(--ink-2); font-size: 16px; line-height: 1; cursor: pointer;
+}
+.q-time-off:hover { color: var(--gold-bright); background: rgba(255, 255, 255, .07); }
+.q-time.off .q-time-off { color: var(--gold); }
 .q-next { margin: 4px 0 0; }
 .q-hint { margin: 10px 0 0; font-size: 12px; }
 

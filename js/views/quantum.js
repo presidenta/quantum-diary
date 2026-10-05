@@ -10,8 +10,8 @@ import { state, t, $, h, fill, changed } from '../store.js';
 import { API_BASE } from '../config.js';
 import { getMeta } from '../db.js';
 import {
-  HOLD_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot,
-  livedCount, activeMoment, nextMoment, timeNow, msUntil
+  HOLD_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot, isOff, liveMoments,
+  livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil
 } from '../core/quantum.js';
 import { todayKey } from '../core/dates.js';
 import { localMedia, warmUp } from '../core/media.js';
@@ -97,6 +97,7 @@ export function renderQuantum() {
   }
 
   const lived = livedCount(day.moments);
+  const planned = plannedCount(day.moments);
   const now = timeNow();
   const active = activeMoment(day.moments, now);
   const next = nextMoment(day.moments, now);
@@ -108,27 +109,71 @@ export function renderQuantum() {
         h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
         h('p', { class: 'q-arcana-name', text: t(arcanaKey(day.arcana)) })),
       h('div', { class: 'q-lived' },
-        h('b', { text: `${lived} / 9` }),
+        h('b', { text: `${lived} / ${planned}` }),
         h('span', { text: t('quantum.livedShort') }))),
 
-    h('div', { class: 'q-bar' }, ...day.moments.map(m =>
+    h('div', { class: 'q-bar' }, ...liveMoments(day.moments).map(m =>
       h('i', { class: m.doneAt ? 'done' : '' }))),
 
     ...groupBySlot(day.moments).map(group => h('div', { class: 'q-group' },
       h('p', { class: 'q-slot', text: t(SLOT_TITLE[group.slot]) }),
-      h('div', { class: 'q-times' }, ...group.moments.map(m => h('span', {
-        class: `q-time${m.doneAt ? ' done' : ''}${m === active ? ' active' : ''}`,
-        text: m.at
-      }))))),
+      h('div', { class: 'q-times' }, ...group.moments.map(m => momentChip(m, active))))),
 
     next && !active
       ? h('p', { class: 'muted q-next', text: t('quantum.next-at', { time: next.at }) })
       : null,
-    h('p', { class: 'muted q-hint', text: t('quantum.hint') })
+    h('p', { class: 'muted q-hint', text: t('quantum.hint') }),
+    h('p', { class: 'muted q-hint', text: t('quantum.offHint') })
   );
 
   renderLive(active, day);
   scheduleWake(next);
+}
+
+/* Квадратик времени с крестиком.
+
+   Крестик гасит момент: сегодня сигнал не придёт, а завтра в этой фазе времён
+   будет на одно меньше. Нажатие на погашенное время возвращает его обратно.
+   У прожитого момента крестика нет — выключать то, что уже случилось, нечего. */
+function momentChip(moment, active) {
+  const mark = ['q-time'];
+  if (isOff(moment)) mark.push('off');
+  else if (moment.doneAt) mark.push('done');
+  else if (moment === active) mark.push('active');
+
+  const chip = h('div', { class: mark.join(' ') },
+    h('span', { class: 'q-time-at', text: moment.at }));
+
+  if (!moment.doneAt) {
+    const key = isOff(moment) ? 'quantum.turnOn' : 'quantum.turnOff';
+    chip.append(h('button', {
+      type: 'button', class: 'q-time-off', text: isOff(moment) ? '+' : '×',
+      title: t(key), 'aria-label': `${t(key)} — ${moment.at}`,
+      onclick: () => toggleOff(moment)
+    }));
+  }
+  return chip;
+}
+
+/* Выключение живёт на сервере: расписание приходит оттуда, и завтрашний день
+   строит он же. Экран показывает новое состояние сразу, не дожидаясь ответа, —
+   а если сервер не ответил, возвращает как было: обещать выключение, которого
+   на самом деле нет, хуже, чем показать отказ. */
+async function toggleOff(moment) {
+  const off = !isOff(moment);
+  const before = moment.offAt;
+  moment.offAt = off ? new Date().toISOString() : null;
+  renderQuantum();
+  changed();
+  try {
+    await api(`/api/quantum/moments/${moment.id}/off`, {
+      method: 'POST', body: JSON.stringify({ off })
+    });
+  } catch {
+    moment.offAt = before;
+    renderQuantum();
+    changed();
+  }
 }
 
 /* Живая часть: то, ради чего всё. Утром и вечером — короткий экран с якорем,
