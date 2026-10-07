@@ -1,12 +1,16 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 33;
+const RELEASE = 35;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   './', 'index.html', 'css/game-tokens.css', 'css/app.css', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/app.js', 'js/store.js', 'js/db.js', 'js/sync.js', 'js/auth.js', 'js/config.js', 'js/wheel.js', 'js/errors.js', 'js/update.js', 'js/password-eye.js',
   'js/views/wheel.js', 'js/views/day.js', 'js/views/quantum.js', 'js/views/money.js', 'js/profile.js',
+  'css/space.css',
+  'js/views/space/index.js', 'js/views/space/app.js', 'js/views/space/config.js',
+  'js/views/space/notifications.js', 'js/views/space/scene.js', 'js/views/space/template.js',
+  'js/vendor/three.min.js',
   'admin.html', 'css/admin.css', 'js/admin.js',
   'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js'
 ];

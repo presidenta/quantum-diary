@@ -1,0 +1,873 @@
+/* ============================================================================
+   КВАНТ · Раздел 2 — «Пространство вариантов»
+   quantum.css — визуальный слой модуля под дизайн-систему Ежедневника.
+
+   ПРАВИЛО ИЗОЛЯЦИИ: каждое правило начинается с .qm-root.
+   Ни один селектор не может повлиять на остальной Пульт управления,
+   и наоборот — внешние стили почти не достают до модуля.
+
+   ЕСЛИ В ЕЖЕДНЕВНИКЕ УЖЕ ЕСТЬ ГЛОБАЛЬНЫЕ ТОКЕНЫ (--gold, --panel и т.п.) —
+   замените значения в блоке :root ниже на var(--ваш-токен). Это единственное
+   место, где заданы цвета: больше нигде в модуле нет «зашитых» оттенков.
+   ========================================================================== */
+
+.qm-root {
+    /* --- Палитра: берётся из токенов «Игры мудрецов» --------------------
+       Значения после запятой — запасные, на случай если модуль открыт вне
+       Ежедневника (например, demo.html). Внутри Пульта подхватываются живые
+       переменные из css/game-tokens.css, поэтому правка токенов в игре
+       автоматически доезжает до этого раздела. Своих цветов модуль не имеет. */
+    --qm-bg:            var(--bg,          #100e16);   /* фон рабочей области */
+    --qm-panel:         var(--surface,     #16131f);   /* карточка */
+    --qm-panel-2:       var(--surface-2,   #1d1927);   /* чипы, поля ввода */
+    --qm-panel-3:       #262033;                       /* активный чип */
+    --qm-border:        var(--line,        rgba(201, 163, 78, 0.14));
+    --qm-border-soft:   var(--line-soft,   rgba(232, 228, 221, 0.07));
+    --qm-border-strong: var(--line-strong, #A8721A);
+
+    --qm-gold:        var(--gold,          #D39D3C);
+    --qm-gold-bright: var(--gold-bright,   #F6C147);
+    --qm-gold-lit:    var(--gold-text-lit, #FFF2B2);
+    --qm-gold-line:   var(--line-strong,   #A8721A);
+    --qm-gold-soft:   var(--gold-fill,     rgba(201, 163, 78, 0.14));
+    --qm-gold-glow:   var(--gold-glow,     rgba(246, 193, 71, 0.28));
+    --qm-gold-ink:    var(--gold-ink,      #381D02);   /* текст НА золоте */
+
+    --qm-gold-3d:     var(--gold-gradient, linear-gradient(145deg, #F9D976 0%, #EAA82C 30%, #C18825 60%, #7A4B11 85%, #B88428 100%));
+    --qm-gold-3d-shadow: var(--gold-3d-shadow,
+                         inset 0 2.5px 4px rgba(255, 255, 255, 0.7),
+                         inset 0 -3px 6px rgba(122, 75, 17, 0.8),
+                         0 8px 20px rgba(0, 0, 0, 0.8));
+    --qm-glow:        var(--glow,        0 0 20px rgba(246, 193, 71, 0.28));
+    --qm-glow-active: var(--glow-active, 0 0 0 1px #D39D3C, 0 0 18px rgba(212, 175, 55, 0.45));
+
+    --qm-text:        var(--ink,   #ece7de);
+    --qm-muted:       var(--ink-2, #a89fb2);
+    --qm-faint:       var(--faint, #6f6880);
+
+    --qm-radius:      var(--edge-lg, 16px);
+    --qm-radius-sm:   var(--edge,    12px);
+
+    --qm-font:        var(--sans,  'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+    --qm-font-head:   var(--serif, 'Cormorant Garamond', 'Iowan Old Style', Georgia, 'Times New Roman', serif);
+
+    /* --- Поведение контейнера ------------------------------------------- */
+    position: relative;          /* система координат для экранов модуля */
+    min-height: 680px;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--qm-radius);
+    border: 1px solid var(--qm-border);
+    background-color: var(--qm-bg);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--qm-text);
+    font-family: var(--qm-font);
+    box-sizing: border-box;
+
+    /* ВАЖНО: не добавляйте сюда transform / filter / perspective —
+       это сломает position:fixed у модалки, затемнения и 3D-канваса. */
+}
+
+.qm-root *,
+.qm-root *::before,
+.qm-root *::after { box-sizing: border-box; }
+
+/* Погружение: на время 3D-коридора модуль разворачивается на весь экран.
+   Это обязательно — three-scene.js считает размеры и клики от окна браузера. */
+.qm-root.qm-immersive {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    z-index: 9000;
+}
+
+.qm-root .hidden { display: none !important; }
+
+/* ===== Экраны ============================================================ */
+.qm-root .qm-screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 20px;
+    z-index: 100;
+    overflow-y: auto;
+}
+
+.qm-root .qm-screen::-webkit-scrollbar { width: 8px; }
+.qm-root .qm-screen::-webkit-scrollbar-thumb {
+    background: var(--qm-panel-3);
+    border-radius: 8px;
+}
+
+/* 3D-сцена: видна только в режиме погружения */
+.qm-root #three-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: none;
+}
+.qm-root.qm-immersive #three-canvas { display: block; }
+
+/* Слой золотых песчинок рисуется в координатах окна — держим его fixed */
+.qm-root #sand-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* ===== Карточка ========================================================== */
+.qm-root .card-panel {
+    background: var(--qm-panel);
+    border: 1px solid var(--qm-border);
+    border-radius: var(--qm-radius);
+    padding: 28px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+}
+
+.qm-root .text-center { text-align: center; }
+.qm-root .gold-text { color: var(--qm-gold); }
+
+/* Надзаголовок: мелкий, разреженный, золотой — как «УТРО · ЗАМЫКАНИЕ КОНТУРА» */
+.qm-root .qm-eyebrow {
+    color: var(--qm-gold);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.qm-root h1,
+.qm-root h2,
+.qm-root h3 {
+    font-family: var(--qm-font-head);
+    font-weight: 400;
+    color: var(--qm-text);
+    margin: 0;
+}
+
+.qm-root .qm-title-lg {
+    font-size: 30px;
+    letter-spacing: 0.3px;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.qm-root .qm-title-md {
+    font-size: 23px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.qm-root .qm-sub {
+    font-size: 13px;
+    color: var(--qm-muted);
+    line-height: 1.55;
+    text-align: center;
+    margin: 0 0 18px 0;
+}
+
+.qm-root .qm-sub-left { text-align: left; }
+
+/* Подводка к выбору скорости на экране «Настройка реальности» */
+.qm-root .qm-speed-title {
+    color: var(--qm-gold);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.55;
+    text-align: left;
+    margin: 0 0 10px 0;
+}
+
+/* Кнопка во всю ширину карточки */
+.qm-root .qm-block { width: 100%; }
+.qm-root .qm-block + .qm-block { margin-top: 10px; }
+
+/* ===== Кнопки ============================================================ */
+/* Повторяет .btn.primary Ежедневника: золотая заливка «слитком»,
+   тёмная надпись, то же свечение и та же геометрия углов. */
+.qm-root .btn-gold {
+    background: var(--qm-gold-3d);
+    color: #0A0A0C;
+    border: 1px solid transparent;
+    min-height: 48px;
+    padding: 0 20px;
+    font-family: var(--qm-font);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    border-radius: var(--qm-radius-sm);
+    box-shadow: var(--qm-glow);
+    cursor: pointer;
+    transition: box-shadow 0.18s ease;
+}
+
+.qm-root .btn-gold:hover,
+.qm-root .btn-gold:active,
+.qm-root .btn-gold:focus-visible {
+    outline: none;
+    box-shadow: var(--qm-glow-active);
+}
+
+.qm-root .btn-link,
+.qm-root .btn-link-small {
+    background: transparent;
+    border: none;
+    color: var(--qm-muted);
+    cursor: pointer;
+    font-family: var(--qm-font);
+    font-size: 13px;
+    padding: 8px 4px;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.18s ease, border-color 0.18s ease;
+}
+
+.qm-root .btn-link:hover,
+.qm-root .btn-link-small:hover {
+    color: var(--qm-gold);
+    border-bottom-color: var(--qm-gold-line);
+}
+
+.qm-root .btn-link-small { font-size: 12px; }
+
+/* Кнопка «Отложить» — приглушённый вариант */
+/* Повторяет обычную .btn Ежедневника */
+.qm-root .btn-snooze {
+    background: var(--qm-panel-2);
+    color: var(--qm-text);
+    border: 1px solid var(--qm-border-strong);
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: var(--qm-radius-sm);
+    cursor: pointer;
+    font-family: var(--qm-font);
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 14px;
+    transition: box-shadow 0.18s ease;
+}
+
+.qm-root .btn-snooze:hover,
+.qm-root .btn-snooze:active,
+.qm-root .btn-snooze:focus-visible {
+    outline: none;
+    box-shadow: var(--qm-glow-active);
+}
+
+/* ===== Стартовый экран =================================================== */
+.qm-root .metaverse-title-top {
+    color: var(--qm-gold);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+}
+
+.qm-root .metaverse-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    position: relative;
+}
+
+.qm-root .flower-orbit-container {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qm-root .flower-svg {
+    width: 110px;
+    height: 110px;
+    /* Обводки «Цветка жизни» нарисованы через currentColor — цвет берётся отсюда */
+    color: var(--qm-gold);
+    filter: drop-shadow(0 0 14px var(--qm-gold-glow));
+}
+
+.qm-root .quantum-particle {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    background: #fffaf0;
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--qm-gold), 0 0 16px var(--qm-gold), 0 0 26px rgba(255, 255, 255, 0.5);
+}
+
+.qm-root .outer-quantum {
+    top: 50%;
+    left: 50%;
+    margin-top: -3.5px;
+    margin-left: -3.5px;
+    animation: qmQuantumOrbit 3.5s linear infinite;
+}
+
+/* Внутренние кванты позиционируются из JS (left/top в px) */
+.qm-root .inner-quantum {
+    top: 0;
+    left: 0;
+    margin-top: -3.5px;
+    margin-left: -3.5px;
+}
+
+@keyframes qmQuantumOrbit {
+    0%   { transform: rotate(0deg)   translate(58px) rotate(0deg); }
+    100% { transform: rotate(360deg) translate(58px) rotate(-360deg); }
+}
+
+.qm-root .qm-hero-title {
+    font-family: var(--qm-font-head);
+    color: var(--qm-text);
+    font-size: 34px;
+    font-weight: 400;
+    letter-spacing: 0.4px;
+    margin: 0 0 6px 0;
+    text-align: center;
+}
+
+.qm-root .qm-hero-rule {
+    width: 54px;
+    height: 1px;
+    background: var(--qm-gold-line);
+    margin: 14px 0 24px 0;
+}
+
+.qm-root .qm-hero-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.qm-root #btn-start-app { padding: 14px 40px; font-size: 15px; }
+
+/* ===== Экран настройки дверей ============================================ */
+.qm-root .doors-count-selector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border);
+    border-radius: var(--qm-radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+}
+
+.qm-root .doors-count-selector label {
+    font-size: 12px;
+    color: var(--qm-muted);
+    letter-spacing: 0.3px;
+}
+
+.qm-root #doors-count-select {
+    background: var(--qm-panel-3);
+    border: 1px solid var(--qm-border);
+    color: var(--qm-gold);
+    font-family: var(--qm-font);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.qm-root #doors-count-select:focus {
+    outline: none;
+    border-color: var(--qm-gold-line);
+}
+
+.qm-root .door-text-input,
+.qm-root textarea {
+    width: 100%;
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border);
+    color: var(--qm-text);
+    font-family: var(--qm-font);
+    font-size: 13.5px;
+    line-height: 1.5;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: var(--qm-radius-sm);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.qm-root .door-text-input::placeholder,
+.qm-root textarea::placeholder { color: var(--qm-faint); }
+
+.qm-root .door-text-input:focus,
+.qm-root textarea:focus {
+    outline: none;
+    border-color: var(--qm-gold-line);
+    box-shadow: 0 0 0 3px var(--qm-gold-soft);
+}
+
+.qm-root textarea { resize: vertical; min-height: 150px; margin-bottom: 16px; }
+
+.qm-root .inputs-scroll-area {
+    max-height: 38vh;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 4px;
+}
+
+.qm-root .inputs-scroll-area::-webkit-scrollbar { width: 6px; }
+.qm-root .inputs-scroll-area::-webkit-scrollbar-thumb {
+    background: var(--qm-panel-3);
+    border-radius: 6px;
+}
+
+/* ===== HUD-таймер квантового окна (виден только в погружении) ============= */
+.qm-root .hud-timer-container {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 9100;
+    pointer-events: none;
+}
+
+.qm-root .hud-timer-badge {
+    background: rgba(19, 19, 28, 0.78);
+    border: 1px solid var(--qm-gold-line);
+    color: var(--qm-gold);
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-size: 22px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+    margin-bottom: 8px;
+    backdrop-filter: blur(6px);
+}
+
+.qm-root .hud-timer-sub {
+    color: rgba(233, 233, 240, 0.9);
+    font-size: 12px;
+    line-height: 1.5;
+    text-shadow: 0 1px 4px #000;
+    white-space: pre-line;
+}
+
+/* ===== Экран «Настройка реальности» ====================================== */
+.qm-root .chosen-reality-box-clean {
+    font-family: var(--qm-font-head);
+    font-size: 19px;
+    line-height: 1.4;
+    color: var(--qm-gold);
+    text-align: center;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    background: var(--qm-gold-soft);
+    border: 1px solid var(--qm-gold-line);
+    border-radius: var(--qm-radius-sm);
+}
+
+.qm-root .speed-tabs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.qm-root .speed-tab {
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border);
+    color: var(--qm-muted);
+    font-family: var(--qm-font);
+    padding: 12px 15px;
+    border-radius: var(--qm-radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.qm-root .speed-tab:hover { border-color: var(--qm-border); background: var(--qm-panel-3); }
+
+.qm-root .speed-tab.active {
+    border-color: var(--qm-gold-line);
+    color: var(--qm-gold);
+    background: var(--qm-gold-soft);
+}
+
+.qm-root .badge-rec {
+    color: var(--qm-gold);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.qm-root .speed-instruction-box {
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border-soft);
+    border-left: 2px solid var(--qm-gold-line);
+    padding: 14px 16px;
+    border-radius: 0 var(--qm-radius-sm) var(--qm-radius-sm) 0;
+    font-size: 13px;
+    color: var(--qm-muted);
+    line-height: 1.6;
+    text-align: left;
+    margin-bottom: 18px;
+    min-height: 64px;
+}
+
+.qm-root .btn-eyes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 15px;
+    padding: 15px 20px;
+}
+
+.qm-root .smiley-icon::before {
+    content: "\1F97A";
+    font-size: 26px;
+    line-height: 1;
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.qm-root .btn-eyes:hover .smiley-icon::before,
+.qm-root .btn-eyes:active .smiley-icon::before { content: "\1F60C"; }
+
+/* ===== Отсчёт 1-2-3 и затемнение ========================================= */
+.qm-root .countdown-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 13, 19, 0.94);
+    backdrop-filter: blur(14px);
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qm-root .countdown-num {
+    font-family: var(--qm-font-head);
+    font-size: 7rem;
+    font-weight: 400;
+    color: var(--qm-gold);
+    text-shadow: 0 0 46px var(--qm-gold-glow);
+    animation: qmCountPulse 0.8s ease-out;
+}
+
+@keyframes qmCountPulse {
+    0%   { opacity: 0; transform: scale(0.4); }
+    50%  { opacity: 1; transform: scale(1.15); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.qm-root .blackout-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 99999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease;
+}
+
+.qm-root .blackout-overlay.active { opacity: 1; pointer-events: auto; }
+
+/* ===== Блок-напоминание на экране дневника =============================== */
+.qm-root .gold-notice-box {
+    background: var(--qm-gold-soft);
+    border: 1px solid var(--qm-gold-line);
+    border-radius: var(--qm-radius-sm);
+    padding: 13px 16px;
+    color: var(--qm-gold);
+    font-size: 12.5px;
+    text-align: left;
+    margin: 0 0 18px 0;
+    line-height: 1.55;
+}
+
+/* ===== Модальное окно «Окно возможностей открыто» ======================== */
+.qm-root .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 15, 0.86);
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.qm-root .modal-card {
+    background: var(--qm-panel);
+    border: 1px solid var(--qm-gold-line);
+    box-shadow: 0 0 44px rgba(216, 166, 63, 0.16), 0 20px 50px rgba(0, 0, 0, 0.6);
+    border-radius: var(--qm-radius);
+    padding: 30px 26px;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.qm-root .modal-clock-icon { margin-bottom: 4px; }
+
+/* Класс исторически назывался «blue» — теперь это золотой круг Ежедневника */
+.qm-root .glowing-blue-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--qm-gold-soft);
+    border: 1px solid var(--qm-gold-line);
+    box-shadow: 0 0 26px var(--qm-gold-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 27px;
+    margin-bottom: 18px;
+}
+
+.qm-root .modal-title {
+    font-family: var(--qm-font-head);
+    color: var(--qm-text);
+    font-size: 22px;
+    font-weight: 400;
+    margin: 0 0 10px 0;
+}
+
+.qm-root .modal-sub {
+    color: var(--qm-muted);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0 0 18px 0;
+}
+
+.qm-root .modal-timer-box {
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-gold-line);
+    color: var(--qm-gold);
+    border-radius: var(--qm-radius-sm);
+    padding: 11px 20px;
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 18px;
+}
+
+.qm-root .modal-warning {
+    color: var(--qm-faint);
+    font-size: 12px;
+    line-height: 1.5;
+    margin: 0 0 22px 0;
+}
+
+/* ===== Переключатель языков ============================================== */
+.qm-root .lang-switcher {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 1000;
+    display: flex;
+    gap: 6px;
+}
+
+.qm-root .qm-lang-btn {
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border);
+    color: var(--qm-muted);
+    font-family: var(--qm-font);
+    padding: 5px 11px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    transition: all 0.18s ease;
+}
+
+.qm-root .qm-lang-btn:hover { color: var(--qm-text); }
+
+.qm-root .qm-lang-btn.active {
+    border-color: var(--qm-gold-line);
+    color: var(--qm-gold);
+    background: var(--qm-gold-soft);
+}
+
+/* ===== Экран «Хроники Акаши» ============================================= */
+.qm-root #screen-5 {
+    justify-content: flex-start;
+    padding-top: 30px;
+}
+
+.qm-root .qm-chronicles-wrap {
+    width: 100%;
+    max-width: 520px;
+}
+
+.qm-root .qm-cooldown-panel {
+    background: var(--qm-panel);
+    border: 1px solid var(--qm-border);
+    border-radius: var(--qm-radius);
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.qm-root #s5-cooldown-timer {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--qm-gold);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.2px;
+}
+
+.qm-root .qm-chronicles-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.qm-root #txt-s5-title {
+    font-family: var(--qm-font-head);
+    font-size: 19px;
+    font-weight: 400;
+    color: var(--qm-text);
+}
+
+.qm-root #txt-s5-sub {
+    font-size: 12px;
+    color: var(--qm-faint);
+    line-height: 1.5;
+    margin: 0 0 18px 0;
+}
+
+.qm-root .chronicle-card {
+    background: var(--qm-panel);
+    border: 1px solid var(--qm-border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.qm-root .chronicle-date {
+    color: var(--qm-faint);
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.qm-root .chronicle-reality {
+    color: var(--qm-gold);
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    margin-bottom: 8px;
+}
+
+.qm-root .chronicle-trace {
+    color: var(--qm-muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.qm-root .qm-empty {
+    color: var(--qm-faint);
+    font-size: 13px;
+    text-align: center;
+    padding: 26px 0;
+}
+
+/* ===== Переключатель подразделов «Кванта» ================================
+   Готовая разметка для вкладок внутри раздела «Квант».
+   Пример использования — в demo.html и README.md.
+   ======================================================================== */
+.qm-tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: #1f1f2b;
+    border: 1px solid #2b2b3a;
+    border-radius: 12px;
+    margin-bottom: 18px;
+}
+
+.qm-tab {
+    background: transparent;
+    border: none;
+    color: #8c8c9d;
+    font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.qm-tab:hover { color: #e9e9f0; }
+
+.qm-tab.active {
+    background: #242431;
+    color: #d8a63f;
+    box-shadow: inset 0 0 0 1px rgba(216, 166, 63, 0.35);
+}
+
+/* ===== Мобильная адаптация =============================================== */
+@media (max-width: 620px) {
+    .qm-root { min-height: 600px; border-radius: 14px; }
+    .qm-root .card-panel { padding: 22px 18px; }
+    .qm-root .qm-hero-title { font-size: 27px; }
+    .qm-root .qm-title-lg { font-size: 25px; }
+    .qm-root .countdown-num { font-size: 5rem; }
+    .qm-root .lang-switcher { top: 12px; right: 12px; }
+    .qm-root .qm-screen { padding: 56px 14px 24px; }
+}
+
+/* ===== Встроенный режим ==================================================
+   Раздел живёт внутри карточки Пульта: собственная звёздная сетка не нужна
+   (она уже есть у страницы), а язык берётся из общего переключателя
+   Ежедневника — свой прячем.
+   ======================================================================== */
+.qm-root.qm-embedded {
+    background-image: none;
+}
+
+.qm-root.qm-embedded .lang-switcher {
+    display: none;
+}

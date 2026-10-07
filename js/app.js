@@ -17,6 +17,7 @@ import { initPasswordEyes } from './password-eye.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
+import { initSpace, syncSpace } from './views/space/index.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
@@ -109,6 +110,7 @@ function render() {
   if (state.view === 'wheel') renderWheelView();
   if (state.view === 'day') renderDay();
   if (state.view === 'quantum') renderQuantum();
+  syncSpace();                 // вторая вкладка «Кванта»: гаснет вне раздела
   if (state.view === 'money') renderMoney();
   renderDrawerSpheres();
 }
@@ -348,6 +350,7 @@ async function boot() {
   initWheel();
   initDay();
   initQuantum();
+  initSpace();
   onChange(render);
 
   // Меню, язык, настройки

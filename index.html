@@ -16,6 +16,9 @@
      ими свои имена (см. :root в app.css) -->
 <link rel="stylesheet" href="css/game-tokens.css">
 <link rel="stylesheet" href="css/app.css">
+<!-- Вторая вкладка «Кванта». Идёт последней: берёт имена из app.css,
+     своих цветов не заводит, все правила живут внутри .qm-root -->
+<link rel="stylesheet" href="css/space.css">
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -169,9 +172,24 @@
 
     <!-- Квант -->
     <section id="viewQuantum" hidden>
-      <div class="card" id="quantumCard"></div>
-      <!-- Живая часть: экран момента, удержание кнопки, хромотерапия -->
-      <div id="quantumLive" class="q-live" hidden></div>
+      <!-- Две части раздела. Подписи проставляет js/views/space/index.js
+           из своего словаря, чтобы не расширять общий i18n. -->
+      <div class="qm-tabs" id="quantumTabs" role="tablist">
+        <button type="button" class="qm-tab active" data-part="moments"
+                role="tab" aria-selected="true">Моменты</button>
+        <button type="button" class="qm-tab" data-part="space"
+                role="tab" aria-selected="false">Пространство вариантов</button>
+      </div>
+
+      <!-- Часть 1: моменты дня. Разметка и логика не менялись. -->
+      <div id="quantumMoments">
+        <div class="card" id="quantumCard"></div>
+        <!-- Живая часть: экран момента, удержание кнопки, хромотерапия -->
+        <div id="quantumLive" class="q-live" hidden></div>
+      </div>
+
+      <!-- Часть 2: «Пространство вариантов». Поднимается по первому клику. -->
+      <div id="quantumSpace" hidden></div>
     </section>
 
     <!-- День -->
