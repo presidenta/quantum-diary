@@ -963,65 +963,92 @@
 /* ===== Переключатель подразделов «Кванта» ================================
    Готовая разметка для вкладок внутри раздела «Квант».
    Пример использования — в demo.html и README.md.
+
+   Цвета берутся из --pult-* (css/app.css): то же бледное золото, что у
+   медальона аркана на пульте. Игровое --gold-3d здесь не годится — оно
+   заметно оранжевее эталона.
    ======================================================================== */
 .qm-tabs {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
-    padding: 6px;
-    background: linear-gradient(180deg, #1A1B22 0%, #131319 100%);
-    border: 1px solid #2B2B3A;
-    border-radius: 12px;
+    padding: 7px;
+    background: linear-gradient(180deg, #17161A 0%, #0E0D10 100%);
+    border: 1px solid rgba(206, 187, 146, .34);
+    border-radius: 13px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .5), inset 0 2px 5px rgba(0, 0, 0, .5);
+    box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, .05),
+        inset 0 3px 7px rgba(0, 0, 0, .6),
+        0 5px 14px rgba(0, 0, 0, .55);
 }
 
 /* Вкладка — пластина, а не надпись.
 
    Объём делается двумя внутренними тенями: светлая полоска по верхнему
    краю даёт блик, тёмная по нижнему — толщину. Наружная тень отрывает
-   пластину от плиты. Тот же приём, что у золотой планки аркана на
-   пульте, поэтому обе части раздела смотрятся из одного набора. */
+   пластину от плиты. Тот же приём, что у медальона аркана на пульте,
+   поэтому обе части раздела смотрятся из одного набора. */
 .qm-tab {
     flex: 1;
+    min-width: 0;
     border: none;
     font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-size: 12px;
     font-weight: 600;
-    letter-spacing: 1px;
+    letter-spacing: .8px;
     text-transform: uppercase;
-    padding: 13px 14px;
-    border-radius: 8px;
+    padding: 13px 10px;
+    border-radius: 9px;
     cursor: pointer;
     transition: color .18s ease, box-shadow .18s ease;
 
-    /* Неактивная: тёмный металл */
-    background: linear-gradient(180deg, #2C2D35 0%, #1E1F26 100%);
-    color: #8C8270;
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .05);
-}
-
-.qm-tab:hover { color: var(--qm-gold, #D39D3C); }
-
-/* Активная: золотая пластина с тёмной надписью */
-.qm-tab.active {
-    color: #1A1206;
-    text-shadow: 0 1px 1px rgba(255, 255, 255, .4);
-    background:
-        repeating-linear-gradient(45deg, transparent, transparent 2px,
-                                  rgba(0, 0, 0, .035) 2px, rgba(0, 0, 0, .035) 4px),
-        linear-gradient(135deg, #E4C46F 0%, #AA8532 50%, #75591C 100%);
+    /* Неактивная: тёмная латунь */
+    background: linear-gradient(180deg, #5E5241 0%, #554938 55%, #4D4233 100%);
+    color: #CCC4B5;
     box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, .6),
-        inset 0 -2px 5px rgba(0, 0, 0, .4),
-        0 4px 10px rgba(223, 188, 94, .2);
+        inset 0 1px 1px rgba(255, 248, 226, .22),
+        inset 0 -2px 4px rgba(0, 0, 0, .45),
+        0 0 0 1px rgba(198, 177, 138, .42),
+        0 3px 8px rgba(0, 0, 0, .5);
 }
 
-/* Узкий телефон: две длинные подписи в строку не влезают */
-@media (max-width: 460px) {
-    .qm-tabs { gap: 4px; padding: 4px; }
-    .qm-tab { font-size: 10px; letter-spacing: .5px; padding: 11px 6px; }
+.qm-tab:hover { color: var(--pult-text-lit, #E8DABA); }
+
+/* Активная: золотая пластина с тёмной надписью.
+
+   Первым слоем идёт тонкая диагональная гравировка — на эталоне по левой
+   половине пластины пущен узор, и без него золото выглядит залитым
+   цветом, а не металлом. */
+.qm-tab.active {
+    color: var(--pult-ink, #35260F);
+    text-shadow: 0 1px 1px rgba(255, 252, 236, .45);
+    background:
+        repeating-linear-gradient(45deg, transparent, transparent 3px,
+                                  rgba(90, 74, 44, .055) 3px, rgba(90, 74, 44, .055) 5px),
+        linear-gradient(180deg,
+                        #C9B07A 0%,
+                        var(--pult-gold-hi,  #DCC68C) 14%,
+                        var(--pult-gold,     #D1B988) 40%,
+                        var(--pult-gold-mid, #C0AA74) 74%,
+                        #A98E58 100%);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 248, 222, .3),
+        inset 0 2px 3px rgba(255, 252, 236, .7),
+        inset 0 -2px 5px rgba(90, 74, 44, .5),
+        0 0 0 1px var(--pult-gold-rim, #5A4A2C),
+        0 4px 11px rgba(0, 0, 0, .55);
 }
+
+/* Узкий телефон: «НАБЛЮДАТЕЛЬ МЕТАВСЕЛЕННОЙ» — двадцать пять знаков, и в
+   половину экрана они помещаются только мелким кеглем. До 360 пикселей
+   подпись идёт строкой; уже — переносится на две, и обе пластины
+   вырастают вместе, потому что их тянет flex. Высота остаётся общей. */
+@media (max-width: 460px) {
+    .qm-tabs { gap: 5px; padding: 5px; }
+    .qm-tab { font-size: 9.5px; letter-spacing: .2px; padding: 11px 4px; line-height: 1.3; }
+}
+
 
 /* ===== Мобильная адаптация =============================================== */
 @media (max-width: 620px) {

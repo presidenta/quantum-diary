@@ -423,51 +423,91 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 /* ---------- Квант: пульт управления реальностью ----------
 
    Страница собрана как тёмный металл с золотой гравировкой: плита панели,
-   на ней золотая планка аркана, под ней чётки прожитых моментов и
-   утопленные в металл окна времён.
+   на ней медальон аркана, под ним чётки прожитых моментов и утопленные в
+   металл окна времён.
 
    Объём везде делается одинаково и без картинок — двумя внутренними
    тенями и одной наружной: светлая полоска по верхнему краю (блик),
    тёмная по нижнему (толщина), и мягкая тень под самим блоком. На
-   золотых поверхностях текст тёмный: --gold-ink. */
-.q-title { margin: 0 0 8px; font-weight: 600; }
+   золотых поверхностях текст тёмный: --pult-ink.
 
-/* Планка аркана: золотая пластина во всю ширину панели */
-.q-head {
-  display: flex; align-items: center; gap: 14px;
-  margin-bottom: 18px;
-  padding: 11px 18px;
-  border-radius: 10px;
-  color: var(--gold-ink);
-  background: linear-gradient(100deg, #EED083 0%, #D7AE56 38%, #C19A3F 68%, #A87C25 100%);
-  box-shadow:
-    inset 0 2px 3px rgba(255, 252, 232, .75),
-    inset 0 -2px 6px rgba(94, 58, 8, .45),
-    0 6px 16px rgba(0, 0, 0, .5);
+   ЗОЛОТО ЗДЕСЬ СВОЁ, И ЭТО НАРОЧНО. Игровое --gold-3d оранжевое
+   (#EAA82C), а на эталоне пульта золото бледнее — латунь с шампанью.
+   Значения ниже сняты пипеткой прямо с эталонной картинки, поэтому они
+   заданы отдельными именами --pult-*, а игровые токены не тронуты:
+   остальной Ежедневник и «Игра мудрецов» остаются в своём золоте. */
+:root {
+  --pult-gold-lit:  #F7E8BC;   /* блик по верхней кромке */
+  --pult-gold-hi:   #DCC68C;   /* светлая часть пластины */
+  --pult-gold:      #D1B988;
+  --pult-gold-mid:  #C0AA74;
+  --pult-gold-low:  #B6A067;   /* нижняя часть пластины */
+  --pult-gold-deep: #7E6A44;
+  --pult-gold-rim:  #5A4A2C;   /* тёмный кант под пластиной */
+  --pult-ink:       #35260F;   /* текст НА золоте */
+  --pult-text:      #C6B18A;   /* золотая надпись на тёмном */
+  --pult-text-lit:  #E8DABA;
+  --pult-line:      rgba(198, 177, 138, .26);
+  --pult-plate: linear-gradient(180deg,
+                  #D3BC8A 0%, var(--pult-gold) 30%,
+                  var(--pult-gold-mid) 72%, var(--pult-gold-low) 100%);
 }
 
+.q-title { margin: 0 0 8px; font-weight: 600; }
+
+/* Шапка панели: слева медальон аркана, справа счёт прожитого.
+
+   Медальон занимает столько места, сколько нужно названию, и не тянется
+   во всю ширину — на эталоне это небольшая наградная пластина, а полоса
+   через весь экран читалась бы как заголовок страницы. Счёт прожитого
+   вынесен из пластины на тёмное поле: это не часть медальона. */
+.q-head {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 16px;
+}
+
+.q-plate {
+  display: inline-flex; align-items: center; gap: 12px;
+  min-width: 0;
+  padding: 11px 22px 11px 11px;
+  border-radius: 9px;
+  color: var(--pult-ink);
+  background: var(--pult-plate);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 248, 222, .32),
+    inset 0 2px 3px rgba(255, 252, 236, .7),
+    inset 0 -2px 5px rgba(90, 74, 44, .5),
+    0 0 0 1px var(--pult-gold-rim),
+    0 6px 16px rgba(0, 0, 0, .6);
+}
+.q-plate-text { min-width: 0; }
+
 .q-arcana {
-  width: 46px; height: 46px; border-radius: 50%;
-  border: 1px solid rgba(50, 28, 2, .65);
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1.5px solid rgba(53, 38, 15, .7);
   display: flex; align-items: center; justify-content: center; flex: none;
-  font-family: var(--serif); font-size: 17px; letter-spacing: .5px;
-  color: var(--gold-ink);
-  background: rgba(255, 250, 230, .22);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, .6), inset 0 -2px 4px rgba(94, 58, 8, .3);
+  /* XVIII — пять знаков, и на 16px они упирались в кольцо */
+  font-family: var(--serif); font-size: 15px; letter-spacing: 0;
+  color: var(--pult-ink);
+  background: radial-gradient(circle at 36% 28%, rgba(255, 250, 232, .55), rgba(173, 147, 89, .35) 78%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, .65), inset 0 -2px 4px rgba(90, 74, 44, .4);
 }
 
 .q-head .q-label {
-  font-size: 11px; letter-spacing: .6px; text-transform: uppercase;
-  color: rgba(56, 29, 2, .72);
+  font-size: 11px; letter-spacing: .5px;
+  color: rgba(53, 38, 15, .78);
 }
-.q-arcana-name { margin: 2px 0 0; font-size: 19px; font-weight: 700; color: var(--gold-ink); }
+.q-arcana-name {
+  margin: 1px 0 0; font-size: 19px; font-weight: 700; color: var(--pult-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
-.q-lived { margin-left: auto; text-align: right; }
-.q-lived b { display: block; font-size: 20px; font-weight: 700; color: var(--gold-ink); }
-.q-lived span {
-  font-size: 10px; letter-spacing: .6px; text-transform: uppercase;
-  color: rgba(56, 29, 2, .72);
+.q-lived { margin-left: auto; text-align: right; flex: none; }
+.q-lived b {
+  display: block; font-size: 22px; font-weight: 700;
+  color: var(--pult-text-lit); font-variant-numeric: tabular-nums;
 }
+.q-lived span { font-size: 11px; color: var(--pult-text); }
 
 /* Чётки: прожитые моменты — золотые бусины, непрожитые — тёмные.
 
@@ -478,8 +518,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   display: flex; align-items: center; justify-content: center;
   gap: 7px; margin: 0 0 20px;
   padding: 10px 0;
-  border-top: 1px solid rgba(201, 163, 78, .12);
-  border-bottom: 1px solid rgba(201, 163, 78, .12);
+  border-top: 1px solid var(--pult-line);
+  border-bottom: 1px solid var(--pult-line);
 }
 .q-bar i {
   flex: none; width: 9px; height: 9px; border-radius: 50%;
@@ -488,14 +528,14 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 }
 .q-bar i.done {
   width: 12px; height: 12px;
-  background: radial-gradient(circle at 32% 30%, #FBE69B, #C08F2B 65%, #8A6318 100%);
+  background: radial-gradient(circle at 32% 30%, var(--pult-gold-lit), var(--pult-gold) 55%, var(--pult-gold-deep) 100%);
   box-shadow: 0 2px 4px rgba(0, 0, 0, .8), inset 0 1px 2px rgba(255, 255, 255, .7);
 }
 
 .q-group { margin-bottom: 18px; }
 .q-slot {
   margin: 0 0 9px; font-size: 11px; font-weight: 700;
-  letter-spacing: 1.4px; text-transform: uppercase; color: var(--gold-text);
+  letter-spacing: 1.4px; text-transform: uppercase; color: var(--pult-text);
 }
 .q-times { display: flex; gap: 10px; }
 
@@ -503,22 +543,22 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .q-time {
   flex: 1; display: flex; align-items: center; gap: 2px;
   padding: 9px 6px; border-radius: 10px;
-  background: linear-gradient(180deg, #24262D 0%, #16171B 100%);
-  border: 1px solid rgba(201, 163, 78, .22);
-  font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .06), 0 3px 7px rgba(0, 0, 0, .45);
+  background: linear-gradient(180deg, #403F3E 0%, #353533 100%);
+  border: 1px solid rgba(198, 177, 138, .42);
+  font-size: 14px; color: #DBD4C6; font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .08), 0 3px 7px rgba(0, 0, 0, .55);
   transition: border-color .18s ease, box-shadow .18s ease;
 }
-.q-time:hover { border-color: var(--gold-line); }
+.q-time:hover { border-color: var(--pult-gold-mid); }
 .q-time-at { flex: 1; text-align: center; }
 
 .q-time.done {
-  background: linear-gradient(180deg, #3A2E12 0%, #241C0B 100%);
-  border-color: var(--gold-line); color: var(--gold-text-lit); font-weight: 600;
+  background: linear-gradient(180deg, #3C3426 0%, #272118 100%);
+  border-color: var(--pult-gold-deep); color: var(--pult-text-lit); font-weight: 600;
 }
 .q-time.active {
-  border-color: var(--gold-line-lit); color: var(--gold-text-lit); font-weight: 700;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .08), 0 0 14px var(--gold-glow);
+  border-color: var(--pult-gold-mid); color: var(--pult-text-lit); font-weight: 700;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .1), 0 0 16px rgba(220, 198, 140, .3);
 }
 
 /* Выключенное время видно, но перечёркнуто: его можно вернуть одним нажатием */
@@ -529,21 +569,35 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    попадать в неё надо с первого раза, а не с третьего. */
 .q-time-off {
   flex: none; width: 26px; height: 30px; padding: 0; border: 0; border-radius: 8px;
-  background: none; color: var(--ink-2); font-size: 16px; line-height: 1; cursor: pointer;
+  background: none; color: rgba(198, 177, 138, .5); font-size: 16px; line-height: 1; cursor: pointer;
 }
-.q-time-off:hover { color: var(--gold-bright); background: rgba(255, 255, 255, .07); }
-.q-time.off .q-time-off { color: var(--gold); }
+.q-time-off:hover { color: var(--pult-text-lit); background: rgba(255, 255, 255, .07); }
+.q-time.off .q-time-off { color: var(--pult-text); }
 
 .q-next { margin: 4px 0 0; }
 .q-hint { margin: 10px 0 0; font-size: 12px; }
 /* Пояснения отделены от расписания чертой, как в книге */
-.q-next + .q-hint, .q-group + .q-hint { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(201, 163, 78, .12); }
+.q-next + .q-hint, .q-group + .q-hint { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--pult-line); }
 
-/* Плита панели: золотой кант и глубокая тень под ней */
+/* Плита панели: почти чёрное поле, золотой кант и глубокая тень.
+
+   Фон темнее остальных карточек Ежедневника нарочно: на эталоне панель
+   пульта почти чёрная, и бледное золото держится только на такой глубине. */
 #quantumCard {
-  border: 1px solid rgba(201, 163, 78, .26);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, .65), inset 0 1px 2px rgba(255, 255, 255, .05);
+  background: linear-gradient(180deg, #0C0D10 0%, #070809 100%);
+  border: 1px solid rgba(206, 187, 146, .34);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .7), inset 0 1px 2px rgba(255, 255, 255, .05);
 }
+
+/* Телефон: пластина аркана и счёт встают в строку, но не ломаются */
+@media (max-width: 460px) {
+  .q-head { gap: 10px; }
+  .q-plate { padding: 8px 14px 8px 8px; gap: 10px; }
+  .q-arcana { width: 38px; height: 38px; font-size: 14px; }
+  .q-arcana-name { font-size: 17px; }
+  .q-lived b { font-size: 19px; }
+}
+
 
 /* Живая часть поверх всего экрана */
 .q-live { position: fixed; inset: 0; z-index: 35; }

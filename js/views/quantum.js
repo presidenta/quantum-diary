@@ -136,10 +136,13 @@ export function renderQuantum() {
 
   fill(card,
     h('div', { class: 'q-head' },
-      h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
-      h('div', {},
-        h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
-        h('p', { class: 'q-arcana-name', text: t(arcanaKey(day.arcana)) })),
+      // Аркан — медальон на своей пластине, а не полоса во всю ширину.
+      // Счёт прожитого стоит рядом, на тёмном поле: это не часть медальона.
+      h('div', { class: 'q-plate' },
+        h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
+        h('div', { class: 'q-plate-text' },
+          h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
+          h('p', { class: 'q-arcana-name', text: t(arcanaKey(day.arcana)) }))),
       h('div', { class: 'q-lived' },
         h('b', { text: `${lived} / ${planned}` }),
         h('span', { text: t('quantum.livedShort') }))),
