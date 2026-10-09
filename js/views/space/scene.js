@@ -1,16 +1,16 @@
-/* 3D-коридор: двери, космическая пыль, квантовый туннель.
+/* 3D-коридор: двери, частицы, квантовый туннель.
 
    Часть раздела «Квант» — вторая вкладка «Пространство вариантов».
-   THREE подключается глобально из CDN — см. index.js.
+   THREE подключается глобально — см. index.js.
 
    ФАЙЛ СОВПАДАЕТ С ОРИГИНАЛОМ, кроме двух мест:
-   1. spawnParticleOutside / animate — точки не уходят дальше торца коридора,
-      иначе перспектива собирает их в белое пятно на чёрном квадрате.
-      Расположение точек прежнее: снаружи стен, потолка и пола.
-   2. createInfinitySymbol — знак построен лемнискатой, а не двумя
+   1. createInfinitySymbol — знак построен лемнискатой, а не двумя
       окружностями, и плоскость под него вытянута.
+   2. fitCorridorWidth и места, где берётся ширина коридора — подгонка
+      под узкий экран телефона. На широком экране значения прежние:
+      стена 6, дверь 5.9, отход камеры 3.0.
 
-   Двери, камера, свет, цвета, туннель и вспышка не изменены. */
+   Частицы, материалы, цвета, камера, туннель и вспышка не изменены. */
 
 export class QuantumCorridorScene {
     constructor(canvasContainer, onDoorSelectCallback) {
@@ -50,6 +50,7 @@ export class QuantumCorridorScene {
         this.checkMobile();
         this.camera = new THREE.PerspectiveCamera(this.isMobile ? 85 : 60, window.innerWidth / window.innerHeight, 0.1, 300);
         this.camera.position.set(0, 1, 5);
+        this.fitCorridorWidth();
 
         this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -81,6 +82,28 @@ export class QuantumCorridorScene {
 
     checkMobile() {
         this.isMobile = window.innerWidth < 768;
+    }
+
+    // Ширина коридора под реальный горизонтальный угол обзора.
+    //
+    // fov у камеры three.js — ВЕРТИКАЛЬНЫЙ. На вытянутом экране телефона
+    // горизонтальный угол выходит вдвое меньше, и двери с фиксированным
+    // отступом уезжали за край кадра.
+    //
+    // Прежние 6 и 5.9 остаются верхней границей, поэтому на широком экране
+    // не меняется ничего. Коридор сужается только там, где иначе не влез бы.
+    fitCorridorWidth() {
+        const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+        const halfV = (this.camera.fov * Math.PI) / 180 / 2;
+        const halfH = Math.atan(Math.tan(halfV) * aspect);
+
+        // Камера на z = 5, первая дверь на z = -3, половина её длины 1.2:
+        // ближний край двери оказывается в 6.8 единицах от камеры.
+        const visibleHalf = 6.8 * Math.tan(halfH);
+
+        const maxX = this.isMobile ? 4 : 6;
+        this.wallX = Math.max(2.2, Math.min(maxX, visibleHalf - 0.3));
+        this.doorX = this.wallX - 0.1;
     }
 
     createBlackTileTexture() {
@@ -154,7 +177,7 @@ export class QuantumCorridorScene {
         ceiling.rotation.x = Math.PI / 2; 
         ceiling.position.y = 4.5;
 
-        const wallX = this.isMobile ? 4 : 6;
+        const wallX = this.wallX;
         const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(100, 7), wallMat);
         leftWall.rotation.y = Math.PI / 2; 
         leftWall.position.set(-wallX, 1, -40);
@@ -178,40 +201,33 @@ export class QuantumCorridorScene {
         this.corridorGroup.add(floor, ceiling, leftWall, rightWall, endSquare, endFrame);
     }
 
-    spawnParticleOutside(index, atFarEnd) {
-        const wallX = this.isMobile ? 4 : 6;
+    spawnParticleOutside(index) {
+        const wallX = this.wallX;
+        const side = Math.floor(Math.random() * 4); // 0: Левая, 1: Правая, 2: Потолок, 3: Пол
+        const depth = Math.random() * 20; // Глубина рассеивания за стенами
+        const span = 40; // Широкое рассредоточение
 
-        // Звёзды живут тонким слоем вдоль поверхностей коридора: у стен,
-        // под потолком и над полом. Стены за счёт этого читаются звёздным
-        // небом, но звёзды остаются настоящими точками в пространстве —
-        // ближние крупнее и проходят быстро, дальние мельче и ползут.
-        const side = Math.floor(Math.random() * 4); // 0: левая, 1: правая, 2: потолок, 3: пол
-        const inset = 0.05 + Math.random() * 0.95;  // насколько уйти внутрь от поверхности
-
-        let x, y;
-        if (side === 0) {
-            x = -wallX + inset;
-            y = -2.3 + Math.random() * 6.6;
-        } else if (side === 1) {
-            x = wallX - inset;
-            y = -2.3 + Math.random() * 6.6;
-        } else if (side === 2) {
-            x = (Math.random() - 0.5) * 2 * (wallX - 0.2);
-            y = 4.5 - inset;
-        } else {
-            x = (Math.random() - 0.5) * 2 * (wallX - 0.2);
-            y = -2.5 + inset;
+        if (side === 0) { 
+            this.pTargets[index * 3] = -wallX - depth;
+            this.pTargets[index * 3 + 1] = (Math.random() - 0.5) * span;
+        } else if (side === 1) { 
+            this.pTargets[index * 3] = wallX + depth;
+            this.pTargets[index * 3 + 1] = (Math.random() - 0.5) * span;
+        } else if (side === 2) { 
+            this.pTargets[index * 3] = (Math.random() - 0.5) * span;
+            this.pTargets[index * 3 + 1] = 4.5 + depth;
+        } else { 
+            this.pTargets[index * 3] = (Math.random() - 0.5) * span;
+            this.pTargets[index * 3 + 1] = -2.5 - depth;
         }
 
-        // Дальше торца не уходим: то, что оказывалось за ним, перспектива
-        // собирала в белое пятно на месте чёрного квадрата.
-        const z = atFarEnd
-            ? -80 - Math.random() * 4      // вернувшаяся звезда входит с дальнего конца
-            : 8 - Math.random() * 92;      // первичный разброс по всей длине
+        // Плотное распределение с самого начала: заполняем пространство далеко за пределы коридора
+        this.pTargets[index * 3 + 2] = 10 - Math.random() * 150; 
 
-        this.pTargets[index * 3] = x;
-        this.pTargets[index * 3 + 1] = y;
-        this.pTargets[index * 3 + 2] = z;
+        // Исключаем блокировку точки схода черного квадрата в центре
+        if (Math.abs(this.pTargets[index * 3]) < 2.5 && Math.abs(this.pTargets[index * 3 + 1] - 1) < 3.2) {
+            this.pTargets[index * 3] += (this.pTargets[index * 3] >= 0 ? 3 : -3);
+        }
     }
 
     buildPerimeterParticles() {
@@ -238,8 +254,7 @@ export class QuantumCorridorScene {
 
         pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
         this.particlesMat = new THREE.PointsMaterial({
-            color: 0xffe9a8, size: 0.085, sizeAttenuation: true,
-            transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending
+            color: 0xffcc00, size: 0.025, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending
         });
         this.particlesMesh = new THREE.Points(pGeo, this.particlesMat);
         this.corridorGroup.add(this.particlesMesh);
@@ -341,7 +356,7 @@ export class QuantumCorridorScene {
 
         const colors = ['#00f0ff', '#ff007f', '#e5a93c', '#00ff88', '#9d00ff', '#ff3300', '#0044ff'];
         
-        const doorXDist = this.isMobile ? 3.9 : 5.9; 
+        const doorXDist = this.doorX; 
         
         for (let i = 0; i < 8; i++) {
             const isLeft = i % 2 === 0;
@@ -442,12 +457,12 @@ export class QuantumCorridorScene {
                 positions[i * 3 + 1] += this.pVelocities[i * 3 + 1] * delta;
                 positions[i * 3 + 2] += this.pVelocities[i * 3 + 2] * delta;
 
-                // Зацикливание: ушедшая за камеру точка возвращается в дальний конец
+                // Зацикливание: когда частицы выходят за камеру, они возвращаются глубоко назад (-140)
                 if (positions[i * 3 + 2] > 10) {
-                    this.spawnParticleOutside(i, true);
+                    this.spawnParticleOutside(i);
                     positions[i * 3] = this.pTargets[i * 3];
                     positions[i * 3 + 1] = this.pTargets[i * 3 + 1];
-                    positions[i * 3 + 2] = this.pTargets[i * 3 + 2];
+                    positions[i * 3 + 2] = -140; 
                 }
             }
             this.particlesMesh.geometry.attributes.position.needsUpdate = true;
@@ -545,7 +560,8 @@ export class QuantumCorridorScene {
         const exactDoorY = -0.4;
         const targetZ = chosen.group.position.z;
         
-        const oppositeX = chosen.isLeft ? 3.0 : -3.0;
+        // В узком коридоре телефона камера не должна уехать сквозь стену
+        const oppositeX = (chosen.isLeft ? 1 : -1) * Math.min(3.0, this.wallX - 0.6);
         
         let phase = 0; 
         let progress = 0;

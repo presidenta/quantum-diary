@@ -557,7 +557,15 @@
     transition: transform 0.2s ease;
 }
 
-.qm-root .btn-eyes:hover .smiley-icon::before,
+/* Наведение — только там, где есть настоящий курсор. На телефоне браузер
+   оставляет :hover «залипшим» после касания, и смайлик закрывал глаза
+   навсегда. Под пальцем теперь работает :active: нажал — закрыл,
+   отпустил — снова открыл. Окончательно глаза закрываются уже на экране
+   отсчёта, после нажатия на кнопку. */
+@media (hover: hover) and (pointer: fine) {
+    .qm-root .btn-eyes:hover .smiley-icon::before { content: "\1F60C"; }
+}
+
 .qm-root .btn-eyes:active .smiley-icon::before { content: "\1F60C"; }
 
 /* ===== Отсчёт 1-2-3 и затемнение ========================================= */
