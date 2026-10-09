@@ -33,11 +33,12 @@ const PARTICLE_NEAR = 3;                  // ближе этого к камер
    иначе пропадает ощущение бесконечности. Раньше частицы жили снаружи
    коридора и были видны только в этом просвете: оттого и получалось
    скопление в конце при пустых стенах. */
-const SHELL_DEPTH = 0.8;                  // насколько вглубь от поверхности
-const CORRIDOR_FAR = -48;                 // дальний край, где кончается пол
+const SHELL_DEPTH = 0.6;                  // насколько вглубь от поверхности
+const CORRIDOR_FAR = -30;                 // дальний край, где кончается пол
 const FLOOR_Y = -2.5;
 const CEIL_Y = 4.5;
 const SURFACE_GAP = 0.05;                 // чтобы точка не лежала в самой плоскости
+const CLEAR_CONE = 0.14;                  // пустая воронка вдоль взгляда
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -257,9 +258,24 @@ export class QuantumCorridorScene {
             this.pTargets[index * 3 + 1] = FLOOR_Y + SURFACE_GAP + depth;
         }
 
-        // Ровно по всей длине коридора: от дальнего края до рубежа у камеры
+        /* Глубина — по всей длине коридора, но с пустой воронкой вдоль взгляда.
+
+           Чем ближе звезда к оси взгляда, тем раньше ей предел по глубине.
+           Иначе дальние звёзды сходятся в точку схода и собираются там в
+           облако — именно оно и выглядело скоплением в конце коридора, —
+           а чёрный квадрат за ними переставал читаться пустотой. */
         const near = this.particleNearZ();
-        this.pTargets[index * 3 + 2] = CORRIDOR_FAR + Math.random() * (near - CORRIDOR_FAR);
+        const radial = Math.hypot(
+            this.pTargets[index * 3],
+            this.pTargets[index * 3 + 1] - this.camera.position.y
+        );
+        const far = Math.max(CORRIDOR_FAR, this.camera.position.z - radial / CLEAR_CONE);
+
+        /* Вглубь звёзд меньше. Перспектива и так сгущает дальние — при
+           ровной плотности по объёму конец коридора выглядел бы гуще
+           начала. Смещение по глубине это выравнивает. */
+        const alongZ = Math.pow(Math.random(), 1.7);
+        this.pTargets[index * 3 + 2] = near - alongZ * (near - far);
     }
 
     /* Круглая пылинка вместо квадрата.
@@ -301,7 +317,7 @@ export class QuantumCorridorScene {
     }
 
     buildPerimeterParticles() {
-        this.particleCount = 7000; // Увеличенное число частиц для полного заполнения пространства
+        this.particleCount = 1600; // Увеличенное число частиц для полного заполнения пространства
         const pGeo = new THREE.BufferGeometry();
         const pPos = new Float32Array(this.particleCount * 3);
 
@@ -337,7 +353,7 @@ export class QuantumCorridorScene {
             // Звёзды теперь идут вдоль всего коридора и проходят вплотную,
             // поэтому размер меньше прежнего: иначе ближняя разрослась бы
             // в пятно на пол-экрана.
-            size: 0.09,
+            size: 0.055,
             map: this.createParticleSprite(),
             transparent: true,
             opacity: 1,

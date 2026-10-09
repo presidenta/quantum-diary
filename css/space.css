@@ -437,7 +437,9 @@
 .qm-root textarea { resize: vertical; min-height: 150px; margin-bottom: 16px; }
 
 .qm-root .inputs-scroll-area {
-    max-height: 38vh;
+    /* Строки дверей стали выше — плашки записи, фото и значок готовности.
+       При прежних 38% третья дверь обрезалась ровно под кнопкой входа. */
+    max-height: 46vh;
     overflow-y: auto;
     margin-bottom: 16px;
     padding-right: 4px;
@@ -1137,7 +1139,7 @@
 
 .qm-root .qm-ico-mic::before { content: "\1F3A4"; }
 .qm-root .qm-ico-file::before { content: "\1F4CE"; }
-.qm-root .qm-ico-photo::before { content: "\1F5BC"; }
+.qm-root .qm-ico-photo::before { content: "\1F4F7"; }
 
 /* ----- Идёт запись: плашка становится таймером ----- */
 .qm-root .qm-chip-rec-on {
@@ -1180,8 +1182,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 18px;
-    margin-top: 7px;
+    /* Пока записи нет, строка состояния пуста и места не занимает */
+    min-height: 0;
+    margin-top: 6px;
 }
 
 .qm-root .qm-audio-info {
