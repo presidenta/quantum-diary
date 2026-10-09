@@ -379,20 +379,27 @@
     margin-bottom: 16px;
 }
 
+/* Подпись забирает всю свободную ширину, выбор остаётся компактным */
 .qm-root .doors-count-selector label {
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 12px;
     color: var(--qm-muted);
     letter-spacing: 0.3px;
 }
 
 .qm-root #doors-count-select {
+    flex: 0 0 auto;
+    width: 58px;
+    text-align: center;
+    text-align-last: center;
     background: var(--qm-panel-3);
     border: 1px solid var(--qm-border);
     color: var(--qm-gold);
     font-family: var(--qm-font);
     font-size: 14px;
     font-weight: 600;
-    padding: 6px 10px;
+    padding: 7px 6px;
     border-radius: 8px;
     cursor: pointer;
 }
@@ -578,6 +585,10 @@
 
 .qm-root .btn-eyes:active .smiley-icon::before { content: "\1F60C"; }
 
+/* Состояние держится после нажатия: :hover и :active отпускают его сразу,
+   а по заданию смайлик должен остаться зажмуренным. Класс ставит app.js. */
+.qm-root .btn-eyes.qm-eyes-shut .smiley-icon::before { content: "\1F60C"; }
+
 /* ===== Отсчёт 1-2-3 и затемнение ========================================= */
 .qm-root .countdown-overlay {
     position: fixed;
@@ -718,26 +729,85 @@
     gap: 6px;
 }
 
-.qm-root .qm-lang-btn {
+/* Одна кнопка с текущим языком, по нажатию — список остальных */
+.qm-root .qm-lang-current {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: var(--qm-panel-2);
     border: 1px solid var(--qm-border);
+    color: var(--qm-text);
+    font-family: var(--qm-font);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 7px 11px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+.qm-root .qm-lang-current:hover { border-color: var(--qm-gold-line); }
+
+.qm-root .qm-lang-caret {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--qm-muted);
+}
+
+.qm-root .qm-lang-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 168px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: var(--qm-panel);
+    border: 1px solid var(--qm-border-strong);
+    border-radius: 12px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+
+.qm-root .qm-lang-menu[hidden] { display: none; }
+
+.qm-root .qm-lang-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
     color: var(--qm-muted);
     font-family: var(--qm-font);
-    padding: 5px 11px;
-    border-radius: 8px;
+    font-size: 13px;
+    padding: 8px 10px;
     cursor: pointer;
+    text-align: left;
+    transition: background 0.14s ease, color 0.14s ease;
+}
+
+.qm-root .qm-lang-item:hover {
+    background: var(--qm-panel-3);
+    color: var(--qm-text);
+}
+
+.qm-root .qm-lang-item.active {
+    color: var(--qm-gold);
+    border-color: var(--qm-gold-line);
+    background: var(--qm-gold-soft);
+}
+
+.qm-root .qm-lang-code {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.4px;
-    transition: all 0.18s ease;
-}
-
-.qm-root .qm-lang-btn:hover { color: var(--qm-text); }
-
-.qm-root .qm-lang-btn.active {
-    border-color: var(--qm-gold-line);
-    color: var(--qm-gold);
-    background: var(--qm-gold-soft);
+    opacity: 0.75;
 }
 
 /* ===== Экран «Хроники Акаши» ============================================= */
@@ -791,6 +861,70 @@
     color: var(--qm-faint);
     line-height: 1.5;
     margin: 0 0 18px 0;
+}
+
+/* ----- Сутки отдельно, вся история — сводкой ----- */
+.qm-root .qm-chron-section {
+    margin-bottom: 22px;
+}
+
+.qm-root .qm-chron-section:last-child { margin-bottom: 0; }
+
+.qm-root .qm-chron-head {
+    margin: 0 0 10px 0;
+    font-family: var(--qm-font-head);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--qm-gold);
+    opacity: 0.85;
+}
+
+.qm-root .qm-stat-row {
+    margin-bottom: 12px;
+}
+
+.qm-root .qm-stat-row:last-child { margin-bottom: 0; }
+
+.qm-root .qm-stat-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 5px;
+}
+
+.qm-root .qm-stat-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--qm-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.qm-root .qm-stat-count {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--qm-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Полоска доли: ширину задаёт app.js, число считается из самих записей */
+.qm-root .qm-stat-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--qm-panel-3);
+    overflow: hidden;
+}
+
+.qm-root .qm-stat-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--qm-gold-line), var(--qm-gold));
 }
 
 .qm-root .chronicle-card {
@@ -884,47 +1018,144 @@
    ======================================================================== */
 .qm-root .qm-door-row {
     margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--qm-border-soft);
+}
+
+.qm-root .qm-door-row:last-child { border-bottom: none; }
+
+/* Поле двери и значок готовности в одну строку */
+.qm-root .qm-door-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
 .qm-root .qm-door-row .door-text-input {
-    margin-bottom: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
 }
 
-.qm-root .qm-audio-row {
+/* Дверь заполнена: хватает текста, записи или фотографии */
+.qm-root .qm-door-badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #7fe3a8;
+    background: rgba(127, 227, 168, 0.1);
+    border: 1px solid rgba(127, 227, 168, 0.35);
+    border-radius: 999px;
+    padding: 5px 10px;
+    white-space: nowrap;
+}
+
+.qm-root .qm-door-badge::before {
+    content: "\2713";
+    font-size: 12px;
+    line-height: 1;
+}
+
+.qm-root .qm-door-badge[hidden] { display: none; }
+
+/* ----- Плашки действий ----- */
+.qm-root .qm-media-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
 }
 
-.qm-root .qm-audio-btn {
+.qm-root .qm-chip {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: var(--qm-panel-2);
     border: 1px solid var(--qm-border);
     color: var(--qm-muted);
     font-family: var(--qm-font);
     font-size: 12px;
     line-height: 1;
-    padding: 7px 10px;
-    border-radius: 8px;
+    padding: 8px 11px;
+    border-radius: 10px;
     cursor: pointer;
     white-space: nowrap;
     transition: color 0.18s ease, border-color 0.18s ease;
 }
 
-.qm-root .qm-audio-btn:hover {
+.qm-root .qm-chip:hover {
     color: var(--qm-text);
     border-color: var(--qm-gold-line);
 }
 
-.qm-root .qm-audio-btn:disabled {
+.qm-root .qm-chip:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
-/* Идёт запись — кнопка подсвечена золотом */
-.qm-root .qm-audio-btn.qm-audio-rec-on {
+.qm-root .qm-chip-text {
+    font-variant-numeric: tabular-nums;
+}
+
+.qm-root .qm-ico {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.qm-root .qm-ico-mic::before { content: "\1F3A4"; }
+.qm-root .qm-ico-file::before { content: "\1F4CE"; }
+.qm-root .qm-ico-photo::before { content: "\1F5BC"; }
+
+/* ----- Идёт запись: плашка становится таймером ----- */
+.qm-root .qm-chip-rec-on {
     color: var(--qm-gold);
     border-color: var(--qm-gold-line);
     background: var(--qm-gold-soft);
+    min-width: 92px;
+}
+
+/* Значок микрофона пульсирует, пока идёт запись */
+.qm-root .qm-chip-rec-on .qm-ico-mic {
+    animation: qm-rec-pulse 1s ease-in-out infinite;
+}
+
+@keyframes qm-rec-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+/* Полоса хода: полный проход за минуту. Длительность записи не ограничена,
+   поэтому это указатель хода, а не полоса до конца. Ширину ведёт app.js. */
+.qm-root .qm-chip-rec-on::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: calc(var(--qm-rec-turn, 0) * 100%);
+    background: var(--qm-gold);
+    transition: width 0.25s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .qm-chip-rec-on .qm-ico-mic { animation: none; }
+    .qm-root .qm-chip-rec-on::after { transition: none; }
+}
+
+/* ----- Состояние записи и кнопки при ней ----- */
+.qm-root .qm-media-state {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 18px;
+    margin-top: 7px;
 }
 
 .qm-root .qm-audio-info {
@@ -935,6 +1166,95 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.qm-root .qm-icon-btn {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border);
+    border-radius: 8px;
+    color: var(--qm-muted);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease;
+}
+
+.qm-root .qm-icon-btn:hover {
+    color: var(--qm-gold);
+    border-color: var(--qm-gold-line);
+}
+
+.qm-root .qm-icon-btn[hidden] { display: none; }
+
+.qm-root .qm-audio-preview::before { content: "\25B6"; }
+.qm-root .qm-audio-remove::before { content: "\2715"; }
+
+/* ----- Счётчик и лента фотографий ----- */
+.qm-root .qm-photo-count {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--qm-faint);
+    background: var(--qm-panel-3);
+    border-radius: 999px;
+    padding: 2px 6px;
+}
+
+.qm-root .qm-photo-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.qm-root .qm-photo-strip:empty { display: none; }
+
+.qm-root .qm-photo-cell {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--qm-border);
+    background: var(--qm-panel-3);
+}
+
+.qm-root .qm-photo-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.qm-root .qm-photo-drop {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 8, 12, 0.78);
+    border: 1px solid var(--qm-border-strong);
+    border-radius: 50%;
+    color: var(--qm-text);
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.qm-root .qm-photo-drop::before { content: "\2715"; }
+
+.qm-root .qm-photo-drop:hover {
+    color: var(--qm-gold);
+    border-color: var(--qm-gold-line);
 }
 
 /* Мягкое предупреждение, если файл двери недоступен */
@@ -1037,6 +1357,6 @@
     background-image: none;
 }
 
-.qm-root.qm-embedded .lang-switcher {
-    display: none;
-}
+/* Раньше переключатель здесь прятали: кнопка языка Ежедневника была рядом.
+   Теперь раздел разворачивается на весь экран и перекрывает её, поэтому
+   свой переключатель нужен и во встроенном режиме. */

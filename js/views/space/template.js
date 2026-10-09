@@ -13,11 +13,17 @@ export const TEMPLATE = [
        внимание, но всегда на месте. */
     '<button type="button" id="btn-space-close" class="qm-close">×</button>',
 
-    /* --- Переключатель языков (скрывается на время 3D-коридора) ------- */
+    /* --- Переключатель языков (скрывается на время 3D-коридора) -------
+       Одна кнопка с текущим языком, по нажатию — список остальных.
+       Раздел занимает весь экран и перекрывает кнопку языка Ежедневника,
+       поэтому своя здесь обязательна. Список наполняет app.js. */
     '<div id="lang-switcher-container" class="lang-switcher">',
-    '    <button class="qm-lang-btn" data-lang="ru">RU</button>',
-    '    <button class="qm-lang-btn" data-lang="en">EN</button>',
-    '    <button class="qm-lang-btn" data-lang="uk">UK</button>',
+    '    <button type="button" id="qm-lang-btn" class="qm-lang-current"',
+    '            aria-haspopup="true" aria-expanded="false">',
+    '        <span id="qm-lang-label">\u{1F1F7}\u{1F1FA} Рус</span>',
+    '        <span class="qm-lang-caret" aria-hidden="true"></span>',
+    '    </button>',
+    '    <div id="qm-lang-menu" class="qm-lang-menu" hidden></div>',
     '</div>',
 
     /* --- Слои 3D-сцены и золотых песчинок ----------------------------- */
@@ -89,9 +95,11 @@ export const TEMPLATE = [
     '        <div class="qm-eyebrow" data-i18n="multiverse">Мультивселенная</div>',
     '        <h2 class="qm-title-md" data-i18n="setupTitle">Настройка Реальностей</h2>',
     '        <p class="qm-sub" data-i18n="setupSub"></p>',
+    /* Подпись тянется на всю свободную ширину, выбор — компактный
+       квадратик справа. */
     '        <div class="doors-count-selector">',
-    '            <label for="doors-count-select" data-i18n="doorsCount">Количество дверей:</label>',
-    '            <select id="doors-count-select">',
+    '            <label class="doors-count-label" for="doors-count-select" data-i18n="doorsCount">Количество дверей:</label>',
+    '            <select id="doors-count-select" class="doors-count-pick">',
     '                <option value="3">3</option>',
     '                <option value="4">4</option>',
     '                <option value="5">5</option>',

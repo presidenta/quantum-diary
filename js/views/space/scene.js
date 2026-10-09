@@ -20,7 +20,24 @@ const WALK_SPEED = 0.015;                 // единиц сцены на пик
 const LOOK_LIMIT = (85 * Math.PI) / 180;  // дальше голова не поворачивается
 const WALK_BACK = 7;                      // дальше назад камера не отходит
 const WALK_FORWARD = -22;                 // дальше вперёд не уходит: там кончается пол
-const PARTICLE_NEAR = 14;                 // ближе этого к камере пылинок не бывает
+const PARTICLE_NEAR = 3;                  // ближе этого к камере пылинок не бывает
+
+/* РАСПРЕДЕЛЕНИЕ ЗВЁЗД.
+
+   Звёзды живут тонкой оболочкой у самих поверхностей коридора — у стен, у
+   пола, у потолка — и ровно по всей его длине. Середина коридора остаётся
+   пустой: туда частицы не попадают вовсе.
+
+   Дальше CORRIDOR_FAR звёзд нет намеренно. Там кончаются пол и потолок, а
+   за ними в темноте стоит чёрный квадрат — он должен оставаться чистым,
+   иначе пропадает ощущение бесконечности. Раньше частицы жили снаружи
+   коридора и были видны только в этом просвете: оттого и получалось
+   скопление в конце при пустых стенах. */
+const SHELL_DEPTH = 0.8;                  // насколько вглубь от поверхности
+const CORRIDOR_FAR = -48;                 // дальний край, где кончается пол
+const FLOOR_Y = -2.5;
+const CEIL_Y = 4.5;
+const SURFACE_GAP = 0.05;                 // чтобы точка не лежала в самой плоскости
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -215,33 +232,34 @@ export class QuantumCorridorScene {
         this.corridorGroup.add(floor, ceiling, leftWall, rightWall, endSquare, endFrame);
     }
 
-    spawnParticleOutside(index) {
-        const wallX = this.wallX;
-        const side = Math.floor(Math.random() * 4); // 0: Левая, 1: Правая, 2: Потолок, 3: Пол
-        const depth = Math.random() * 20; // Глубина рассеивания за стенами
-        const span = 40; // Широкое рассредоточение
+    /* Одна звезда у одной из четырёх поверхностей коридора.
 
-        if (side === 0) { 
-            this.pTargets[index * 3] = -wallX - depth;
-            this.pTargets[index * 3 + 1] = (Math.random() - 0.5) * span;
-        } else if (side === 1) { 
-            this.pTargets[index * 3] = wallX + depth;
-            this.pTargets[index * 3 + 1] = (Math.random() - 0.5) * span;
-        } else if (side === 2) { 
-            this.pTargets[index * 3] = (Math.random() - 0.5) * span;
-            this.pTargets[index * 3 + 1] = 4.5 + depth;
-        } else { 
-            this.pTargets[index * 3] = (Math.random() - 0.5) * span;
-            this.pTargets[index * 3 + 1] = -2.5 - depth;
+       Сторона выбирается поровну, поэтому стены, пол и потолок заселены
+       одинаково. Глубина — небольшой отступ внутрь от поверхности, так что
+       сердцевина коридора остаётся пустой сама собой, без отдельных
+       проверок. */
+    spawnParticleOnSurface(index) {
+        const innerX = Math.max(0.4, this.wallX - SURFACE_GAP);
+        const side = Math.floor(Math.random() * 4);   // 0 левая, 1 правая, 2 потолок, 3 пол
+        const depth = Math.random() * SHELL_DEPTH;
+
+        if (side === 0) {
+            this.pTargets[index * 3] = -innerX + depth;
+            this.pTargets[index * 3 + 1] = FLOOR_Y + Math.random() * (CEIL_Y - FLOOR_Y);
+        } else if (side === 1) {
+            this.pTargets[index * 3] = innerX - depth;
+            this.pTargets[index * 3 + 1] = FLOOR_Y + Math.random() * (CEIL_Y - FLOOR_Y);
+        } else if (side === 2) {
+            this.pTargets[index * 3] = (Math.random() * 2 - 1) * innerX;
+            this.pTargets[index * 3 + 1] = CEIL_Y - SURFACE_GAP - depth;
+        } else {
+            this.pTargets[index * 3] = (Math.random() * 2 - 1) * innerX;
+            this.pTargets[index * 3 + 1] = FLOOR_Y + SURFACE_GAP + depth;
         }
 
-        // Плотное распределение с самого начала: заполняем пространство далеко за пределы коридора
-        this.pTargets[index * 3 + 2] = this.particleNearZ() - Math.random() * 131; 
-
-        // Исключаем блокировку точки схода черного квадрата в центре
-        if (Math.abs(this.pTargets[index * 3]) < 2.5 && Math.abs(this.pTargets[index * 3 + 1] - 1) < 3.2) {
-            this.pTargets[index * 3] += (this.pTargets[index * 3] >= 0 ? 3 : -3);
-        }
+        // Ровно по всей длине коридора: от дальнего края до рубежа у камеры
+        const near = this.particleNearZ();
+        this.pTargets[index * 3 + 2] = CORRIDOR_FAR + Math.random() * (near - CORRIDOR_FAR);
     }
 
     /* Круглая пылинка вместо квадрата.
@@ -291,16 +309,20 @@ export class QuantumCorridorScene {
         this.pVelocities = new Float32Array(this.particleCount * 3); // Плавные вектора скорости
 
         for (let i = 0; i < this.particleCount; i++) {
-            this.spawnParticleOutside(i);
+            this.spawnParticleOnSurface(i);
 
             // Частицы предварительно плотно распределены по объему с первой секунды
             pPos[i * 3] = this.pTargets[i * 3];
             pPos[i * 3 + 1] = this.pTargets[i * 3 + 1];
             pPos[i * 3 + 2] = this.pTargets[i * 3 + 2];
 
-            // Плавающие скорости
-            this.pVelocities[i * 3] = (Math.random() - 0.5) * 0.15;
-            this.pVelocities[i * 3 + 1] = (Math.random() - 0.5) * 0.15;
+            /* Движение только вдоль коридора.
+
+               Боковой снос убран намеренно: звезда живёт в кадре около
+               сорока секунд, и прежнего сноса хватало, чтобы она ушла из
+               своей оболочки в середину коридора или сквозь стену. */
+            this.pVelocities[i * 3] = 0;
+            this.pVelocities[i * 3 + 1] = 0;
             this.pVelocities[i * 3 + 2] = 0.5 + Math.random() * 1.5; // Медленно плывут на камеру
         }
 
@@ -312,7 +334,10 @@ export class QuantumCorridorScene {
         // стены коридора по-прежнему их закрывают.
         this.particlesMat = new THREE.PointsMaterial({
             color: 0xffe9b5,
-            size: 0.18,
+            // Звёзды теперь идут вдоль всего коридора и проходят вплотную,
+            // поэтому размер меньше прежнего: иначе ближняя разрослась бы
+            // в пятно на пол-экрана.
+            size: 0.09,
             map: this.createParticleSprite(),
             transparent: true,
             opacity: 1,
@@ -539,10 +564,10 @@ export class QuantumCorridorScene {
 
                 // Зацикливание: когда частицы выходят за камеру, они возвращаются глубоко назад (-140)
                 if (positions[i * 3 + 2] > nearZ) {
-                    this.spawnParticleOutside(i);
+                    this.spawnParticleOnSurface(i);
                     positions[i * 3] = this.pTargets[i * 3];
                     positions[i * 3 + 1] = this.pTargets[i * 3 + 1];
-                    positions[i * 3 + 2] = -140; 
+                    positions[i * 3 + 2] = CORRIDOR_FAR;
                 }
             }
             this.particlesMesh.geometry.attributes.position.needsUpdate = true;

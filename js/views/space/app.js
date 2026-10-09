@@ -11,6 +11,17 @@ import {
     saveDoorAudio, getDoorAudio, getDoorAudioMeta, deleteDoorAudio,
     canRecord, startRecording, formatDuration
 } from './audio.js';
+import {
+    getDoorPhotos, addDoorPhotos, deleteDoorPhoto, PHOTO_LIMIT
+} from './photos.js';
+
+/* Языки раздела — те же и в том же порядке, что в Ежедневнике.
+   Название языка пишется на нём самом, поэтому переводить его не нужно. */
+const LANGS = [
+    { code: 'ru', flag: '\u{1F1F7}\u{1F1FA}', label: 'Рус', name: 'Русский' },
+    { code: 'uk', flag: '\u{1F1FA}\u{1F1E6}', label: 'Укр', name: 'Українська' },
+    { code: 'en', flag: '\u{1F1EC}\u{1F1E7}', label: 'Eng', name: 'English' }
+];
 
 export class QuantumApp {
     constructor(rootEl) {
@@ -33,6 +44,8 @@ export class QuantumApp {
         this.audioUrl = null;            // ссылка на blob, её надо освобождать
         this.recorder = null;            // активный диктофон
         this.recordingDoorId = null;     // дверь, которую сейчас записываем
+        this.recTimer = null;            // отсчёт секунд во время записи
+        this.smileyLocked = false;       // смайлик зажмурился и остался таким
         this.history = JSON.parse(localStorage.getItem('quantum_akashi_chronicles') || '[]');
         this.notifications = new NotificationManager();
         this.selectedSpeed = 1; // 1: Быстрый переход, 2: Глубокое погружение
@@ -42,8 +55,22 @@ export class QuantumApp {
         this.initInnerQuantums();
         this.initLangSwitcher();
         this.initUI();
+        this.initSmiley();
         this.applyLang();
         this.checkScheduleAndTimer();
+    }
+
+    /* Модуль ищет элементы только внутри себя.
+
+       Рядом на той же странице живёт Ежедневник, и его элементы трогать
+       нельзя: у него сотня своих подписей, и чужой словарь подставил бы им
+       служебные ключи вместо текста. */
+    $(id) {
+        return (this.rootEl || document).querySelector('#' + id);
+    }
+
+    $(selector) {
+        return (this.rootEl || document).querySelectorAll(selector);
     }
 
     t(key) {
@@ -165,24 +192,104 @@ export class QuantumApp {
         animateQ();
     }
 
+    /* Переключатель языков: одна кнопка с текущим языком, по нажатию —
+       список остальных.
+
+       Раздел занимает весь экран и перекрывает кнопку языка Ежедневника,
+       поэтому своя здесь обязательна. Выбор уходит наружу событием: язык в
+       Ежедневнике и в разделе должен остаться одним, а менять чужое
+       состояние напрямую модуль не вправе. */
     initLangSwitcher() {
-        document.querySelectorAll('.qm-lang-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.lang = e.target.getAttribute('data-lang');
-                localStorage.setItem('quantum_lang', this.lang);
-                this.applyLang();
+        const button = this.$('qm-lang-btn');
+        const menu = this.$('qm-lang-menu');
+        if (!button || !menu) return;
+
+        menu.replaceChildren(...LANGS.map(item => {
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'qm-lang-item';
+            row.dataset.lang = item.code;
+            row.innerHTML = '<span class="qm-lang-name"></span><span class="qm-lang-code"></span>';
+            row.querySelector('.qm-lang-name').textContent = item.flag + ' ' + item.name;
+            row.querySelector('.qm-lang-code').textContent = item.label;
+            row.addEventListener('click', () => {
+                this.closeLangMenu();
+                this.setLang(item.code);
             });
+            return row;
+        }));
+
+        button.addEventListener('click', () => {
+            const open = menu.hidden;
+            menu.hidden = !open;
+            button.setAttribute('aria-expanded', String(open));
+        });
+
+        // Клик мимо списка закрывает его. Слушаем на корне раздела, чтобы
+        // не оставлять обработчик на всей странице после ухода отсюда.
+        if (this.rootEl) {
+            this.rootEl.addEventListener('click', e => {
+                if (!e.target.closest('#lang-switcher-container')) this.closeLangMenu();
+            });
+        }
+    }
+
+    closeLangMenu() {
+        const button = this.$('qm-lang-btn');
+        const menu = this.$('qm-lang-menu');
+        if (menu) menu.hidden = true;
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    setLang(code) {
+        if (!LANGS.some(item => item.code === code)) return;
+
+        this.lang = code;
+        localStorage.setItem('quantum_lang', code);
+        this.applyLang();
+
+        // Просим Ежедневник переключиться следом, чтобы язык был один
+        document.dispatchEvent(new CustomEvent('qm-lang-change', { detail: code }));
+    }
+
+    /* Смайлик жмурится от любого прикосновения.
+
+       На наведение, касание и фокус — пока взаимодействие длится. После
+       нажатия остаётся зажмуренным, пока не выберут новую дверь. Одним CSS
+       так не выйдет: :hover и :active отпускают состояние сразу. */
+    initSmiley() {
+        const button = this.$('btn-s3');
+        if (!button) return;
+
+        const shut = () => button.classList.add('qm-eyes-shut');
+        const open = () => { if (!this.smileyLocked) button.classList.remove('qm-eyes-shut'); };
+
+        ['pointerenter', 'pointerdown', 'touchstart', 'focus'].forEach(type => {
+            button.addEventListener(type, shut, { passive: true });
+        });
+        ['pointerleave', 'pointercancel', 'blur'].forEach(type => {
+            button.addEventListener(type, open);
+        });
+        button.addEventListener('click', () => {
+            this.smileyLocked = true;
+            shut();
         });
     }
 
     applyLang() {
-        // Подсветка активной кнопки языка
-        document.querySelectorAll('.qm-lang-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-lang') === this.lang);
+        // Текущий язык на кнопке и отметка в списке
+        const current = LANGS.find(item => item.code === this.lang) || LANGS[0];
+        const label = this.$('qm-lang-label');
+        if (label) label.textContent = current.flag + ' ' + current.label;
+
+        this.$('.qm-lang-item').forEach(item => {
+            const active = item.dataset.lang === this.lang;
+            item.classList.toggle('active', active);
+            item.setAttribute('aria-pressed', String(active));
         });
 
-        // Статичные тексты в HTML
-        document.querySelectorAll('[data-i18n]').forEach(el => {
+        // Статичные тексты в разметке раздела — и только в ней
+        this.$('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 el.placeholder = this.t(key);
@@ -231,6 +338,13 @@ export class QuantumApp {
         const doorsBox = document.getElementById('doors-inputs-container');
         doorsBox.addEventListener('click', (e) => this.onDoorAudioClick(e));
         doorsBox.addEventListener('change', (e) => this.onDoorAudioFile(e));
+
+        // Значок готовности зажигается сразу, как в поле появился текст
+        doorsBox.addEventListener('input', (e) => {
+            if (!e.target.classList.contains('door-text-input')) return;
+            const row = e.target.closest('.qm-door-row');
+            if (row) this.updateDoorStatus(row);
+        });
         document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());
         document.getElementById('btn-cancel-setup').addEventListener('click', () => this.showScreen('screen-1'));
 
@@ -389,12 +503,15 @@ export class QuantumApp {
         animate();
     }
 
+    /* «Войти в суперпозицию» всегда открывает настройку.
+
+       Раньше при заполненных дверях коридор запускался сразу, и поправить
+       двери с телефона было нельзя — экран настройки просто не показывался.
+       Теперь человек всегда видит свои двери, может сменить их число,
+       поправить тексты, записи и фотографии, а входит кнопкой
+       «Сохранить и войти». */
     checkFirstTimeOrCorridor() {
-        if (this.realities.length >= CONFIG.doors.min) {
-            this.startCorridorScreen();
-        } else {
-            this.openSettingsScreen();
-        }
+        this.openSettingsScreen();
     }
 
     openSettingsScreen() {
@@ -416,6 +533,11 @@ export class QuantumApp {
             const row = document.createElement('div');
             row.className = 'qm-door-row';
             row.dataset.doorId = this.doorIds[i];
+            row.dataset.hasAudio = '0';
+            row.dataset.photoCount = '0';
+
+            const head = document.createElement('div');
+            head.className = 'qm-door-head';
 
             // Поле создаётся элементом, а не строкой HTML: кавычки и угловые
             // скобки в тексте намерения больше не ломают разметку.
@@ -424,9 +546,18 @@ export class QuantumApp {
             input.className = 'door-text-input';
             input.placeholder = placeholderText;
             input.value = val;
-            row.appendChild(input);
+            head.appendChild(input);
 
-            row.appendChild(this.buildAudioControls());
+            // Значок готовности. Загорается, как только в двери появилось
+            // хоть что-то: текст, запись или фотография.
+            const badge = document.createElement('span');
+            badge.className = 'qm-door-badge';
+            badge.textContent = this.t('doorReady');
+            badge.hidden = true;
+            head.appendChild(badge);
+
+            row.appendChild(head);
+            row.appendChild(this.buildDoorMedia());
             container.appendChild(row);
         }
 
@@ -444,58 +575,207 @@ export class QuantumApp {
         while (this.doorIds.length < count) this.doorIds.push(this.makeDoorId());
     }
 
-    // Панель под полем двери: запись с микрофона, выбор файла,
-    // название с длительностью, прослушивание и удаление.
-    buildAudioControls() {
+    /* Панель под полем двери: запись с микрофона, звуковой файл,
+       фотографии, состояние записи и лента снимков.
+
+       Вместо прежней надписи «Добавить аудио» — плашки со значками. Во
+       время записи левая плашка превращается в таймер. */
+    buildDoorMedia() {
         const box = document.createElement('div');
-        box.className = 'qm-audio-row';
+        box.className = 'qm-media';
 
-        const makeButton = (act, label, extraClass) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'qm-audio-btn' + (extraClass ? ' ' + extraClass : '');
-            button.dataset.act = act;
-            button.textContent = label;
-            return button;
-        };
+        const actions = document.createElement('div');
+        actions.className = 'qm-media-actions';
 
-        const record = makeButton('record', this.t('audioRecord'));
+        const record = document.createElement('button');
+        record.type = 'button';
+        record.className = 'qm-chip qm-chip-rec';
+        record.dataset.act = 'record';
+
+        const dot = document.createElement('span');
+        dot.className = 'qm-ico qm-ico-mic';
+        dot.setAttribute('aria-hidden', 'true');
+        record.appendChild(dot);
+
+        const recText = document.createElement('span');
+        recText.className = 'qm-chip-text';
+        recText.textContent = this.t('audioRecord');
+        record.appendChild(recText);
+
         if (!canRecord()) {
             record.disabled = true;
             record.title = this.t('audioNoRecorder');
         }
-        box.appendChild(record);
+        actions.appendChild(record);
 
-        // Поле выбора файла спрятано в label — по клику открывается
-        // системный проводник, своей кнопки для этого не нужно.
-        const pick = document.createElement('label');
-        pick.className = 'qm-audio-btn';
-        pick.textContent = this.t('audioPickFile');
-        const file = document.createElement('input');
-        file.type = 'file';
-        file.accept = 'audio/*';
-        file.hidden = true;
-        file.dataset.act = 'file';
-        pick.appendChild(file);
-        box.appendChild(pick);
+        actions.appendChild(this.buildPickChip('file', 'audio/*', false, 'qm-ico-file', this.t('audioPickFile')));
+
+        const photoChip = this.buildPickChip('photo', 'image/*', true, 'qm-ico-photo', this.t('photoAdd'));
+        const counter = document.createElement('span');
+        counter.className = 'qm-photo-count';
+        counter.textContent = '0/' + PHOTO_LIMIT;
+        photoChip.appendChild(counter);
+        actions.appendChild(photoChip);
+
+        box.appendChild(actions);
+
+        const state = document.createElement('div');
+        state.className = 'qm-media-state';
 
         const info = document.createElement('span');
         info.className = 'qm-audio-info';
-        box.appendChild(info);
+        state.appendChild(info);
 
-        box.appendChild(makeButton('preview', this.t('audioPlay'), 'qm-audio-preview'));
-        box.appendChild(makeButton('remove', this.t('audioRemove'), 'qm-audio-remove'));
+        state.appendChild(this.buildIconButton('preview', 'qm-audio-preview', this.t('audioPlay')));
+        state.appendChild(this.buildIconButton('remove', 'qm-audio-remove', this.t('audioRemove')));
+        box.appendChild(state);
+
+        const strip = document.createElement('div');
+        strip.className = 'qm-photo-strip';
+        box.appendChild(strip);
 
         return box;
     }
 
-    // Читает хранилище и расставляет подписи у всех дверей сразу
+    // Плашка, за которой спрятан выбор файла: по нажатию открывается
+    // системный проводник, отдельной кнопки для этого не нужно.
+    buildPickChip(act, accept, multiple, iconClass, label) {
+        const chip = document.createElement('label');
+        chip.className = 'qm-chip';
+
+        const icon = document.createElement('span');
+        icon.className = 'qm-ico ' + iconClass;
+        icon.setAttribute('aria-hidden', 'true');
+        chip.appendChild(icon);
+
+        const text = document.createElement('span');
+        text.className = 'qm-chip-text';
+        text.textContent = label;
+        chip.appendChild(text);
+
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = accept;
+        input.multiple = multiple;
+        input.hidden = true;
+        input.dataset.act = act;
+        chip.appendChild(input);
+
+        return chip;
+    }
+
+    buildIconButton(act, extraClass, title) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'qm-icon-btn ' + extraClass;
+        button.dataset.act = act;
+        button.title = title;
+        button.setAttribute('aria-label', title);
+        button.hidden = true;
+        return button;
+    }
+
+    /* Дверь заполнена, если есть хоть что-то: текст, запись ИЛИ фотография.
+       Одного аудио достаточно — так в задании. */
+    updateDoorStatus(row) {
+        const input = row.querySelector('.door-text-input');
+        const badge = row.querySelector('.qm-door-badge');
+
+        const hasText = Boolean(input && input.value.trim());
+        const hasAudio = row.dataset.hasAudio === '1';
+        const hasPhoto = Number(row.dataset.photoCount || 0) > 0;
+        const ready = hasText || hasAudio || hasPhoto;
+
+        row.classList.toggle('qm-door-ready', ready);
+        if (badge) badge.hidden = !ready;
+    }
+
+    /* Лента снимков двери с кнопкой «убрать» на каждом. */
+    async refreshPhotoStrip(row) {
+        const strip = row.querySelector('.qm-photo-strip');
+        const counter = row.querySelector('.qm-photo-count');
+        if (!strip) return;
+
+        const photos = await getDoorPhotos(row.dataset.doorId);
+        if (this._destroyed || !row.isConnected) return;
+
+        this.releasePhotoUrls(strip);
+        strip.replaceChildren();
+
+        for (const photo of photos) {
+            const cell = document.createElement('div');
+            cell.className = 'qm-photo-cell';
+
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(photo.blob);
+            img.alt = photo.fileName;
+            cell.appendChild(img);
+
+            const drop = document.createElement('button');
+            drop.type = 'button';
+            drop.className = 'qm-photo-drop';
+            drop.dataset.act = 'photo-remove';
+            drop.dataset.photoId = photo.id;
+            drop.title = this.t('photoRemove');
+            drop.setAttribute('aria-label', this.t('photoRemove'));
+            cell.appendChild(drop);
+
+            strip.appendChild(cell);
+        }
+
+        if (counter) counter.textContent = photos.length + '/' + PHOTO_LIMIT;
+        row.dataset.photoCount = String(photos.length);
+        this.updateDoorStatus(row);
+    }
+
+    // Ссылки на картинки отпускаем при замене ленты: иначе снимки копились
+    // бы в памяти при каждой перерисовке дверей.
+    releasePhotoUrls(strip) {
+        strip.querySelectorAll('img').forEach(img => {
+            if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+        });
+    }
+
+    /* Таймер записи.
+
+       Показывает, сколько уже пишется, и ведёт круговой указатель — полный
+       оборот за минуту. Длительность записи не ограничена, поэтому это
+       именно указатель хода, а не полоса до конца. */
+    startRecTimer(row) {
+        this.stopRecTimer();
+
+        const record = row.querySelector('[data-act="record"]');
+        const text = record ? record.querySelector('.qm-chip-text') : null;
+        if (!record || !text) return;
+
+        const startedAt = Date.now();
+        const tick = () => {
+            const seconds = Math.floor((Date.now() - startedAt) / 1000);
+            text.textContent = formatDuration(seconds * 1000) || '0:00';
+            record.style.setProperty('--qm-rec-turn', ((seconds % 60) / 60).toFixed(3));
+        };
+
+        tick();
+        this.recTimer = setInterval(tick, 250);
+    }
+
+    stopRecTimer() {
+        if (this.recTimer) {
+            clearInterval(this.recTimer);
+            this.recTimer = null;
+        }
+    }
+
+    // Читает хранилище и расставляет состояние у всех дверей сразу
     async refreshAudioControls() {
-        const rows = Array.from(document.querySelectorAll('.qm-door-row'));
+        const rows = Array.from(this.$('.qm-door-row'));
         for (const row of rows) {
             const meta = await getDoorAudioMeta(row.dataset.doorId);
             if (this._destroyed || !row.isConnected) return;
             this.applyAudioState(row, meta);
+
+            await this.refreshPhotoStrip(row);
+            if (this._destroyed || !row.isConnected) return;
         }
     }
 
@@ -504,17 +784,22 @@ export class QuantumApp {
         const preview = row.querySelector('.qm-audio-preview');
         const remove = row.querySelector('.qm-audio-remove');
         const record = row.querySelector('[data-act="record"]');
+        const recText = record ? record.querySelector('.qm-chip-text') : null;
         const isRecording = this.recordingDoorId === row.dataset.doorId;
 
+        row.dataset.hasAudio = meta ? '1' : '0';
+
         if (record && !record.disabled) {
-            record.textContent = isRecording ? this.t('audioStopRec') : this.t('audioRecord');
-            record.classList.toggle('qm-audio-rec-on', isRecording);
+            record.classList.toggle('qm-chip-rec-on', isRecording);
+            // Во время записи подпись ведёт таймер, трогать её здесь нельзя
+            if (recText && !isRecording) recText.textContent = this.t('audioRecord');
         }
 
         if (isRecording) {
-            info.textContent = this.t('audioRecording');
+            info.textContent = this.t('recElapsed');
             preview.hidden = true;
             remove.hidden = true;
+            this.updateDoorStatus(row);
             return;
         }
 
@@ -524,15 +809,19 @@ export class QuantumApp {
             preview.hidden = false;
             remove.hidden = false;
         } else {
-            info.textContent = this.t('audioAdd');
+            // Пусто: о том, что можно добавить, говорят сами плашки
+            info.textContent = '';
             preview.hidden = true;
             remove.hidden = true;
         }
+
+        this.updateDoorStatus(row);
     }
 
     onDoorAudioClick(event) {
-        const button = event.target.closest('.qm-audio-btn');
-        if (!button) return;
+        const button = event.target.closest('[data-act]');
+        if (!button || button.tagName === 'INPUT') return;
+
         const row = button.closest('.qm-door-row');
         if (!row) return;
 
@@ -540,20 +829,46 @@ export class QuantumApp {
         if (act === 'record') this.toggleRecording(row);
         else if (act === 'preview') this.previewDoorAudio(row);
         else if (act === 'remove') this.removeDoorAudio(row);
+        else if (act === 'photo-remove') this.removeDoorPhoto(row, button.dataset.photoId);
+    }
+
+    async removeDoorPhoto(row, photoId) {
+        if (!photoId) return;
+        await deleteDoorPhoto(row.dataset.doorId, photoId);
+        if (this._destroyed || !row.isConnected) return;
+        await this.refreshPhotoStrip(row);
     }
 
     async onDoorAudioFile(event) {
         const input = event.target;
-        if (!input || input.dataset.act !== 'file') return;
+        if (!input || !input.dataset) return;
 
         const row = input.closest('.qm-door-row');
-        const file = input.files && input.files[0];
-        input.value = '';
-        if (!row || !file) return;
+        if (!row) return;
 
-        const meta = await saveDoorAudio(row.dataset.doorId, file, file.name);
-        if (this._destroyed || !row.isConnected) return;
-        this.applyAudioState(row, meta);
+        if (input.dataset.act === 'file') {
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+
+            const meta = await saveDoorAudio(row.dataset.doorId, file, file.name);
+            if (this._destroyed || !row.isConnected) return;
+            this.applyAudioState(row, meta);
+            return;
+        }
+
+        if (input.dataset.act === 'photo') {
+            const files = Array.from(input.files || []);
+            input.value = '';
+            if (files.length === 0) return;
+
+            // Лишние сверх трёх плагин отбрасывает сам и говорит сколько
+            const { skipped } = await addDoorPhotos(row.dataset.doorId, files);
+            if (this._destroyed || !row.isConnected) return;
+
+            await this.refreshPhotoStrip(row);
+            if (skipped > 0) alert(this.t('photoLimitReached'));
+        }
     }
 
     async toggleRecording(row) {
@@ -565,6 +880,7 @@ export class QuantumApp {
             this.recorder = null;
             this.recordingDoorId = null;
 
+            this.stopRecTimer();
             const blob = await recorder.stop();
             const stamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             const meta = await saveDoorAudio(doorId, blob, this.t('audioRecord') + ' ' + stamp);
@@ -579,8 +895,10 @@ export class QuantumApp {
             this.recorder = await startRecording();
             this.recordingDoorId = doorId;
             this.applyAudioState(row, null);
+            this.startRecTimer(row);
         } catch (err) {
             console.error('[space] микрофон недоступен:', err);
+            this.stopRecTimer();
             this.recorder = null;
             this.recordingDoorId = null;
             alert(this.t('audioNoMic'));
@@ -686,7 +1004,17 @@ export class QuantumApp {
         for (const row of rows) {
             const input = row.querySelector('.door-text-input');
             const text = input ? input.value.trim() : '';
-            if (text !== '') kept.push({ id: row.dataset.doorId, text });
+            const hasAudio = row.dataset.hasAudio === '1';
+            const hasPhoto = Number(row.dataset.photoCount || 0) > 0;
+
+            // Дверь живёт, если в ней есть хоть что-то. У двери без текста
+            // должно остаться имя — иначе в коридоре она была бы безымянной.
+            if (text === '' && !hasAudio && !hasPhoto) continue;
+
+            kept.push({
+                id: row.dataset.doorId,
+                text: text || this.t('doorNoName').replace('{i}', String(kept.length + 1))
+            });
         }
 
         if (kept.length < CONFIG.doors.min) {
@@ -735,6 +1063,11 @@ export class QuantumApp {
     }
 
     onDoorChosen(index, text) {
+        // Новая дверь — смайлик снова открывает глаза
+        this.smileyLocked = false;
+        const eyes = this.$('btn-s3');
+        if (eyes) eyes.classList.remove('qm-eyes-shut');
+
         this.currentChosenText = text;
         this.currentDoorId = this.doorIds[index] || null;
         document.getElementById('txt-s3-chosen-reality').innerText = text;
@@ -745,7 +1078,18 @@ export class QuantumApp {
 
     saveDiaryEntry() {
         const trace = document.getElementById('input-s4-diary').value.trim();
+
+        /* ts и doorId нужны сводке.
+
+           ts — чтобы отделить сутки от всего времени; раньше в записи была
+           только строка с датой, по ней не посчитаешь.
+
+           doorId — чтобы считать по самой двери, а не по её названию:
+           переименовал дверь, и статистика продолжилась под новым именем,
+           а не завелась заново. */
         this.history.unshift({
+            ts: Date.now(),
+            doorId: this.currentDoorId || null,
             dateStr: new Date().toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
             reality: this.currentChosenText,
             trace: trace || this.t('emptyTrace')
@@ -760,22 +1104,96 @@ export class QuantumApp {
         this.showScreen('screen-5');
     }
 
+    /* Хроники: сутки подробно, всё остальное — сводкой.
+
+       Длинный список всех переходов разрастался в простыню, по которой
+       ничего не видно. Теперь сверху — что было за последние сутки, ниже —
+       сколько раз открывалась каждая дверь и какую долю это составляет. */
     renderChronicles() {
         const list = document.getElementById('chronicles-list');
+        if (!list) return;
+
         if (this.history.length === 0) {
             list.innerHTML = `<p class="qm-empty">${this.escapeHtml(this.t('noRecords'))}</p>`;
             return;
         }
 
-        // Тексты пользователя экранируются: кавычки и символы < > больше
-        // не ломают карточку и не могут выполнить разметку.
-        list.innerHTML = this.history.map(item => `
+        list.innerHTML = this.renderRecentChronicles() + this.renderChronicleStats();
+    }
+
+    // Нынешнее имя двери. Записи, сделанные до появления id, показываем по
+    // тексту, который в них сохранён.
+    doorNameOfKey(key, fallback) {
+        const at = this.doorIds.indexOf(key);
+        if (at !== -1 && this.realities[at]) return this.realities[at];
+        return fallback || this.t('emptyTrace');
+    }
+
+    renderRecentChronicles() {
+        const since = Date.now() - 24 * 60 * 60 * 1000;
+        const fresh = this.history.filter(item => Number(item.ts) >= since);
+
+        // Тексты человека экранируются: кавычки и символы < > больше не
+        // ломают карточку и не могут выполнить разметку.
+        const body = fresh.length === 0
+            ? `<p class="qm-empty">${this.escapeHtml(this.t('chroniclesNoneDay'))}</p>`
+            : fresh.map(item => `
             <div class="chronicle-card">
                 <div class="chronicle-date">${this.escapeHtml(item.dateStr)}</div>
-                <div class="chronicle-reality">${this.escapeHtml(this.t('akashiAct'))}<br>${this.escapeHtml(item.reality)}</div>
+                <div class="chronicle-reality">${this.escapeHtml(this.t('akashiAct'))}<br>${this.escapeHtml(this.doorNameOfKey(item.doorId || '', item.reality))}</div>
                 <div class="chronicle-trace">${this.escapeHtml(this.t('akashiTrace'))}<br>«${this.escapeHtml(item.trace)}»</div>
-            </div>
-        `).join('');
+            </div>`).join('');
+
+        return `<section class="qm-chron-section">
+            <h4 class="qm-chron-head">${this.escapeHtml(this.t('chronicles24h'))}</h4>
+            ${body}
+        </section>`;
+    }
+
+    renderChronicleStats() {
+        const counts = new Map();
+
+        for (const item of this.history) {
+            const key = item.doorId || ('text:' + (item.reality || ''));
+            const row = counts.get(key) || { key, count: 0, fallback: item.reality || '' };
+            row.count += 1;
+            counts.set(key, row);
+        }
+
+        const total = this.history.length;
+        const rows = Array.from(counts.values()).sort((a, b) => b.count - a.count);
+
+        const body = rows.map(row => {
+            const share = Math.round((row.count / total) * 100);
+            const name = this.doorNameOfKey(row.key, row.fallback);
+            // share — наше собственное число, в разметку идёт без него не обойтись
+            return `<div class="qm-stat-row">
+                <div class="qm-stat-top">
+                    <span class="qm-stat-name">${this.escapeHtml(name)}</span>
+                    <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${share}%</span>
+                </div>
+                <div class="qm-stat-bar"><span style="width:${share}%"></span></div>
+            </div>`;
+        }).join('');
+
+        return `<section class="qm-chron-section">
+            <h4 class="qm-chron-head">${this.escapeHtml(this.t('chroniclesAll'))}</h4>
+            ${body}
+        </section>`;
+    }
+
+    /* Склонение числа открытий: русскому и украинскому нужны три формы,
+       английскому две — там вторая и третья в словаре совпадают. */
+    plural(n) {
+        if (this.lang === 'en') return this.t(n === 1 ? 'chroniclesTimesOne' : 'chroniclesTimesMany');
+
+        const hundreds = Math.abs(n) % 100;
+        const tens = hundreds % 10;
+
+        if (hundreds > 10 && hundreds < 20) return this.t('chroniclesTimesMany');
+        if (tens === 1) return this.t('chroniclesTimesOne');
+        if (tens >= 2 && tens <= 4) return this.t('chroniclesTimesFew');
+        return this.t('chroniclesTimesMany');
     }
 
     handleSnooze() {
@@ -902,6 +1320,8 @@ export class QuantumApp {
         if (this._onResize) window.removeEventListener('resize', this._onResize);
 
         this.stopDoorAudio();
+        this.stopRecTimer();
+        this.$('.qm-photo-strip').forEach(strip => this.releasePhotoUrls(strip));
         if (this.recorder) {
             this.recorder.stop().catch(() => {});
             this.recorder = null;
