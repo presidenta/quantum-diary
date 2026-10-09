@@ -395,6 +395,38 @@ export class QuantumCorridorScene {
         return texture;
     }
 
+    /* Песчинка туннеля: то же зерно, но с плотным светлым ядром.
+
+       У пылинки коридора мягкая середина: полная яркость держится до 35%
+       радиуса и дальше быстро гаснет. Для дальних звёзд это правильно —
+       они должны быть неяркими. В туннеле же песчинки проносятся мимо за
+       доли секунды, и такая мягкость читается тусклостью.
+
+       Здесь ядро белое до 55% радиуса и гаснет короче. Зерно остаётся
+       зерном — круглым и небольшим, — но светит в полную силу. */
+    createGrainSprite() {
+        const size = 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const half = size / 2;
+
+        const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        grad.addColorStop(0.55, 'rgba(255, 255, 255, 1)');
+        grad.addColorStop(0.78, 'rgba(255, 255, 255, 0.55)');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        return texture;
+    }
+
     /* ТРИ СЛОЯ ЗВЁЗД РАЗНОГО РАЗМЕРА.
 
        Прежде все пылинки были одного размера — коридор от этого читался
@@ -574,9 +606,9 @@ export class QuantumCorridorScene {
            кольцом — и в него летишь. */
         this.tunnelMat = new THREE.PointsMaterial({
             color: 0xffffff,
-            size: 0.3,
+            size: 0.38,
             sizeAttenuation: true,
-            map: this.createParticleSprite(),
+            map: this.createGrainSprite(),
             transparent: true,
             depthWrite: false,
             blending: THREE.AdditiveBlending
