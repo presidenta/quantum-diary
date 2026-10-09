@@ -553,44 +553,6 @@
     min-height: 64px;
 }
 
-/* Кнопка «Закрой глаза»: смайлик крупнее в 1.8 раза (26px -> 47px) и
-   занимает почти всю высоту кнопки, надпись увеличена пропорционально.
-   Высота кнопки поднята под новый размер содержимого, поэтому границы не рвутся,
-   а flexbox держит смайлик и текст по центру. */
-.qm-root .btn-eyes {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    min-height: 76px;
-    font-size: 20px;
-    line-height: 1.2;
-    padding: 10px 20px;
-}
-
-.qm-root .smiley-icon::before {
-    content: "\1F97A";
-    font-size: 47px;
-    line-height: 1;
-    display: inline-block;
-    transition: transform 0.2s ease;
-}
-
-/* Наведение — только там, где есть настоящий курсор. На телефоне браузер
-   оставляет :hover «залипшим» после касания, и смайлик закрывал глаза
-   навсегда. Под пальцем теперь работает :active: нажал — закрыл,
-   отпустил — снова открыл. Окончательно глаза закрываются уже на экране
-   отсчёта, после нажатия на кнопку. */
-@media (hover: hover) and (pointer: fine) {
-    .qm-root .btn-eyes:hover .smiley-icon::before { content: "\1F60C"; }
-}
-
-.qm-root .btn-eyes:active .smiley-icon::before { content: "\1F60C"; }
-
-/* Состояние держится после нажатия: :hover и :active отпускают его сразу,
-   а по заданию смайлик должен остаться зажмуренным. Класс ставит app.js. */
-.qm-root .btn-eyes.qm-eyes-shut .smiley-icon::before { content: "\1F60C"; }
-
 /* ===== Отсчёт 1-2-3 и затемнение ========================================= */
 .qm-root .countdown-overlay {
     position: fixed;
@@ -1301,75 +1263,163 @@
    с прикреплённой записью — поэтому левая часть скругляется справа лишь
    тогда, когда правая видна.
    ======================================================================== */
-.qm-root .qm-split-btn {
+/* ===== Золотая капсула: смайлик + «Закрой глаза» + круглый Play ========
+
+   Три части лежат в одной золотой капсуле, а не стоят тремя отдельными
+   кнопками: смайлик — её лицо, пластина и круг — две её половины. Так
+   рука сразу видит, что это одно целое, и не ищет, куда нажимать.
+
+   Смайлик кнопкой не является: у него aria-hidden и он не ловит нажатия,
+   поэтому попасть мимо обеих половин нельзя. */
+.qm-root .qm-act {
     display: flex;
-    align-items: stretch;
+    align-items: center;
+    gap: 10px;
     width: 100%;
-    margin-top: 15px;
+    margin-top: 18px;
+    padding: 9px 12px 9px 10px;
+    border-radius: 999px;
+    background: var(--qm-gold-3d);
+    box-shadow:
+        0 10px 26px rgba(0, 0, 0, 0.55),
+        0 0 26px var(--qm-gold-glow),
+        inset 0 2px 1px rgba(255, 246, 214, 0.75),
+        inset 0 -3px 6px rgba(90, 52, 6, 0.55);
+    transition: box-shadow 0.18s ease, transform 0.12s ease;
 }
 
-.qm-root .qm-split-main {
-    flex: 1 1 80%;
-    border-radius: var(--qm-radius-sm);
+/* Нажали любую половину — утапливается вся капсула */
+.qm-root .qm-act.qm-act-pressed {
+    transform: translateY(2px);
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.5),
+        0 0 32px var(--qm-gold-glow),
+        inset 0 3px 8px rgba(90, 52, 6, 0.6);
 }
 
-/* Правая половина стоит всегда, поэтому левая всегда срезана справа */
-.qm-root .qm-split-main {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+.qm-root .qm-act-face {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    line-height: 0;
 }
 
-.qm-root .qm-split-play {
-    flex: 0 0 20%;
-    min-height: 76px;
+.qm-root .qm-act-face::before {
+    content: "\1F97A";
+    font-size: 48px;
+    line-height: 1;
+    display: inline-block;
+}
+
+/* Пластина с надписью: утоплена в капсулу, своя фаска и своя рамка */
+.qm-root .qm-act-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 60px;
+    padding: 8px 14px;
+    border: 1px solid rgba(120, 72, 10, 0.55);
+    border-radius: 999px;
+    background: linear-gradient(180deg, #F3CE78 0%, #E0AE43 45%, #C58D26 100%);
+    color: var(--qm-gold-ink);
+    font-family: var(--qm-font);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.15;
+    cursor: pointer;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 250, 226, 0.85),
+        inset 0 -2px 4px rgba(120, 72, 10, 0.4),
+        0 2px 5px rgba(0, 0, 0, 0.35);
+    transition: box-shadow 0.15s ease;
+}
+
+.qm-root .qm-act-main:active {
+    box-shadow:
+        inset 0 3px 7px rgba(120, 72, 10, 0.6),
+        inset 0 -1px 0 rgba(255, 250, 226, 0.5);
+}
+
+/* Круглый Play: диск того же золота со светящимся ободком */
+.qm-root .qm-act-play {
+    flex: 0 0 auto;
+    width: 60px;
+    height: 60px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--qm-radius-sm);
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    border-left: 1px solid rgba(10, 10, 12, 0.35);
+    border: 1px solid rgba(120, 72, 10, 0.55);
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #FBE6A8 0%, #EEB948 42%, #C9912A 72%, #8A5A12 100%);
+    cursor: pointer;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 250, 226, 0.9),
+        inset 0 -2px 5px rgba(120, 72, 10, 0.45),
+        0 0 14px rgba(255, 221, 130, 0.65);
+    transition: box-shadow 0.15s ease;
 }
 
-/* Без этого hidden не сработает: display выше его перебивает */
-/* У двери без записи кнопка на месте, но приглушена и не нажимается */
-.qm-root .qm-split-play.qm-play-idle {
-    opacity: 0.4;
+.qm-root .qm-act-play:active {
+    box-shadow:
+        inset 0 3px 8px rgba(120, 72, 10, 0.65),
+        0 0 20px rgba(255, 221, 130, 0.8);
+}
+
+/* У двери без записи круг на месте, но приглушён и не нажимается */
+.qm-root .qm-act-play.qm-play-idle {
+    opacity: 0.45;
     cursor: default;
-}
-
-.qm-root .qm-split-play.qm-play-idle .qm-play-glyph {
-    border-left-color: rgba(10, 10, 12, 0.55);
-}
-
-/* Разделитель между половинами, чтобы кнопка читалась составной */
-.qm-root .qm-split-play {
-    border-left: 1px solid rgba(10, 10, 12, 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 250, 226, 0.5),
+                inset 0 -2px 5px rgba(120, 72, 10, 0.3);
 }
 
 /* Треугольник рисуется рамкой, чтобы не зависеть от шрифта эмодзи.
 
    display: block обязателен. Строчному элементу ширина и высота не
    задаются вовсе, поэтому приём с нулевым размером и рамкой на нём не
-   срабатывает: правая половина кнопки оставалась пустым золотым
-   прямоугольником без знака. */
+   срабатывает: круг оставался пустым. */
 .qm-root .qm-play-glyph {
     display: block;
     width: 0;
     height: 0;
+    margin-left: 4px;
     border-style: solid;
-    border-width: 13px 0 13px 21px;
-    border-color: transparent transparent transparent #0A0A0C;
+    border-width: 12px 0 12px 19px;
+    border-color: transparent transparent transparent #3A2206;
 }
 
 /* Запись играет — треугольник становится квадратом «стоп» */
-.qm-root .qm-split-play.qm-play-on .qm-play-glyph {
-    width: 18px;
-    height: 18px;
+.qm-root .qm-act-play.qm-play-on .qm-play-glyph {
+    width: 17px;
+    height: 17px;
+    margin-left: 0;
     border: 0;
     border-radius: 3px;
-    background: #0A0A0C;
+    background: #3A2206;
+}
+
+/* ===== Смайлик закрывает глаза ==========================================
+
+   Глаза закрываются, когда палец или курсор оказывается на капсуле, и
+   открываются, когда уходит. Класс ставит app.js: одного :hover мало —
+   на телефоне он остаётся «залипшим» после касания, и смайлик закрывал
+   глаза навсегда. Окончательно глаза закрываются уже на экране отсчёта. */
+.qm-root .qm-act.qm-eyes-shut .qm-act-face::before { content: "\1F60C"; }
+
+@media (hover: hover) and (pointer: fine) {
+    .qm-root .qm-act:hover .qm-act-face::before { content: "\1F60C"; }
+}
+
+.qm-root .qm-act:active .qm-act-face::before { content: "\1F60C"; }
+
+/* Узкий телефон: надпись мельче, круг меньше — чтобы капсула не ломалась */
+@media (max-width: 400px) {
+    .qm-root .qm-act { gap: 7px; padding: 8px 9px 8px 7px; }
+    .qm-root .qm-act-face::before { font-size: 40px; }
+    .qm-root .qm-act-main { font-size: 17px; min-height: 54px; padding: 7px 10px; }
+    .qm-root .qm-act-play { width: 52px; height: 52px; }
+    .qm-root .qm-play-glyph { border-width: 10px 0 10px 16px; }
+    .qm-root .qm-act-play.qm-play-on .qm-play-glyph { width: 15px; height: 15px; }
 }
 
 /* ===== Выход из раздела ==================================================
@@ -1451,4 +1501,149 @@
 .qm-root .qm-stat-idle .qm-stat-name,
 .qm-root .qm-stat-idle .qm-stat-count {
     color: var(--qm-faint);
+}
+
+/* ===== Гримуар Акаши: экран дневника ====================================
+
+   Экран задуман как разворот древней книги: тёмная ночь, по которой
+   плывёт золотая дымка, и тяжёлый золочёный фолиант внизу. Рисунка в
+   файле нет — вся сцена собрана градиентами, поэтому она ничего не
+   весит, тянется под любой экран и не мылится на плотных дисплеях. */
+.qm-root .qm-akasha {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(120% 70% at 78% 18%, rgba(84, 62, 160, 0.30) 0%, rgba(84, 62, 160, 0) 60%),
+        radial-gradient(90% 55% at 18% 82%, rgba(190, 142, 48, 0.18) 0%, rgba(190, 142, 48, 0) 62%),
+        radial-gradient(130% 90% at 50% 50%, #141026 0%, #0B0A14 70%, #07060D 100%);
+    border: 1px solid rgba(201, 163, 78, 0.28);
+    box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.75), 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Золотая пыль по развороту. Два слоя точек разной частоты — так пятна
+   не выстраиваются в заметную решётку. */
+.qm-root .qm-akasha::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image:
+        radial-gradient(1.6px 1.6px at 18% 24%, rgba(255, 234, 170, 0.75), transparent 60%),
+        radial-gradient(1.2px 1.2px at 62% 12%, rgba(255, 234, 170, 0.6), transparent 60%),
+        radial-gradient(1.8px 1.8px at 84% 42%, rgba(190, 215, 255, 0.55), transparent 60%),
+        radial-gradient(1.1px 1.1px at 33% 68%, rgba(255, 234, 170, 0.5), transparent 60%),
+        radial-gradient(1.5px 1.5px at 72% 78%, rgba(255, 234, 170, 0.45), transparent 60%),
+        radial-gradient(1.2px 1.2px at 8% 54%, rgba(190, 215, 255, 0.4), transparent 60%);
+}
+
+.qm-root .qm-akasha > * { position: relative; }
+
+/* --- сама кнопка-фолиант --- */
+.qm-root .qm-tome-wrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+}
+
+/* Холст с искрами лежит НАД кнопкой и выше неё, кликов не ловит */
+.qm-root .qm-tome-sparks {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 220px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.qm-root .qm-tome {
+    position: relative;
+    width: 100%;
+    padding: 17px 22px;
+    overflow: hidden;
+    border: 2px solid #B8860B;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #1A1525 0%, #2D243A 100%);
+    cursor: pointer;
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.6),
+        inset 0 0 15px rgba(218, 165, 32, 0.30),
+        0 0 20px rgba(184, 134, 11, 0.22);
+    transition: box-shadow 0.25s ease, transform 0.15s ease, background 0.4s ease;
+}
+
+/* Внутренняя рамка — тиснение по краю переплёта */
+.qm-root .qm-tome-edge {
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(255, 215, 0, 0.38);
+    border-radius: 9px;
+    pointer-events: none;
+}
+
+.qm-root .qm-tome-text {
+    position: relative;
+    z-index: 2;
+    display: block;
+    font-family: var(--qm-font);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    line-height: 1.3;
+    color: #F8E5A5;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(218, 165, 32, 0.6);
+    transition: opacity 0.3s ease, color 0.3s ease;
+}
+
+/* Блик волшебной палочки: лежит ниже надписи и ждёт своего мига */
+.qm-root .qm-tome-flare {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(45deg,
+        transparent 45%,
+        rgba(255, 255, 255, 0.7) 50%,
+        transparent 55%);
+    transform: rotate(45deg) translateX(-100%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .qm-root .qm-tome:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 12px 30px rgba(0, 0, 0, 0.7),
+            inset 0 0 20px rgba(218, 165, 32, 0.5),
+            0 0 35px rgba(184, 134, 11, 0.5);
+    }
+}
+
+.qm-root .qm-tome:active {
+    transform: translateY(2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(218, 165, 32, 0.8);
+}
+
+.qm-root .qm-tome.qm-tome-on {
+    background: linear-gradient(145deg, #2D243A 0%, #4A3B15 100%);
+    border-color: #FFD700;
+}
+
+.qm-root .qm-tome.qm-tome-on .qm-tome-flare {
+    animation: qmWandStrike 0.6s ease-out forwards;
+}
+
+@keyframes qmWandStrike {
+    0%   { transform: rotate(45deg) translateX(-100%); }
+    100% { transform: rotate(45deg) translateX(100%); }
+}
+
+/* Кому движение мешает — тому без движения */
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .qm-tome.qm-tome-on .qm-tome-flare { animation: none; }
 }

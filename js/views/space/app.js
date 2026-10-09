@@ -292,23 +292,52 @@ export class QuantumApp {
        На наведение, касание и фокус — пока взаимодействие длится. После
        нажатия остаётся зажмуренным, пока не выберут новую дверь. Одним CSS
        так не выйдет: :hover и :active отпускают состояние сразу. */
+    /* Смайлик — лицо всей капсулы.
+
+       Он закрывает глаза, когда палец или курсор оказывается на любой её
+       части: и на пластине «Закрой глаза», и на круглом Play. Уходит —
+       открывает. Нажатие на любую половину вдобавок утапливает капсулу
+       целиком, чтобы она читалась одной вещью, а не тремя.
+
+       Одного :hover мало: на телефоне он остаётся «залипшим» после
+       касания, и глаза закрывались навсегда. */
     initSmiley() {
-        const button = this.$('btn-s3');
-        if (!button) return;
+        const capsule = this.$('qm-act');
+        const eyes = this.$('btn-s3');
+        const play = this.$('btn-s3-play');
+        if (!capsule) return;
 
-        const shut = () => button.classList.add('qm-eyes-shut');
-        const open = () => { if (!this.smileyLocked) button.classList.remove('qm-eyes-shut'); };
+        const shut = () => capsule.classList.add('qm-eyes-shut');
+        const open = () => { if (!this.smileyLocked) capsule.classList.remove('qm-eyes-shut'); };
+        const press = () => capsule.classList.add('qm-act-pressed');
+        const release = () => capsule.classList.remove('qm-act-pressed');
 
-        ['pointerenter', 'pointerdown', 'touchstart', 'focus'].forEach(type => {
-            button.addEventListener(type, shut, { passive: true });
+        ['pointerenter', 'pointerdown', 'touchstart'].forEach(type => {
+            capsule.addEventListener(type, shut, { passive: true });
         });
-        ['pointerleave', 'pointercancel', 'blur'].forEach(type => {
-            button.addEventListener(type, open);
+        ['pointerleave', 'pointercancel'].forEach(type => {
+            capsule.addEventListener(type, () => { open(); release(); });
         });
-        button.addEventListener('click', () => {
-            this.smileyLocked = true;
-            shut();
-        });
+
+        for (const half of [eyes, play]) {
+            if (!half) continue;
+            ['pointerdown', 'touchstart'].forEach(type => {
+                half.addEventListener(type, () => { shut(); press(); }, { passive: true });
+            });
+            ['pointerup', 'pointercancel', 'touchend', 'blur'].forEach(type => {
+                half.addEventListener(type, release);
+            });
+            half.addEventListener('focus', shut);
+            half.addEventListener('blur', open);
+        }
+
+        // Глаза окончательно закрываются только у «Закрой глаза»
+        if (eyes) {
+            eyes.addEventListener('click', () => {
+                this.smileyLocked = true;
+                shut();
+            });
+        }
     }
 
     applyLang() {
@@ -413,7 +442,7 @@ export class QuantumApp {
         document.getElementById('btn-s3').addEventListener('click', () => this.handleEyeCloseTransition(false));
         const playZone = document.getElementById('btn-s3-play');
         if (playZone) playZone.addEventListener('click', () => this.toggleDoorAudio());
-        document.getElementById('btn-s4-save').addEventListener('click', () => this.saveDiaryEntry());
+        document.getElementById('btn-s4-save').addEventListener('click', () => this.activateAkasha());
         document.getElementById('btn-snooze').addEventListener('click', () => this.handleSnooze());
 
         // Крестик не закрывает раздел сам: он лишь сообщает об этом наружу,
@@ -1290,8 +1319,9 @@ export class QuantumApp {
     onDoorChosen(index, text) {
         // Новая дверь — смайлик снова открывает глаза
         this.smileyLocked = false;
-        const eyes = this.$('btn-s3');
-        if (eyes) eyes.classList.remove('qm-eyes-shut');
+        // Класс живёт на капсуле целиком, а не на одной её половине
+        const capsule = this.$('qm-act');
+        if (capsule) capsule.classList.remove('qm-eyes-shut', 'qm-act-pressed');
 
         // index — место в коридоре, а двери перетасованы: берём слот
         const slot = this.slotOfDoor(index);
@@ -1337,6 +1367,115 @@ export class QuantumApp {
         }
 
         box.hidden = false;
+    }
+
+    /* Нажали фолиант: удар света, вихрь искр, и только потом запись.
+
+       Сохранение не задерживается ради красоты: оно идёт сразу, а на
+       экран хроник переходим, дав искрам долететь. Если человек нажмёт
+       второй раз, пока летят искры, ничего не задвоится — кнопка на это
+       время не слушает. */
+    activateAkasha() {
+        const btn = document.getElementById('btn-s4-save');
+        const label = document.getElementById('qm-tome-text');
+        if (this.akashaBusy) return;
+        this.akashaBusy = true;
+
+        if (btn) btn.classList.add('qm-tome-on');
+        this.burstAkashaSparks();
+
+        if (label) {
+            label.style.opacity = '0';
+            this.later(() => {
+                if (this._destroyed || !label.isConnected) return;
+                label.textContent = this.t('akashaDone');
+                label.style.color = '#FFFFFF';
+                label.style.opacity = '1';
+            }, 300);
+        }
+
+        this.later(() => {
+            this.akashaBusy = false;
+            if (btn) btn.classList.remove('qm-tome-on');
+            if (label) {
+                label.style.opacity = '';
+                label.style.color = '';
+                label.textContent = this.t('screen4Btn');
+            }
+            if (this._destroyed) return;
+            this.saveDiaryEntry();
+        }, 1100);
+    }
+
+    /* Вихрь Акаши: золотые и синие искры летят вверх по спирали.
+
+       Холст живёт только пока летят искры: кадры заказываются от первой
+       искры до последней и сами прекращаются. Отдельного вечного цикла
+       нет — экран дневника не должен жечь батарею, пока человек пишет. */
+    burstAkashaSparks() {
+        const canvas = document.getElementById('qm-tome-sparks');
+        if (!canvas || !canvas.getContext) return;
+
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const w = canvas.offsetWidth || 300;
+        const h = canvas.offsetHeight || 220;
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const sparks = [];
+        for (let i = 0; i < 70; i++) {
+            sparks.push({
+                // Искры поднимаются по всей ширине переплёта, а не из точки
+                x: w * (0.18 + Math.random() * 0.64),
+                y: h - Math.random() * 6,
+                size: Math.random() * 3 + 1,
+                up: Math.random() * -3 - 2,
+                side: (Math.random() - 0.5) * 4,
+                color: Math.random() > 0.7 ? '#4DB8FF' : '#FFD700',
+                life: 1,
+                decay: Math.random() * 0.02 + 0.015,
+                angle: Math.random() * Math.PI * 2,
+                spin: (Math.random() - 0.5) * 0.1
+            });
+        }
+
+        const step = () => {
+            if (this._destroyed || !canvas.isConnected) return;
+            ctx.clearRect(0, 0, w, h);
+
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                const s = sparks[i];
+                s.y += s.up;
+                s.angle += s.spin;
+                s.x += s.side + Math.sin(s.angle) * 2;
+                s.life -= s.decay;
+
+                if (s.life <= 0) { sparks.splice(i, 1); continue; }
+
+                ctx.globalAlpha = s.life;
+                ctx.fillStyle = s.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = s.color;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+
+            if (sparks.length) {
+                this._sparkRaf = requestAnimationFrame(step);
+            } else {
+                ctx.clearRect(0, 0, w, h);
+                this._sparkRaf = null;
+            }
+        };
+
+        if (this._sparkRaf) cancelAnimationFrame(this._sparkRaf);
+        this._sparkRaf = requestAnimationFrame(step);
     }
 
     saveDiaryEntry() {
@@ -1665,6 +1804,7 @@ export class QuantumApp {
         this._destroyed = true;
 
         if (this._raf) cancelAnimationFrame(this._raf);
+        if (this._sparkRaf) cancelAnimationFrame(this._sparkRaf);
         clearInterval(this.countdownInterval);
         clearInterval(this.scheduleInterval);
         clearInterval(this.countTimer);

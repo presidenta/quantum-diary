@@ -140,13 +140,17 @@ export const TEMPLATE = [
     '        <div id="speed-instruction-text" class="speed-instruction-box"></div>',
     '        <p id="txt-s3-audio-warn" class="qm-audio-warn" hidden></p>',
 
-    /* Составная кнопка: слева «Закрой глаза», справа «Play».
-       Правая зона стоит всегда; у двери без записи она приглушена. */
-    '        <div class="qm-split-btn">',
-    '            <button type="button" id="btn-s3" class="btn-gold btn-eyes qm-split-main">',
-    '                <span class="smiley-icon"></span><span data-i18n="screen3Btn">Закрой глаза</span>',
+    /* Золотая капсула: смайлик, пластина «Закрой глаза», круг «Play».
+
+       Смайлик — не кнопка, а лицо всей капсулы: он закрывает глаза, когда
+       палец или курсор оказывается на любой её части, и открывает, когда
+       уходит. Нажатие на любую половину утапливает капсулу целиком. */
+    '        <div class="qm-act" id="qm-act">',
+    '            <span class="qm-act-face" aria-hidden="true"></span>',
+    '            <button type="button" id="btn-s3" class="qm-act-main">',
+    '                <span data-i18n="screen3Btn">Закрой глаза</span>',
     '            </button>',
-    '            <button type="button" id="btn-s3-play" class="btn-gold qm-split-play qm-play-idle">',
+    '            <button type="button" id="btn-s3-play" class="qm-act-play qm-play-idle">',
     '                <span class="qm-play-glyph"></span>',
     '            </button>',
     '        </div>',
@@ -155,12 +159,22 @@ export const TEMPLATE = [
 
     /* --- ЭКРАН 4: Дневник Наблюдателя ---------------------------------- */
     '<div id="screen-4" class="qm-screen hidden">',
-    '    <div class="card-panel">',
+    '    <div class="card-panel qm-akasha">',
     '        <p id="txt-s4-top" class="gold-notice-box" data-i18n="screen4Top"></p>',
     '        <h2 id="txt-s4-title" class="qm-title-md" data-i18n="screen4Title">Дневник Наблюдателя</h2>',
     '        <p id="txt-s4-sub" class="qm-sub" data-i18n="screen4Subtitle"></p>',
     '        <textarea id="input-s4-diary" rows="7" data-i18n="screen4Placeholder"></textarea>',
-    '        <button id="btn-s4-save" class="btn-gold qm-block" data-i18n="screen4Btn">Активировать в Хрониках Акаши</button>',
+
+    /* Гримуар Акаши: кнопка-фолиант, из которой при нажатии вылетает
+       вихрь золотых и синих искр. Холст лежит поверх и кликов не ловит. */
+    '        <div class="qm-tome-wrap">',
+    '            <canvas id="qm-tome-sparks" class="qm-tome-sparks" aria-hidden="true"></canvas>',
+    '            <button type="button" id="btn-s4-save" class="qm-tome">',
+    '                <span class="qm-tome-edge" aria-hidden="true"></span>',
+    '                <span class="qm-tome-text" id="qm-tome-text" data-i18n="screen4Btn">Активировать в Хрониках Акаши</span>',
+    '                <span class="qm-tome-flare" aria-hidden="true"></span>',
+    '            </button>',
+    '        </div>',
     '    </div>',
     '</div>',
 
