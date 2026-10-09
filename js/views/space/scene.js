@@ -247,35 +247,44 @@ export class QuantumCorridorScene {
         rightWall.rotation.y = -Math.PI / 2;
         rightWall.position.set(wallX, 1, CORRIDOR_MID);
 
-        /* Задняя стена — заглушка коридора.
+        /* Конец коридора — чистая чернота.
 
-           Непрозрачна и пишет глубину: всё, что окажется за ней, обрезается
-           сразу, и ни одна звезда больше не просачивается наружу.
+           Коридор должен читаться бесконечным. Для этого в конце не нужно
+           ничего рисовать: сходящиеся стены, пол и потолок сами обводят
+           вертикальный чёрный прямоугольник, и глаз достраивает, что за
+           ним коридор продолжается.
 
-           Материал тот же, что у боковых стен, и освещается так же. Сперва
-           она была MeshBasicMaterial — свет её не касался, и на широком
-           экране она читалась светлой панелью, висящей отдельно от чёрных
-           стен. Теперь это просто дальняя стена того же коридора. */
-        const endWallMat = new THREE.MeshStandardMaterial({ color: 0x07090e, roughness: 0.8 });
+           Раньше тут стояли чёрный квадрат и золотая рамка вокруг него, а
+           сама стена была освещённой: она смотрит прямо в камеру и ловила
+           больше света, чем боковые стены, которые камера видит вскользь.
+           Оттого в конце и висела светлая плита с подсвеченной дверцей —
+           коридор упирался в неё и кончался.
+
+           Теперь стена не освещается вовсе: MeshBasicMaterial чёрного цвета
+           рисуется ровно чёрным при любом свете. Непрозрачна и пишет
+           глубину, поэтому ни одна звезда за неё не просачивается. */
+        const endWallMat = new THREE.MeshBasicMaterial({ color: 0x050506 });
         const endWall = new THREE.Mesh(
             new THREE.PlaneGeometry(CORRIDOR_WIDE, CORRIDOR_TALL + 1), endWallMat);
         endWall.position.set(0, 1, CORRIDOR_END);
 
-        // Светящаяся тонкая рамка, на ней — чёрный квадрат
-        const endFrameGeo = new THREE.BoxGeometry(2.5, 4.3, 0.05);
-        const endFrameMat = new THREE.MeshBasicMaterial({ color: 0xe5a93c });
-        const endFrame = new THREE.Mesh(endFrameGeo, endFrameMat);
-        endFrame.position.set(0, 1, CORRIDOR_END + 0.05);
+        /* Сам конец — вертикальный чёрный прямоугольник, и только он.
 
-        const endSquareGeo = new THREE.PlaneGeometry(2.4, 4.2);
-        const endSquareMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const endSquare = new THREE.Mesh(endSquareGeo, endSquareMat);
-        endSquare.position.set(0, 1, CORRIDOR_END + 0.1);
+           Ни рамки, ни подсветки: пустой проём, за которым коридор как бы
+           продолжается. Чтобы он читался прямоугольником, а не пятном,
+           стена вокруг него чуть светлее — по нижнему краю того, как
+           рисуются боковые стены (замерено по кадру: 4–8 из 255 на
+           телефоне, 4–9 на широком экране). Светлее делать нельзя: тогда
+           она читается отдельной плитой, висящей в конце. Сам проём —
+           чистый ноль. */
+        const endGateMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const endGate = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 5.0), endGateMat);
+        endGate.position.set(0, 1, CORRIDOR_END + 0.05);
 
         this.leftWall = leftWall;
         this.rightWall = rightWall;
         this.endWall = endWall;
-        this.corridorGroup.add(floor, ceiling, leftWall, rightWall, endWall, endFrame, endSquare);
+        this.corridorGroup.add(floor, ceiling, leftWall, rightWall, endWall, endGate);
     }
 
     /* Одна звезда у одной из четырёх поверхностей коридора.

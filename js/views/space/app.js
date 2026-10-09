@@ -12,7 +12,7 @@ import {
     canRecord, startRecording, formatDuration
 } from './audio.js';
 import {
-    getDoorPhotos, addDoorPhotos, deleteDoorPhoto, PHOTO_LIMIT
+    getDoorPhotos, countDoorPhotos, addDoorPhotos, deleteDoorPhoto, PHOTO_LIMIT
 } from './photos.js';
 
 /* Языки раздела — те же и в том же порядке, что в Ежедневнике.
@@ -39,6 +39,7 @@ export class QuantumApp {
         this.syncDoorIds(this.realities.length);
         this.clearStoredPlaceholders();
 
+        this.doorMediaFlags = {};        // что лежит в каждой двери
         this.screenBeforeSetup = 'screen-1';  // куда вернуть из настройки
         this.currentDoorId = null;       // дверь, выбранная в коридоре
         this.currentAudioRecord = null;  // её запись, если она есть
@@ -403,11 +404,15 @@ export class QuantumApp {
             });
         });
 
-        // Переходы между экранами
-        // Левая зона: отсчёт без звука. Правая: отсчёт и следом аудио двери.
+        /* Составная кнопка.
+
+           Левая половина — «Закрой глаза»: отсчёт и переход на дневник.
+           Правая — слушать запись этой двери, и только это. Раньше она
+           тоже запускала переход, просто со звуком: нажать и послушать,
+           ничего больше не делая, было нельзя. */
         document.getElementById('btn-s3').addEventListener('click', () => this.handleEyeCloseTransition(false));
         const playZone = document.getElementById('btn-s3-play');
-        if (playZone) playZone.addEventListener('click', () => this.handleEyeCloseTransition(true));
+        if (playZone) playZone.addEventListener('click', () => this.toggleDoorAudio());
         document.getElementById('btn-s4-save').addEventListener('click', () => this.saveDiaryEntry());
         document.getElementById('btn-snooze').addEventListener('click', () => this.handleSnooze());
 
@@ -986,9 +991,9 @@ export class QuantumApp {
         const warn = document.getElementById('txt-s3-audio-warn');
         if (!play || !warn) return;
 
-        play.hidden = true;
         warn.hidden = true;
         this.currentAudioRecord = null;
+        this.setPlayButtonState('none');
         if (!this.currentDoorId) return;
 
         const record = await getDoorAudio(this.currentDoorId);
@@ -996,12 +1001,46 @@ export class QuantumApp {
 
         if (record && record.blob && record.blob.size > 0) {
             this.currentAudioRecord = record;
-            play.hidden = false;
-            play.setAttribute('aria-label', this.t('audioPlayAria'));
+            this.setPlayButtonState('ready');
         } else if (record) {
             // Запись числится за дверью, но файл пуст или испорчен
             this.showAudioWarning();
         }
+    }
+
+    /* Кнопка Play всегда на своём месте.
+
+       Прежде она появлялась только у двери с записью и пропадала у
+       остальных: составная кнопка то была составной, то нет, и место
+       под пальцем съезжало. Теперь она стоит всегда, а её вид говорит,
+       что сейчас можно: 'none' — записи нет, кнопка приглушена и не
+       нажимается; 'ready' — треугольник; 'playing' — квадрат, нажатие
+       останавливает. */
+    setPlayButtonState(state) {
+        const play = document.getElementById('btn-s3-play');
+        if (!play) return;
+
+        play.hidden = false;
+        play.classList.toggle('qm-play-idle', state === 'none');
+        play.classList.toggle('qm-play-on', state === 'playing');
+        play.disabled = state === 'none';
+
+        const aria = state === 'none' ? 'audioNoneAria'
+            : state === 'playing' ? 'audioStopAria'
+            : 'audioPlayAria';
+        play.setAttribute('aria-label', this.t(aria));
+        play.title = this.t(aria);
+    }
+
+    // Нажали Play: играет — остановить, молчит — включить
+    toggleDoorAudio() {
+        if (!this.currentAudioRecord) return;
+
+        if (this.audioEl && !this.audioEl.paused) {
+            this.stopDoorAudio();
+            return;
+        }
+        this.playCurrentDoorAudio();
     }
 
     showAudioWarning() {
@@ -1011,7 +1050,7 @@ export class QuantumApp {
             warn.textContent = this.t('audioMissing');
             warn.hidden = false;
         }
-        if (play) play.hidden = true;
+        if (play) this.setPlayButtonState('none');
     }
 
     // Аудио выбранной двери. Играет до конца, экран ему не мешает.
@@ -1032,8 +1071,10 @@ export class QuantumApp {
 
             // При входящем звонке браузер сам ставит воспроизведение на паузу.
             // Сами его не возобновляем — это делает человек.
+            this.audioEl.onpause = () => this.setPlayButtonState('ready');
             const started = this.audioEl.play();
             if (started && started.catch) started.catch(() => this.showAudioWarning());
+            this.setPlayButtonState('playing');
         } catch (err) {
             console.error('[space] не удалось включить аудио:', err);
             this.showAudioWarning();
@@ -1042,6 +1083,7 @@ export class QuantumApp {
 
     stopDoorAudio() {
         if (this.audioEl) {
+            this.audioEl.onpause = null;
             this.audioEl.pause();
             this.audioEl.onended = null;
             this.audioEl.onerror = null;
@@ -1051,6 +1093,8 @@ export class QuantumApp {
             URL.revokeObjectURL(this.audioUrl);
             this.audioUrl = null;
         }
+        // Запись кончилась или её остановили — на кнопке снова треугольник
+        if (this.currentAudioRecord) this.setPlayButtonState('ready');
     }
 
     saveSettingsAndStart() {
@@ -1094,6 +1138,8 @@ export class QuantumApp {
 
     startCorridorScreen() {
         this.showScreen(null);
+        // Чем называется дверь без текста, знают только флаги — снимаем их
+        this.refreshDoorMediaFlags();
 
         if (!this.scene3D) {
             this.scene3D = new QuantumCorridorScene(
@@ -1154,9 +1200,60 @@ export class QuantumApp {
        записью или фотографией) — показываем «Дверь N». В самой двери при
        этом по-прежнему пусто. */
     doorDisplayName(slot) {
-        const own = this.realities[slot];
-        if (own && own.trim()) return own;
-        return this.t('doorNoName').replace('{i}', String(slot + 1));
+        const own = (this.realities[slot] || '').trim();
+        if (own) return this.shortenTitle(own);
+
+        /* Номеров у дверей нет. Двери меняются: сегодня их три, завтра семь,
+           порядок в коридоре каждый раз новый, — номер ничего не значит и
+           ничего не говорит о том, что внутри.
+
+           Если человек не дал двери имени, она называется тем, что в ней
+           лежит: «Фото» или «Запись». Что именно лежит, знает
+           doorMediaFlags: это снимается один раз перед входом в коридор и
+           перед показом хроник, чтобы здесь не ждать базу. */
+        const flags = this.doorMediaFlags[this.doorIds[slot]] || {};
+        if (flags.photos) return this.t('doorTitlePhoto');
+        if (flags.audio) return this.t('doorTitleAudio');
+        return this.t('doorTitleEmpty');
+    }
+
+    /* Короткая подпись двери: первая строка намерения, не длиннее строки.
+
+       В намерении человек пишет сколько хочет. На экране перехода и в
+       хрониках нужна одна узнаваемая строка, поэтому берём первую и, если
+       она длинная, обрываем по границе слова. */
+    shortenTitle(text) {
+        const first = text.split(/\r?\n/)[0].trim() || text.trim();
+        const LIMIT = 42;
+        if (first.length <= LIMIT) return first;
+
+        const cut = first.slice(0, LIMIT);
+        const space = cut.lastIndexOf(' ');
+        return (space > LIMIT * 0.5 ? cut.slice(0, space) : cut).trimEnd() + '…';
+    }
+
+    /* Что лежит в каждой двери — снимком, разом по всем.
+
+       Имя двери без текста зависит от её содержимого, а оно в базе
+       устройства и читается не сразу. Собираем всё до того, как имя
+       понадобится, и держим под рукой. */
+    async refreshDoorMediaFlags() {
+        const flags = {};
+
+        for (const doorId of this.doorIds) {
+            if (!doorId) continue;
+            const [audio, photos] = await Promise.all([
+                getDoorAudio(doorId).catch(() => null),
+                countDoorPhotos(doorId).catch(() => 0)
+            ]);
+            flags[doorId] = {
+                audio: Boolean(audio && audio.blob && audio.blob.size > 0),
+                photos: photos || 0
+            };
+        }
+
+        if (this._destroyed) return;
+        this.doorMediaFlags = flags;
     }
 
     /* Разовая уборка за прежней ошибкой.
@@ -1280,11 +1377,27 @@ export class QuantumApp {
         const list = document.getElementById('chronicles-list');
         if (!list) return;
 
+        /* Имена дверей без текста зависят от содержимого. Снимок флагов
+           уходит в базу и возвращается позже — тогда список перерисуется
+           ещё раз, уже с «Фото» и «Запись» вместо пустых подписей. */
+        if (!this.statsFlagsPending) {
+            this.statsFlagsPending = true;
+            this.refreshDoorMediaFlags().then(() => {
+                this.statsFlagsPending = false;
+                if (this._destroyed || !list.isConnected) return;
+                this.paintChronicles(list);
+            });
+        }
+
         if (this.history.length === 0) {
             list.innerHTML = `<p class="qm-empty">${this.escapeHtml(this.t('noRecords'))}</p>`;
             return;
         }
 
+        this.paintChronicles(list);
+    }
+
+    paintChronicles(list) {
         list.innerHTML = this.renderRecentChronicles() + this.renderChronicleStats();
         this.applyStatShares(list);
     }

@@ -141,12 +141,12 @@ export const TEMPLATE = [
     '        <p id="txt-s3-audio-warn" class="qm-audio-warn" hidden></p>',
 
     /* Составная кнопка: слева «Закрой глаза», справа «Play».
-       Правая зона появляется только у двери с прикреплённым аудио. */
+       Правая зона стоит всегда; у двери без записи она приглушена. */
     '        <div class="qm-split-btn">',
     '            <button type="button" id="btn-s3" class="btn-gold btn-eyes qm-split-main">',
     '                <span class="smiley-icon"></span><span data-i18n="screen3Btn">Закрой глаза</span>',
     '            </button>',
-    '            <button type="button" id="btn-s3-play" class="btn-gold qm-split-play" hidden>',
+    '            <button type="button" id="btn-s3-play" class="btn-gold qm-split-play qm-play-idle">',
     '                <span class="qm-play-glyph"></span>',
     '            </button>',
     '        </div>',
