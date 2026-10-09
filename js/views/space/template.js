@@ -116,9 +116,18 @@ export const TEMPLATE = [
     '            </button>',
     '        </div>',
     '        <div id="speed-instruction-text" class="speed-instruction-box"></div>',
-    '        <button id="btn-s3" class="btn-gold btn-eyes qm-block">',
-    '            <span class="smiley-icon"></span><span data-i18n="screen3Btn">Закрой глаза</span>',
-    '        </button>',
+    '        <p id="txt-s3-audio-warn" class="qm-audio-warn" hidden></p>',
+
+    /* Составная кнопка: слева «Закрой глаза», справа «Play».
+       Правая зона появляется только у двери с прикреплённым аудио. */
+    '        <div class="qm-split-btn">',
+    '            <button type="button" id="btn-s3" class="btn-gold btn-eyes qm-split-main">',
+    '                <span class="smiley-icon"></span><span data-i18n="screen3Btn">Закрой глаза</span>',
+    '            </button>',
+    '            <button type="button" id="btn-s3-play" class="btn-gold qm-split-play" hidden>',
+    '                <span class="qm-play-glyph"></span>',
+    '            </button>',
+    '        </div>',
     '    </div>',
     '</div>',
 

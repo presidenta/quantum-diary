@@ -878,10 +878,126 @@
     .qm-root .qm-screen { padding: 56px 14px 24px; }
 }
 
+/* ===== Аудио дверей ======================================================
+   Панель под каждым полем двери: запись с микрофона, выбор файла,
+   название с длительностью, прослушивание и удаление.
+   ======================================================================== */
+.qm-root .qm-door-row {
+    margin-bottom: 14px;
+}
+
+.qm-root .qm-door-row .door-text-input {
+    margin-bottom: 6px;
+}
+
+.qm-root .qm-audio-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.qm-root .qm-audio-btn {
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border);
+    color: var(--qm-muted);
+    font-family: var(--qm-font);
+    font-size: 12px;
+    line-height: 1;
+    padding: 7px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.18s ease, border-color 0.18s ease;
+}
+
+.qm-root .qm-audio-btn:hover {
+    color: var(--qm-text);
+    border-color: var(--qm-gold-line);
+}
+
+.qm-root .qm-audio-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Идёт запись — кнопка подсвечена золотом */
+.qm-root .qm-audio-btn.qm-audio-rec-on {
+    color: var(--qm-gold);
+    border-color: var(--qm-gold-line);
+    background: var(--qm-gold-soft);
+}
+
+.qm-root .qm-audio-info {
+    flex: 1 1 80px;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--qm-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Мягкое предупреждение, если файл двери недоступен */
+.qm-root .qm-audio-warn {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--qm-gold);
+    text-align: left;
+}
+
+/* ===== Составная кнопка «Закрой глаза | Play» =============================
+   Единый блок: слева основная зона (~80%), справа зона запуска аудио (~20%).
+   Правая зона существует в разметке всегда, но показывается только у двери
+   с прикреплённой записью — поэтому левая часть скругляется справа лишь
+   тогда, когда правая видна.
+   ======================================================================== */
+.qm-root .qm-split-btn {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    margin-top: 15px;
+}
+
+.qm-root .qm-split-main {
+    flex: 1 1 80%;
+    border-radius: var(--qm-radius-sm);
+}
+
+.qm-root .qm-split-btn:has(.qm-split-play:not([hidden])) .qm-split-main {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.qm-root .qm-split-play {
+    flex: 0 0 20%;
+    min-height: 76px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--qm-radius-sm);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid rgba(10, 10, 12, 0.35);
+}
+
+/* Без этого hidden не сработает: display выше его перебивает */
+.qm-root .qm-split-play[hidden] {
+    display: none;
+}
+
+/* Треугольник рисуется рамкой, чтобы не зависеть от шрифта эмодзи */
+.qm-root .qm-play-glyph {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 13px 0 13px 21px;
+    border-color: transparent transparent transparent #0A0A0C;
+}
+
 /* ===== Встроенный режим ==================================================
-   Раздел живёт внутри карточки Пульта: собственная звёздная сетка не нужна
-   (она уже есть у страницы), а язык берётся из общего переключателя
-   Ежедневника — свой прячем.
+   Раздел живёт внутри карточки Пульта: собственная звёздная сетка не нужна.
    ======================================================================== */
 .qm-root.qm-embedded {
     background-image: none;

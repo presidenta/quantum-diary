@@ -7,6 +7,10 @@
 import { CONFIG } from './config.js';
 import { NotificationManager } from './notifications.js';
 import { QuantumCorridorScene } from './scene.js';
+import {
+    saveDoorAudio, getDoorAudio, getDoorAudioMeta, deleteDoorAudio,
+    canRecord, startRecording, formatDuration
+} from './audio.js';
 
 export class QuantumApp {
     constructor(rootEl) {
@@ -17,6 +21,18 @@ export class QuantumApp {
 
         this.lang = localStorage.getItem('quantum_lang') || 'ru';
         this.realities = JSON.parse(localStorage.getItem('quantum_doors_texts') || '[]');
+
+        // Неизменные id дверей: к ним привязаны записи, поэтому правка текста
+        // или перестановка дверей аудио не теряет.
+        this.doorIds = JSON.parse(localStorage.getItem('quantum_doors_ids') || '[]');
+        this.syncDoorIds(this.realities.length);
+
+        this.currentDoorId = null;       // дверь, выбранная в коридоре
+        this.currentAudioRecord = null;  // её запись, если она есть
+        this.audioEl = null;             // проигрыватель
+        this.audioUrl = null;            // ссылка на blob, её надо освобождать
+        this.recorder = null;            // активный диктофон
+        this.recordingDoorId = null;     // дверь, которую сейчас записываем
         this.history = JSON.parse(localStorage.getItem('quantum_akashi_chronicles') || '[]');
         this.notifications = new NotificationManager();
         this.selectedSpeed = 1; // 1: Быстрый переход, 2: Глубокое погружение
@@ -203,6 +219,12 @@ export class QuantumApp {
         });
         document.getElementById('btn-edit-from-s5').addEventListener('click', () => this.openSettingsScreen());
         document.getElementById('doors-count-select').addEventListener('change', (e) => this.renderSetupInputs(parseInt(e.target.value)));
+
+        // Панели аудио пересоздаются при каждой перерисовке дверей,
+        // поэтому слушаем контейнер, а не каждую кнопку по отдельности.
+        const doorsBox = document.getElementById('doors-inputs-container');
+        doorsBox.addEventListener('click', (e) => this.onDoorAudioClick(e));
+        doorsBox.addEventListener('change', (e) => this.onDoorAudioFile(e));
         document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());
         document.getElementById('btn-cancel-setup').addEventListener('click', () => this.showScreen('screen-1'));
 
@@ -218,7 +240,10 @@ export class QuantumApp {
         });
 
         // Переходы между экранами
-        document.getElementById('btn-s3').addEventListener('click', () => this.handleEyeCloseTransition());
+        // Левая зона: отсчёт без звука. Правая: отсчёт и следом аудио двери.
+        document.getElementById('btn-s3').addEventListener('click', () => this.handleEyeCloseTransition(false));
+        const playZone = document.getElementById('btn-s3-play');
+        if (playZone) playZone.addEventListener('click', () => this.handleEyeCloseTransition(true));
         document.getElementById('btn-s4-save').addEventListener('click', () => this.saveDiaryEntry());
         document.getElementById('btn-snooze').addEventListener('click', () => this.handleSnooze());
 
@@ -246,12 +271,17 @@ export class QuantumApp {
         }
     }
 
-    handleEyeCloseTransition() {
+    /**
+     * Закрытие глаз и отсчёт до трёх.
+     * @param {boolean} withAudio запускать ли аудио двери по окончании отсчёта
+     */
+    handleEyeCloseTransition(withAudio) {
         const countdownOverlay = document.getElementById('countdown-overlay');
         const countdownNum = document.getElementById('countdown-num');
         const blackout = document.getElementById('blackout-screen');
 
         if (!countdownOverlay || !countdownNum || !blackout) {
+            if (withAudio) this.playCurrentDoorAudio();
             this.showScreen('screen-4');
             return;
         }
@@ -269,6 +299,11 @@ export class QuantumApp {
                 countdownNum.style.animation = 'qmCountPulse 0.8s ease-out';
             } else {
                 clearInterval(this.countTimer);
+
+                // Отсчёт кончился — аудио стартует здесь, параллельно
+                // с уходом экрана в затемнение.
+                if (withAudio) this.playCurrentDoorAudio();
+
                 blackout.classList.remove('hidden');
                 blackout.classList.add('active');
 
@@ -355,9 +390,15 @@ export class QuantumApp {
     renderSetupInputs(count) {
         const container = document.getElementById('doors-inputs-container');
         container.innerHTML = '';
+        this.syncDoorIds(count);
+
         for (let i = 0; i < count; i++) {
             const val = this.realities[i] || '';
             const placeholderText = this.t('doorPlaceholder').replace('{i}', i + 1);
+
+            const row = document.createElement('div');
+            row.className = 'qm-door-row';
+            row.dataset.doorId = this.doorIds[i];
 
             // Поле создаётся элементом, а не строкой HTML: кавычки и угловые
             // скобки в тексте намерения больше не ломают разметку.
@@ -366,21 +407,280 @@ export class QuantumApp {
             input.className = 'door-text-input';
             input.placeholder = placeholderText;
             input.value = val;
-            container.appendChild(input);
+            row.appendChild(input);
+
+            row.appendChild(this.buildAudioControls());
+            container.appendChild(row);
+        }
+
+        this.refreshAudioControls();
+    }
+
+    /* ---------- Аудио дверей ---------- */
+
+    makeDoorId() {
+        return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+
+    // Список id всегда не короче списка дверей
+    syncDoorIds(count) {
+        while (this.doorIds.length < count) this.doorIds.push(this.makeDoorId());
+    }
+
+    // Панель под полем двери: запись с микрофона, выбор файла,
+    // название с длительностью, прослушивание и удаление.
+    buildAudioControls() {
+        const box = document.createElement('div');
+        box.className = 'qm-audio-row';
+
+        const makeButton = (act, label, extraClass) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'qm-audio-btn' + (extraClass ? ' ' + extraClass : '');
+            button.dataset.act = act;
+            button.textContent = label;
+            return button;
+        };
+
+        const record = makeButton('record', this.t('audioRecord'));
+        if (!canRecord()) {
+            record.disabled = true;
+            record.title = this.t('audioNoRecorder');
+        }
+        box.appendChild(record);
+
+        // Поле выбора файла спрятано в label — по клику открывается
+        // системный проводник, своей кнопки для этого не нужно.
+        const pick = document.createElement('label');
+        pick.className = 'qm-audio-btn';
+        pick.textContent = this.t('audioPickFile');
+        const file = document.createElement('input');
+        file.type = 'file';
+        file.accept = 'audio/*';
+        file.hidden = true;
+        file.dataset.act = 'file';
+        pick.appendChild(file);
+        box.appendChild(pick);
+
+        const info = document.createElement('span');
+        info.className = 'qm-audio-info';
+        box.appendChild(info);
+
+        box.appendChild(makeButton('preview', this.t('audioPlay'), 'qm-audio-preview'));
+        box.appendChild(makeButton('remove', this.t('audioRemove'), 'qm-audio-remove'));
+
+        return box;
+    }
+
+    // Читает хранилище и расставляет подписи у всех дверей сразу
+    async refreshAudioControls() {
+        const rows = Array.from(document.querySelectorAll('.qm-door-row'));
+        for (const row of rows) {
+            const meta = await getDoorAudioMeta(row.dataset.doorId);
+            if (this._destroyed || !row.isConnected) return;
+            this.applyAudioState(row, meta);
+        }
+    }
+
+    applyAudioState(row, meta) {
+        const info = row.querySelector('.qm-audio-info');
+        const preview = row.querySelector('.qm-audio-preview');
+        const remove = row.querySelector('.qm-audio-remove');
+        const record = row.querySelector('[data-act="record"]');
+        const isRecording = this.recordingDoorId === row.dataset.doorId;
+
+        if (record && !record.disabled) {
+            record.textContent = isRecording ? this.t('audioStopRec') : this.t('audioRecord');
+            record.classList.toggle('qm-audio-rec-on', isRecording);
+        }
+
+        if (isRecording) {
+            info.textContent = this.t('audioRecording');
+            preview.hidden = true;
+            remove.hidden = true;
+            return;
+        }
+
+        if (meta) {
+            const length = formatDuration(meta.durationMs);
+            info.textContent = meta.fileName + (length ? ' · ' + length : '');
+            preview.hidden = false;
+            remove.hidden = false;
+        } else {
+            info.textContent = this.t('audioAdd');
+            preview.hidden = true;
+            remove.hidden = true;
+        }
+    }
+
+    onDoorAudioClick(event) {
+        const button = event.target.closest('.qm-audio-btn');
+        if (!button) return;
+        const row = button.closest('.qm-door-row');
+        if (!row) return;
+
+        const act = button.dataset.act;
+        if (act === 'record') this.toggleRecording(row);
+        else if (act === 'preview') this.previewDoorAudio(row);
+        else if (act === 'remove') this.removeDoorAudio(row);
+    }
+
+    async onDoorAudioFile(event) {
+        const input = event.target;
+        if (!input || input.dataset.act !== 'file') return;
+
+        const row = input.closest('.qm-door-row');
+        const file = input.files && input.files[0];
+        input.value = '';
+        if (!row || !file) return;
+
+        const meta = await saveDoorAudio(row.dataset.doorId, file, file.name);
+        if (this._destroyed || !row.isConnected) return;
+        this.applyAudioState(row, meta);
+    }
+
+    async toggleRecording(row) {
+        const doorId = row.dataset.doorId;
+
+        // Второе нажатие по той же двери останавливает запись и сохраняет её
+        if (this.recorder && this.recordingDoorId === doorId) {
+            const recorder = this.recorder;
+            this.recorder = null;
+            this.recordingDoorId = null;
+
+            const blob = await recorder.stop();
+            const stamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            const meta = await saveDoorAudio(doorId, blob, this.t('audioRecord') + ' ' + stamp);
+            if (this._destroyed || !row.isConnected) return;
+            this.applyAudioState(row, meta);
+            return;
+        }
+
+        if (this.recorder) return;   // уже пишем другую дверь
+
+        try {
+            this.recorder = await startRecording();
+            this.recordingDoorId = doorId;
+            this.applyAudioState(row, null);
+        } catch (err) {
+            console.error('[space] микрофон недоступен:', err);
+            this.recorder = null;
+            this.recordingDoorId = null;
+            alert(this.t('audioNoMic'));
+        }
+    }
+
+    async previewDoorAudio(row) {
+        const record = await getDoorAudio(row.dataset.doorId);
+        if (!record || this._destroyed) return;
+
+        this.stopDoorAudio();
+        this.audioUrl = URL.createObjectURL(record.blob);
+        this.audioEl = new Audio(this.audioUrl);
+        this.audioEl.onended = () => this.stopDoorAudio();
+        this.audioEl.play().catch(() => this.stopDoorAudio());
+    }
+
+    async removeDoorAudio(row) {
+        await deleteDoorAudio(row.dataset.doorId);
+        if (this._destroyed || !row.isConnected) return;
+        this.applyAudioState(row, null);
+    }
+
+    // Зона «Play» включается, только если у выбранной двери есть запись
+    async prepareDoorAudio() {
+        const play = document.getElementById('btn-s3-play');
+        const warn = document.getElementById('txt-s3-audio-warn');
+        if (!play || !warn) return;
+
+        play.hidden = true;
+        warn.hidden = true;
+        this.currentAudioRecord = null;
+        if (!this.currentDoorId) return;
+
+        const record = await getDoorAudio(this.currentDoorId);
+        if (this._destroyed || !play.isConnected) return;
+
+        if (record && record.blob && record.blob.size > 0) {
+            this.currentAudioRecord = record;
+            play.hidden = false;
+            play.setAttribute('aria-label', this.t('audioPlayAria'));
+        } else if (record) {
+            // Запись числится за дверью, но файл пуст или испорчен
+            this.showAudioWarning();
+        }
+    }
+
+    showAudioWarning() {
+        const warn = document.getElementById('txt-s3-audio-warn');
+        const play = document.getElementById('btn-s3-play');
+        if (warn) {
+            warn.textContent = this.t('audioMissing');
+            warn.hidden = false;
+        }
+        if (play) play.hidden = true;
+    }
+
+    // Аудио выбранной двери. Играет до конца, экран ему не мешает.
+    playCurrentDoorAudio() {
+        const record = this.currentAudioRecord;
+        if (!record) return;
+
+        this.stopDoorAudio();
+
+        try {
+            this.audioUrl = URL.createObjectURL(record.blob);
+            this.audioEl = new Audio(this.audioUrl);
+            this.audioEl.onended = () => this.stopDoorAudio();
+            this.audioEl.onerror = () => {
+                this.showAudioWarning();
+                this.stopDoorAudio();
+            };
+
+            // При входящем звонке браузер сам ставит воспроизведение на паузу.
+            // Сами его не возобновляем — это делает человек.
+            const started = this.audioEl.play();
+            if (started && started.catch) started.catch(() => this.showAudioWarning());
+        } catch (err) {
+            console.error('[space] не удалось включить аудио:', err);
+            this.showAudioWarning();
+        }
+    }
+
+    stopDoorAudio() {
+        if (this.audioEl) {
+            this.audioEl.pause();
+            this.audioEl.onended = null;
+            this.audioEl.onerror = null;
+            this.audioEl = null;
+        }
+        if (this.audioUrl) {
+            URL.revokeObjectURL(this.audioUrl);
+            this.audioUrl = null;
         }
     }
 
     saveSettingsAndStart() {
-        const inputs = Array.from(document.querySelectorAll('.door-text-input'));
-        const newRealities = inputs.map(i => i.value.trim()).filter(v => v !== '');
+        // Идём по строкам, а не по полям: так текст двери и её id остаются
+        // одной парой, и пустые двери выпадают вместе со своими id.
+        const rows = Array.from(document.querySelectorAll('.qm-door-row'));
+        const kept = [];
 
-        if (newRealities.length < CONFIG.doors.min) {
+        for (const row of rows) {
+            const input = row.querySelector('.door-text-input');
+            const text = input ? input.value.trim() : '';
+            if (text !== '') kept.push({ id: row.dataset.doorId, text });
+        }
+
+        if (kept.length < CONFIG.doors.min) {
             alert(this.t('doorMinAlert').replace('{min}', CONFIG.doors.min));
             return;
         }
 
-        this.realities = newRealities;
+        this.realities = kept.map(door => door.text);
+        this.doorIds = kept.map(door => door.id);
         localStorage.setItem('quantum_doors_texts', JSON.stringify(this.realities));
+        localStorage.setItem('quantum_doors_ids', JSON.stringify(this.doorIds));
         this.startCorridorScreen();
     }
 
@@ -390,7 +690,7 @@ export class QuantumApp {
         if (!this.scene3D) {
             this.scene3D = new QuantumCorridorScene(
                 document.getElementById('three-canvas'),
-                (idx, txt) => this.onDoorChosen(txt)
+                (idx, txt) => this.onDoorChosen(idx, txt)
             );
         }
 
@@ -417,11 +717,13 @@ export class QuantumApp {
         }, 100);
     }
 
-    onDoorChosen(text) {
+    onDoorChosen(index, text) {
         this.currentChosenText = text;
+        this.currentDoorId = this.doorIds[index] || null;
         document.getElementById('txt-s3-chosen-reality').innerText = text;
         this.updateSpeedUI();
         this.showScreen('screen-3');
+        this.prepareDoorAudio();
     }
 
     saveDiaryEntry() {
@@ -581,6 +883,13 @@ export class QuantumApp {
         this._timeouts = [];
 
         if (this._onResize) window.removeEventListener('resize', this._onResize);
+
+        this.stopDoorAudio();
+        if (this.recorder) {
+            this.recorder.stop().catch(() => {});
+            this.recorder = null;
+            this.recordingDoorId = null;
+        }
 
         if (this.scene3D) {
             this.scene3D.isRunning = false;

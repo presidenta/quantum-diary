@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 38;
+const RELEASE = 39;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   './', 'index.html', 'css/game-tokens.css', 'css/app.css', 'manifest.webmanifest',
@@ -9,6 +9,7 @@ const SHELL = [
   'js/views/wheel.js', 'js/views/day.js', 'js/views/quantum.js', 'js/views/money.js', 'js/profile.js',
   'css/space.css',
   'js/views/space/index.js', 'js/views/space/app.js', 'js/views/space/config.js',
+  'js/views/space/audio.js',
   'js/views/space/notifications.js', 'js/views/space/scene.js', 'js/views/space/template.js',
   'js/vendor/three.min.js',
   'admin.html', 'css/admin.css', 'js/admin.js',
