@@ -20,6 +20,7 @@ import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
 import { initSpace, syncSpace } from './views/space/index.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import { cancelAll as cancelAllReminders } from './core/reminders.js';
+import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
@@ -334,13 +335,27 @@ async function start() {
   }
   render();
 
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  /* В собранном приложении service worker не нужен и даже вреден: файлы и
+     так лежат на телефоне, а его запас мог бы заслонить свежий пакет,
+     пришедший по воздуху. В браузере он по-прежнему главный работник
+     офлайна. */
+  const inApp = Boolean(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function'
+    && window.Capacitor.isNativePlatform());
+
+  if (!inApp && 'serviceWorker' in navigator
+      && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.warn('[sw]', err.message));
   }
 }
 
 async function boot() {
   watchErrors();
+
+  /* Приложение поднялось — отчитываемся сразу, пока не истекли десять
+     секунд, после которых плагин откатил бы выкладку назад. И тут же
+     смотрим, не вышло ли новое: в браузере обе строчки ничего не делают. */
+  markStartedOk();
+  checkForUpdate();
 
   // Повернули телефон или растянули окно — панель должна стать той, какой надо
   window.matchMedia(WIDE).addEventListener('change', e => {
