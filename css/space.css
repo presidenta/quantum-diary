@@ -51,13 +51,22 @@
     --qm-font:        var(--sans,  'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
     --qm-font-head:   var(--serif, 'Cormorant Garamond', 'Iowan Old Style', Georgia, 'Times New Roman', serif);
 
-    /* --- Поведение контейнера ------------------------------------------- */
-    position: relative;          /* система координат для экранов модуля */
-    min-height: 680px;
-    width: 100%;
+    /* --- Поведение контейнера -------------------------------------------
+       Раздел открывается на весь экран и полностью перекрывает страницу
+       Ежедневника: ни рамки, ни отступов, ни фона родительского сайта.
+       dvh идёт следом за vh — на телефоне он учитывает адресную строку,
+       а в браузерах без его поддержки просто игнорируется. */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    z-index: 9999;
     overflow: hidden;
-    border-radius: var(--qm-radius);
-    border: 1px solid var(--qm-border);
     background-color: var(--qm-bg);
     background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
     background-size: 22px 22px;
@@ -76,14 +85,9 @@
 /* Погружение: на время 3D-коридора модуль разворачивается на весь экран.
    Это обязательно — three-scene.js считает размеры и клики от окна браузера. */
 .qm-root.qm-immersive {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    min-height: 0;
-    border: none;
-    border-radius: 0;
-    z-index: 9000;
+    /* Раздел и так развёрнут на весь экран — здесь остаётся только то,
+       что нужно 3D-коридору: показ канваса задан ниже по файлу. */
+    z-index: 9999;
 }
 
 .qm-root .hidden { display: none !important; }
@@ -540,18 +544,24 @@
     min-height: 64px;
 }
 
+/* Кнопка «Закрой глаза»: смайлик крупнее в 1.8 раза (26px -> 47px) и
+   занимает почти всю высоту кнопки, надпись увеличена пропорционально.
+   Высота кнопки поднята под новый размер содержимого, поэтому границы не рвутся,
+   а flexbox держит смайлик и текст по центру. */
 .qm-root .btn-eyes {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    font-size: 15px;
-    padding: 15px 20px;
+    gap: 14px;
+    min-height: 76px;
+    font-size: 20px;
+    line-height: 1.2;
+    padding: 10px 20px;
 }
 
 .qm-root .smiley-icon::before {
     content: "\1F97A";
-    font-size: 26px;
+    font-size: 47px;
     line-height: 1;
     display: inline-block;
     transition: transform 0.2s ease;
@@ -858,7 +868,8 @@
 
 /* ===== Мобильная адаптация =============================================== */
 @media (max-width: 620px) {
-    .qm-root { min-height: 600px; border-radius: 14px; }
+    /* Скруглений и минимальной высоты здесь больше нет: раздел занимает
+       весь экран, и закруглённый угол выдавал бы рамку поверх страницы. */
     .qm-root .card-panel { padding: 22px 18px; }
     .qm-root .qm-hero-title { font-size: 27px; }
     .qm-root .qm-title-lg { font-size: 25px; }

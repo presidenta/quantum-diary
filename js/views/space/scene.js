@@ -253,8 +253,13 @@ export class QuantumCorridorScene {
         }
 
         pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        // Яркость звёздного потока.
+        // Видны только дальние частицы — ближние закрыты стенами коридора,
+        // поэтому крупный размер безопасен: на экране они всё равно
+        // остаются точками в 2-3 пикселя, а не квадратами.
+        // Меняются только цвет, размер и непрозрачность самих частиц.
         this.particlesMat = new THREE.PointsMaterial({
-            color: 0xffcc00, size: 0.025, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending
+            color: 0xffe9b5, size: 0.18, transparent: true, opacity: 1, blending: THREE.AdditiveBlending
         });
         this.particlesMesh = new THREE.Points(pGeo, this.particlesMat);
         this.corridorGroup.add(this.particlesMesh);
