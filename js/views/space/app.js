@@ -51,13 +51,31 @@ export class QuantumApp {
         this.selectedSpeed = 1; // 1: Быстрый переход, 2: Глубокое погружение
         this.windowTriggered = false;
 
-        this.initSandFX();
-        this.initInnerQuantums();
-        this.initLangSwitcher();
-        this.initUI();
-        this.initSmiley();
-        this.applyLang();
-        this.checkScheduleAndTimer();
+        /* Каждый кусок заводится отдельно и под присмотром.
+
+           Раньше ошибка в любом из них обрывала конструктор целиком. Если
+           спотыкался шаг до initUI, обработчики кнопок не навешивались
+           вовсе: раздел открывался, рисовался, но ни одна кнопка не
+           работала — в том числе «Войти в суперпозицию». Теперь сломанный
+           кусок остаётся сломанным, а всё остальное живёт.
+
+           Кнопки заводятся первыми: без них раздел бесполезен. */
+        this.safely('кнопки раздела', () => this.initUI());
+        this.safely('песочная анимация', () => this.initSandFX());
+        this.safely('частицы заголовка', () => this.initInnerQuantums());
+        this.safely('переключатель языков', () => this.initLangSwitcher());
+        this.safely('смайлик', () => this.initSmiley());
+        this.safely('подписи', () => this.applyLang());
+        this.safely('расписание', () => this.checkScheduleAndTimer());
+    }
+
+    /* Заводит кусок раздела, не роняя остальные. */
+    safely(what, step) {
+        try {
+            step();
+        } catch (err) {
+            console.error('[space] не удалось завести: ' + what, err);
+        }
     }
 
     /* Модуль ищет элементы только внутри себя.
@@ -69,7 +87,7 @@ export class QuantumApp {
         return (this.rootEl || document).querySelector('#' + id);
     }
 
-    $(selector) {
+    $$(selector) {
         return (this.rootEl || document).querySelectorAll(selector);
     }
 
@@ -204,20 +222,34 @@ export class QuantumApp {
         const menu = this.$('qm-lang-menu');
         if (!button || !menu) return;
 
-        menu.replaceChildren(...LANGS.map(item => {
+        /* Список собирается по одному элементу, без replaceChildren:
+           эта команда появилась в браузерах недавно, а раздел должен
+           открываться и на старом движке. */
+        menu.innerHTML = '';
+
+        for (const item of LANGS) {
             const row = document.createElement('button');
             row.type = 'button';
             row.className = 'qm-lang-item';
             row.dataset.lang = item.code;
-            row.innerHTML = '<span class="qm-lang-name"></span><span class="qm-lang-code"></span>';
-            row.querySelector('.qm-lang-name').textContent = item.flag + ' ' + item.name;
-            row.querySelector('.qm-lang-code').textContent = item.label;
+
+            const name = document.createElement('span');
+            name.className = 'qm-lang-name';
+            name.textContent = item.flag + ' ' + item.name;
+            row.appendChild(name);
+
+            const code = document.createElement('span');
+            code.className = 'qm-lang-code';
+            code.textContent = item.label;
+            row.appendChild(code);
+
             row.addEventListener('click', () => {
                 this.closeLangMenu();
                 this.setLang(item.code);
             });
-            return row;
-        }));
+
+            menu.appendChild(row);
+        }
 
         button.addEventListener('click', () => {
             const open = menu.hidden;
@@ -282,14 +314,14 @@ export class QuantumApp {
         const label = this.$('qm-lang-label');
         if (label) label.textContent = current.flag + ' ' + current.label;
 
-        this.$('.qm-lang-item').forEach(item => {
+        this.$$('.qm-lang-item').forEach(item => {
             const active = item.dataset.lang === this.lang;
             item.classList.toggle('active', active);
             item.setAttribute('aria-pressed', String(active));
         });
 
         // Статичные тексты в разметке раздела — и только в ней
-        this.$('[data-i18n]').forEach(el => {
+        this.$$('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 el.placeholder = this.t(key);
@@ -314,6 +346,12 @@ export class QuantumApp {
             closeBtn.title = this.t('btnCloseSection');
         }
 
+        const gear = this.$('btn-gear');
+        if (gear) {
+            gear.setAttribute('aria-label', this.t('btnSettings'));
+            gear.title = this.t('btnSettings');
+        }
+
         this.renderChronicles();
         this.updateSnoozeButtonUI();
         this.updateSpeedUI();
@@ -331,6 +369,10 @@ export class QuantumApp {
             this.openSettingsScreen();
         });
         document.getElementById('btn-edit-from-s5').addEventListener('click', () => this.openSettingsScreen());
+
+        // Шестерёнка на главном экране: тот же экран настройки
+        const gear = this.$('btn-gear');
+        if (gear) gear.addEventListener('click', () => this.openSettingsScreen());
         document.getElementById('doors-count-select').addEventListener('change', (e) => this.renderSetupInputs(parseInt(e.target.value)));
 
         // Панели аудио пересоздаются при каждой перерисовке дверей,
@@ -503,15 +545,15 @@ export class QuantumApp {
         animate();
     }
 
-    /* «Войти в суперпозицию» всегда открывает настройку.
-
-       Раньше при заполненных дверях коридор запускался сразу, и поправить
-       двери с телефона было нельзя — экран настройки просто не показывался.
-       Теперь человек всегда видит свои двери, может сменить их число,
-       поправить тексты, записи и фотографии, а входит кнопкой
-       «Сохранить и войти». */
+    /* Двери уже настроены — сразу в коридор. Настройка открывается сама
+       только при самом первом входе, когда дверей ещё нет. Поправить их в
+       любой другой момент можно шестерёнкой на главном экране. */
     checkFirstTimeOrCorridor() {
-        this.openSettingsScreen();
+        if (this.realities.length >= CONFIG.doors.min) {
+            this.startCorridorScreen();
+        } else {
+            this.openSettingsScreen();
+        }
     }
 
     openSettingsScreen() {
@@ -700,7 +742,7 @@ export class QuantumApp {
         if (this._destroyed || !row.isConnected) return;
 
         this.releasePhotoUrls(strip);
-        strip.replaceChildren();
+        strip.innerHTML = '';
 
         for (const photo of photos) {
             const cell = document.createElement('div');
@@ -768,7 +810,7 @@ export class QuantumApp {
 
     // Читает хранилище и расставляет состояние у всех дверей сразу
     async refreshAudioControls() {
-        const rows = Array.from(this.$('.qm-door-row'));
+        const rows = Array.from(this.$$('.qm-door-row'));
         for (const row of rows) {
             const meta = await getDoorAudioMeta(row.dataset.doorId);
             if (this._destroyed || !row.isConnected) return;
@@ -1039,7 +1081,7 @@ export class QuantumApp {
             );
         }
 
-        this.scene3D.setupRealities(this.realities);
+        this.scene3D.setupRealities(this.shuffleDoors());
         this.scene3D.startAnimation();
 
         let timeLeft = CONFIG.timing.quantumWindowSeconds;
@@ -1062,14 +1104,49 @@ export class QuantumApp {
         }, 100);
     }
 
+    /* СЛЕПОЙ ВЫБОР.
+
+       Перед каждым входом содержимое дверей тасуется, поэтому запомнить,
+       за какой дверью что лежит, нельзя. Тасуется только порядок показа:
+       сами двери, их записи и фотографии остаются на своих местах. Обратная
+       дорожка doorOrder помнит, какой слот куда встал, — по ней находится и
+       аудио двери, и её место в сводке.
+
+       Перемешивание Фишера — Йетса: каждый порядок равновероятен. */
+    shuffleDoors() {
+        const order = this.realities.map((_, slot) => slot);
+
+        for (let i = order.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const keep = order[i];
+            order[i] = order[j];
+            order[j] = keep;
+        }
+
+        this.doorOrder = order;
+        return order.map(slot => this.realities[slot]);
+    }
+
+    // Какой слот стоит на этом месте в коридоре
+    slotOfDoor(index) {
+        if (Array.isArray(this.doorOrder) && Number.isInteger(this.doorOrder[index])) {
+            return this.doorOrder[index];
+        }
+        return index;
+    }
+
     onDoorChosen(index, text) {
         // Новая дверь — смайлик снова открывает глаза
         this.smileyLocked = false;
         const eyes = this.$('btn-s3');
         if (eyes) eyes.classList.remove('qm-eyes-shut');
 
+        // index — место в коридоре, а двери перетасованы: берём слот
+        const slot = this.slotOfDoor(index);
+        this.currentSlot = slot;
+
         this.currentChosenText = text;
-        this.currentDoorId = this.doorIds[index] || null;
+        this.currentDoorId = this.doorIds[slot] || null;
         document.getElementById('txt-s3-chosen-reality').innerText = text;
         this.updateSpeedUI();
         this.showScreen('screen-3');
@@ -1089,6 +1166,7 @@ export class QuantumApp {
            а не завелась заново. */
         this.history.unshift({
             ts: Date.now(),
+            slot: Number.isInteger(this.currentSlot) ? this.currentSlot : null,
             doorId: this.currentDoorId || null,
             dateStr: new Date().toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
             reality: this.currentChosenText,
@@ -1121,11 +1199,31 @@ export class QuantumApp {
         list.innerHTML = this.renderRecentChronicles() + this.renderChronicleStats();
     }
 
-    // Нынешнее имя двери. Записи, сделанные до появления id, показываем по
-    // тексту, который в них сохранён.
-    doorNameOfKey(key, fallback) {
-        const at = this.doorIds.indexOf(key);
-        if (at !== -1 && this.realities[at]) return this.realities[at];
+    /* Ключ записи для сводки.
+
+       Считаем по номеру слота: дверь — это место в списке, а не строка с
+       названием. Переписал намерение в первой двери — счёт продолжился,
+       просто под новым названием, а не завёлся заново.
+
+       Записи, сделанные раньше, разбираем по старым приметам: сначала id
+       двери (его ещё можно привести к слоту), потом текст. */
+    statKeyOf(item) {
+        if (Number.isInteger(item.slot)) return 'slot:' + item.slot;
+
+        if (item.doorId) {
+            const at = this.doorIds.indexOf(item.doorId);
+            return at !== -1 ? 'slot:' + at : 'door:' + item.doorId;
+        }
+
+        return 'text:' + (item.reality || '');
+    }
+
+    // Нынешнее название слота; для старых записей — то, что в них записано
+    statNameOf(key, fallback) {
+        if (key.indexOf('slot:') === 0) {
+            const slot = Number(key.slice(5));
+            if (this.realities[slot]) return this.realities[slot];
+        }
         return fallback || this.t('emptyTrace');
     }
 
@@ -1140,7 +1238,7 @@ export class QuantumApp {
             : fresh.map(item => `
             <div class="chronicle-card">
                 <div class="chronicle-date">${this.escapeHtml(item.dateStr)}</div>
-                <div class="chronicle-reality">${this.escapeHtml(this.t('akashiAct'))}<br>${this.escapeHtml(this.doorNameOfKey(item.doorId || '', item.reality))}</div>
+                <div class="chronicle-reality">${this.escapeHtml(this.t('akashiAct'))}<br>${this.escapeHtml(this.statNameOf(this.statKeyOf(item), item.reality))}</div>
                 <div class="chronicle-trace">${this.escapeHtml(this.t('akashiTrace'))}<br>«${this.escapeHtml(item.trace)}»</div>
             </div>`).join('');
 
@@ -1154,7 +1252,7 @@ export class QuantumApp {
         const counts = new Map();
 
         for (const item of this.history) {
-            const key = item.doorId || ('text:' + (item.reality || ''));
+            const key = this.statKeyOf(item);
             const row = counts.get(key) || { key, count: 0, fallback: item.reality || '' };
             row.count += 1;
             counts.set(key, row);
@@ -1165,7 +1263,7 @@ export class QuantumApp {
 
         const body = rows.map(row => {
             const share = Math.round((row.count / total) * 100);
-            const name = this.doorNameOfKey(row.key, row.fallback);
+            const name = this.statNameOf(row.key, row.fallback);
             // share — наше собственное число, в разметку идёт без него не обойтись
             return `<div class="qm-stat-row">
                 <div class="qm-stat-top">
@@ -1296,6 +1394,10 @@ export class QuantumApp {
             this.rootEl.classList.toggle('qm-immersive', screenKey === null);
         }
 
+        // Шестерёнка нужна только на главном экране
+        const gear = this.$('btn-gear');
+        if (gear) gear.hidden = screenKey !== 'screen-1';
+
         if (screenKey) {
             document.getElementById(screenKey).classList.remove('hidden');
             timer.classList.add('hidden');
@@ -1321,7 +1423,7 @@ export class QuantumApp {
 
         this.stopDoorAudio();
         this.stopRecTimer();
-        this.$('.qm-photo-strip').forEach(strip => this.releasePhotoUrls(strip));
+        this.$$('.qm-photo-strip').forEach(strip => this.releasePhotoUrls(strip));
         if (this.recorder) {
             this.recorder.stop().catch(() => {});
             this.recorder = null;

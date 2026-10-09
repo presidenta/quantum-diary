@@ -729,6 +729,32 @@
     gap: 6px;
 }
 
+/* Шестерёнка настройки — рядом с переключателем языков */
+.qm-root .qm-gear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--qm-panel-2);
+    border: 1px solid var(--qm-border);
+    border-radius: 10px;
+    color: var(--qm-muted);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease;
+}
+
+.qm-root .qm-gear::before { content: "\2699"; }
+
+.qm-root .qm-gear:hover {
+    color: var(--qm-gold);
+    border-color: var(--qm-gold-line);
+}
+
+.qm-root .qm-gear[hidden] { display: none; }
+
 /* Одна кнопка с текущим языком, по нажатию — список остальных */
 .qm-root .qm-lang-current {
     display: inline-flex;

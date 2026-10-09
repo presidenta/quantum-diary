@@ -18,6 +18,9 @@ export const TEMPLATE = [
        Раздел занимает весь экран и перекрывает кнопку языка Ежедневника,
        поэтому своя здесь обязательна. Список наполняет app.js. */
     '<div id="lang-switcher-container" class="lang-switcher">',
+    /* Шестерёнка открывает настройку реальностей. Показывается только на
+       главном экране; позже уйдёт под права администратора. */
+    '    <button type="button" id="btn-gear" class="qm-gear"></button>',
     '    <button type="button" id="qm-lang-btn" class="qm-lang-current"',
     '            aria-haspopup="true" aria-expanded="false">',
     '        <span id="qm-lang-label">\u{1F1F7}\u{1F1FA} Рус</span>',
@@ -100,6 +103,7 @@ export const TEMPLATE = [
     '        <div class="doors-count-selector">',
     '            <label class="doors-count-label" for="doors-count-select" data-i18n="doorsCount">Количество дверей:</label>',
     '            <select id="doors-count-select" class="doors-count-pick">',
+    '                <option value="2">2</option>',
     '                <option value="3">3</option>',
     '                <option value="4">4</option>',
     '                <option value="5">5</option>',

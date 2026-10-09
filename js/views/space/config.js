@@ -8,7 +8,7 @@
 
 export const CONFIG = {
     doors: {
-        min: 3,
+        min: 2,
         max: 7,
         defaultCount: 7
     },
@@ -59,7 +59,7 @@ export const CONFIG = {
             btnSettings: "Изменить варианты реальностей",
             multiverse: "Мультивселенная",
             setupTitle: "Настройка Реальностей",
-            setupSub: "Выбери от 3 до 7 дверей и опиши намерения:",
+            setupSub: "Выбери от 2 до 7 дверей и опиши намерения:",
             doorsCount: "Количество дверей:",
             btnSave: "Сохранить и войти",
             btnCancel: "Отмена",
@@ -133,7 +133,7 @@ export const CONFIG = {
             btnSettings: "Change Reality Variants",
             multiverse: "Multiverse",
             setupTitle: "Reality Setup",
-            setupSub: "Choose from 3 to 7 doors and describe your intentions:",
+            setupSub: "Choose from 2 to 7 doors and describe your intentions:",
             doorsCount: "Number of doors:",
             btnSave: "Save and Enter",
             btnCancel: "Cancel",
@@ -207,7 +207,7 @@ export const CONFIG = {
             btnSettings: "Змінити варіанти реальностей",
             multiverse: "Мультивсесвіт",
             setupTitle: "Налаштування Реальностей",
-            setupSub: "Обери від 3 до 7 дверей і опиши наміри:",
+            setupSub: "Обери від 2 до 7 дверей і опиши наміри:",
             doorsCount: "Кількість дверей:",
             btnSave: "Зберегти та увійти",
             btnCancel: "Скасувати",
