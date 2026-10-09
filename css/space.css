@@ -965,34 +965,62 @@
    Пример использования — в demo.html и README.md.
    ======================================================================== */
 .qm-tabs {
-    display: inline-flex;
-    gap: 4px;
-    padding: 4px;
-    background: #1f1f2b;
-    border: 1px solid #2b2b3a;
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    padding: 6px;
+    background: linear-gradient(180deg, #1A1B22 0%, #131319 100%);
+    border: 1px solid #2B2B3A;
     border-radius: 12px;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .5), inset 0 2px 5px rgba(0, 0, 0, .5);
 }
 
+/* Вкладка — пластина, а не надпись.
+
+   Объём делается двумя внутренними тенями: светлая полоска по верхнему
+   краю даёт блик, тёмная по нижнему — толщину. Наружная тень отрывает
+   пластину от плиты. Тот же приём, что у золотой планки аркана на
+   пульте, поэтому обе части раздела смотрятся из одного набора. */
 .qm-tab {
-    background: transparent;
+    flex: 1;
     border: none;
-    color: #8c8c9d;
     font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 9px 18px;
-    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 13px 14px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: color .18s ease, box-shadow .18s ease;
+
+    /* Неактивная: тёмный металл */
+    background: linear-gradient(180deg, #2C2D35 0%, #1E1F26 100%);
+    color: #8C8270;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .05);
 }
 
-.qm-tab:hover { color: #e9e9f0; }
+.qm-tab:hover { color: var(--qm-gold, #D39D3C); }
 
+/* Активная: золотая пластина с тёмной надписью */
 .qm-tab.active {
-    background: #242431;
-    color: #d8a63f;
-    box-shadow: inset 0 0 0 1px rgba(216, 166, 63, 0.35);
+    color: #1A1206;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, .4);
+    background:
+        repeating-linear-gradient(45deg, transparent, transparent 2px,
+                                  rgba(0, 0, 0, .035) 2px, rgba(0, 0, 0, .035) 4px),
+        linear-gradient(135deg, #E4C46F 0%, #AA8532 50%, #75591C 100%);
+    box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, .6),
+        inset 0 -2px 5px rgba(0, 0, 0, .4),
+        0 4px 10px rgba(223, 188, 94, .2);
+}
+
+/* Узкий телефон: две длинные подписи в строку не влезают */
+@media (max-width: 460px) {
+    .qm-tabs { gap: 4px; padding: 4px; }
+    .qm-tab { font-size: 10px; letter-spacing: .5px; padding: 11px 6px; }
 }
 
 /* ===== Мобильная адаптация =============================================== */
@@ -1283,7 +1311,9 @@
     width: 100%;
     margin-top: 18px;
     padding: 9px 12px 9px 10px;
-    border-radius: 999px;
+    /* Углы как у блоков выше: карточка 16, поля и вкладки 12. Прежняя
+       «таблетка» в 999 выбивалась из всего экрана. */
+    border-radius: var(--qm-radius);
     background: var(--qm-gold-3d);
     box-shadow:
         0 10px 26px rgba(0, 0, 0, 0.55),
@@ -1323,7 +1353,7 @@
     min-height: 60px;
     padding: 8px 14px;
     border: 1px solid rgba(120, 72, 10, 0.55);
-    border-radius: 999px;
+    border-radius: var(--qm-radius-sm);
     background: linear-gradient(180deg, #F3CE78 0%, #E0AE43 45%, #C58D26 100%);
     color: var(--qm-gold-ink);
     font-family: var(--qm-font);
@@ -1419,7 +1449,7 @@
 
 /* Узкий телефон: надпись мельче, круг меньше — чтобы капсула не ломалась */
 @media (max-width: 400px) {
-    .qm-root .qm-act { gap: 7px; padding: 8px 9px 8px 7px; }
+    .qm-root .qm-act { gap: 7px; padding: 8px 9px 8px 7px; border-radius: 14px; }
     .qm-root .qm-act-face::before { font-size: 40px; }
     .qm-root .qm-act-main { font-size: 17px; min-height: 54px; padding: 7px 10px; }
     .qm-root .qm-act-play { width: 52px; height: 52px; }
