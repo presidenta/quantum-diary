@@ -8,7 +8,7 @@
 
 import { state, t, $, h, fill, changed } from '../store.js';
 import { API_BASE } from '../config.js';
-import { getMeta } from '../db.js';
+import { getMeta, setMeta } from '../db.js';
 import {
   HOLD_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot, isOff, liveMoments,
   livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil
@@ -40,6 +40,36 @@ async function api(path, options = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+/* День, сохранённый с прошлого удачного выхода на сервер.
+
+   Моменты задаёт администратор, и день приходит только с сервера — нигде
+   не оседая. В приложении без сети вкладка из-за этого всегда была пуста.
+   Теперь удачно полученный день остаётся в хранилище устройства и
+   показывается, пока связи нет.
+
+   Кэш берём только за сегодня: вчерашние моменты сбили бы и отметки
+   «прожито», и время ближайшего окна. */
+const QUANTUM_CACHE = 'quantum_day';
+
+async function cachedQuantum() {
+  try {
+    const saved = await getMeta(QUANTUM_CACHE);
+    if (saved && saved.savedOn === todayKey() && saved.day) return saved.day;
+  } catch {
+    // Хранилище недоступно — ведём себя так, будто кэша нет
+  }
+  return null;
+}
+
+async function saveQuantumCache() {
+  if (!state.quantum) return;
+  try {
+    await setMeta(QUANTUM_CACHE, { savedOn: todayKey(), day: state.quantum });
+  } catch {
+    // Не сохранилось — не беда, в следующий раз получим день с сервера
+  }
+}
+
 export async function loadQuantum() {
   if (!API_BASE) { state.quantum = null; return; }
   try {
@@ -48,9 +78,10 @@ export async function loadQuantum() {
        зале или в метро, и тянуть файл в ту секунду будет поздно. Ждать этого
        экран не должен — поэтому без await. */
     warmUpToday(state.quantum);
+    saveQuantumCache();
   } catch {
-    // Нет сети — экран покажет, что день ещё не получен; данные не теряются
-    state.quantum = null;
+    // Нет сети или вход не выполнен — показываем день, сохранённый раньше
+    state.quantum = await cachedQuantum();
   }
 }
 
@@ -73,6 +104,7 @@ async function markDone(moment, { redraw = true } = {}) {
   moment.doneAt = new Date().toISOString();
   if (redraw) renderQuantum();
   changed();
+  saveQuantumCache();   // отметка переживёт закрытие приложения без сети
   try {
     await api(`/api/quantum/moments/${moment.id}/done`, { method: 'POST', body: '{}' });
   } catch {

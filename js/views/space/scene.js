@@ -12,6 +12,18 @@
 
    Частицы, материалы, цвета, камера, туннель и вспышка не изменены. */
 
+/* Пороги управления пальцем. Вынесены наверх, чтобы подкручивать в одном месте. */
+const TAP_SLOP = 12;                      // px: дальше этого — уже жест, а не тап
+const TAP_TIME = 500;                     // мс: дольше — уже не тап
+const LOOK_SPEED = 0.003;                 // радиан поворота на пиксель
+const WALK_SPEED = 0.015;                 // единиц сцены на пиксель
+const LOOK_LIMIT = (85 * Math.PI) / 180;  // дальше голова не поворачивается
+const WALK_BACK = 7;                      // дальше назад камера не отходит
+const WALK_FORWARD = -22;                 // дальше вперёд не уходит: там кончается пол
+const PARTICLE_NEAR = 14;                 // ближе этого к камере пылинок не бывает
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
 export class QuantumCorridorScene {
     constructor(canvasContainer, onDoorSelectCallback) {
         this.container = canvasContainer;
@@ -23,6 +35,9 @@ export class QuantumCorridorScene {
         this.tunnelMode = false;
         this.introBurst = 0; 
         
+        this.viewYaw = 0;
+        this.walkZ = 5;
+
         this.initScene();
         this.initHandCursor();
     }
@@ -74,10 +89,7 @@ export class QuantumCorridorScene {
         this.buildDoorExplosion(); 
 
         window.addEventListener('resize', () => this.resize());
-        this.renderer.domElement.addEventListener('click', (e) => this.onClick(e));
-        this.renderer.domElement.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) this.onClick(e.touches[0]);
-        }, { passive: false });
+        this.initPointerControls();
     }
 
     checkMobile() {
@@ -198,6 +210,8 @@ export class QuantumCorridorScene {
         const endFrame = new THREE.Mesh(endFrameGeo, endFrameMat);
         endFrame.position.set(0, 1, -85.1);
 
+        this.leftWall = leftWall;
+        this.rightWall = rightWall;
         this.corridorGroup.add(floor, ceiling, leftWall, rightWall, endSquare, endFrame);
     }
 
@@ -222,12 +236,50 @@ export class QuantumCorridorScene {
         }
 
         // Плотное распределение с самого начала: заполняем пространство далеко за пределы коридора
-        this.pTargets[index * 3 + 2] = 10 - Math.random() * 150; 
+        this.pTargets[index * 3 + 2] = this.particleNearZ() - Math.random() * 131; 
 
         // Исключаем блокировку точки схода черного квадрата в центре
         if (Math.abs(this.pTargets[index * 3]) < 2.5 && Math.abs(this.pTargets[index * 3 + 1] - 1) < 3.2) {
             this.pTargets[index * 3] += (this.pTargets[index * 3] >= 0 ? 3 : -3);
         }
+    }
+
+    /* Круглая пылинка вместо квадрата.
+
+       PointsMaterial без карты рисует точку квадратом. Пока точка размером в
+       пару пикселей, этого не видно. Но размер точки на экране растёт обратно
+       расстоянию: частица, подошедшая к камере, раздувалась в большой
+       непрозрачный квадрат — это и было видно на телефоне.
+
+       Ядро держим плотным до 35% радиуса: иначе дальние частицы в два-три
+       пикселя выцветают и звёздное поле в конце коридора тускнеет. */
+    createParticleSprite() {
+        const size = 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const half = size / 2;
+
+        const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        grad.addColorStop(0.35, 'rgba(255, 255, 255, 0.95)');
+        grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.25)');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        return texture;
+    }
+
+    // Рубеж, ближе которого пылинок не бывает. Едет вместе с камерой, поэтому
+    // работает и когда человек идёт по коридору пальцем.
+    particleNearZ() {
+        return this.camera.position.z - PARTICLE_NEAR;
     }
 
     buildPerimeterParticles() {
@@ -253,13 +305,19 @@ export class QuantumCorridorScene {
         }
 
         pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-        // Яркость звёздного потока.
-        // Видны только дальние частицы — ближние закрыты стенами коридора,
-        // поэтому крупный размер безопасен: на экране они всё равно
-        // остаются точками в 2-3 пикселя, а не квадратами.
-        // Меняются только цвет, размер и непрозрачность самих частиц.
+        // Светящаяся пыль: круглая карта, сложение света, без записи глубины.
+        //
+        // depthWrite: false — чтобы пылинки не загораживали друг друга и не
+        // спорили за глубину. Проверка глубины остаётся включённой, поэтому
+        // стены коридора по-прежнему их закрывают.
         this.particlesMat = new THREE.PointsMaterial({
-            color: 0xffe9b5, size: 0.18, transparent: true, opacity: 1, blending: THREE.AdditiveBlending
+            color: 0xffe9b5,
+            size: 0.18,
+            map: this.createParticleSprite(),
+            transparent: true,
+            opacity: 1,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
         });
         this.particlesMesh = new THREE.Points(pGeo, this.particlesMat);
         this.corridorGroup.add(this.particlesMesh);
@@ -444,6 +502,22 @@ export class QuantumCorridorScene {
         this.scene.background = null;
         this.camera.position.set(0, 1, 5);
         this.camera.rotation.set(0, 0, 0);
+        this.viewYaw = 0;
+        this.walkZ = 5;
+
+        /* Возвращаем угол обзора коридора.
+
+           Сцена живёт одна на все заходы (app.js создаёт её один раз).
+           Туннель переключал камеру на свой широкий угол и обратно его не
+           возвращал — на втором заходе коридор оказывался шире, чем нужно,
+           и крайние двери уходили за край кадра. */
+        this.camera.fov = this.isMobile ? 85 : 60;
+        this.camera.updateProjectionMatrix();
+
+        // Окно приложения к этому мигу уже разложено по месту — ширину
+        // коридора пересчитываем по настоящему размеру кадра, а не по тому,
+        // каким он был в миг сборки сцены.
+        this.refitCorridor();
         if (this.hand) this.hand.style.display = 'none';
         this.animate();
     }
@@ -457,13 +531,14 @@ export class QuantumCorridorScene {
         if (!this.tunnelMode) {
             // Рассредоточенные плавающие частицы
             const positions = this.particlesMesh.geometry.attributes.position.array;
+            const nearZ = this.particleNearZ();
             for (let i = 0; i < this.particleCount; i++) {
                 positions[i * 3] += this.pVelocities[i * 3] * delta;
                 positions[i * 3 + 1] += this.pVelocities[i * 3 + 1] * delta;
                 positions[i * 3 + 2] += this.pVelocities[i * 3 + 2] * delta;
 
                 // Зацикливание: когда частицы выходят за камеру, они возвращаются глубоко назад (-140)
-                if (positions[i * 3 + 2] > 10) {
+                if (positions[i * 3 + 2] > nearZ) {
                     this.spawnParticleOutside(i);
                     positions[i * 3] = this.pTargets[i * 3];
                     positions[i * 3 + 1] = this.pTargets[i * 3 + 1];
@@ -494,23 +569,113 @@ export class QuantumCorridorScene {
         this.renderer.render(this.scene, this.camera);
     }
 
-    onClick(e) {
+    /* УПРАВЛЕНИЕ ПАЛЬЦЕМ.
+
+       Прежде выбор двери срабатывал прямо по touchstart: любое движение по
+       экрану открывало ту дверь, с которой начался палец, и осмотреться было
+       нельзя. Теперь нажатие дослушивается до конца. Палец почти не сдвинулся
+       и отпущен быстро — это тап по двери. Повело вверх или вниз — идём по
+       коридору, вбок — поворачиваем голову.
+
+       Pointer Events охватывают и палец, и мышь одним кодом: в приложении это
+       касания, на компьютере — прежний клик и перетаскивание мышью. */
+    initPointerControls() {
+        const canvas = this.renderer.domElement;
+        canvas.style.touchAction = 'none';   // иначе систему уведёт в прокрутку и зум
+
+        let active = false;
+        let startX = 0, startY = 0, startTime = 0;
+        let lastX = 0, lastY = 0, moved = 0;
+
+        canvas.addEventListener('pointerdown', e => {
+            if (!this.navigationAllowed()) return;
+            active = true;
+            moved = 0;
+            startX = lastX = e.clientX;
+            startY = lastY = e.clientY;
+            startTime = performance.now();
+            try { canvas.setPointerCapture(e.pointerId); } catch { /* браузер без захвата */ }
+        });
+
+        canvas.addEventListener('pointermove', e => {
+            if (!active) return;
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            moved += Math.abs(dx) + Math.abs(dy);
+            if (moved < TAP_SLOP) return;    // мелкое дрожание пальца — ещё не жест
+            this.lookBy(dx);
+            this.walkBy(dy);
+        });
+
+        canvas.addEventListener('pointerup', e => {
+            if (!active) return;
+            active = false;
+            try { canvas.releasePointerCapture(e.pointerId); } catch { /* палец уже отпущен */ }
+
+            const slid = Math.hypot(e.clientX - startX, e.clientY - startY);
+            const held = performance.now() - startTime;
+            if (slid <= TAP_SLOP && held <= TAP_TIME) this.pickDoorAt(e.clientX, e.clientY);
+        });
+
+        canvas.addEventListener('pointercancel', () => { active = false; });
+    }
+
+    // Пока идёт выбор двери или полёт по туннелю, управление отключено:
+    // кинематографическая часть не должна спорить с пальцем.
+    navigationAllowed() {
+        return this.isRunning && !this.isSelecting && !this.tunnelMode;
+    }
+
+    // Поворот головы. Палец ведёт сцену за собой: тянем вправо — взгляд уходит
+    // влево. Предел — почти прямой угол, чтобы коридор не пропал из виду.
+    lookBy(dx) {
+        this.viewYaw = clamp(this.viewYaw + dx * LOOK_SPEED, -LOOK_LIMIT, LOOK_LIMIT);
+        this.camera.rotation.set(0, this.viewYaw, 0);
+    }
+
+    // Шаг вдоль коридора. Строго по оси Z, как бы ни была повёрнута голова:
+    // так не пройдёшь сквозь стену и не выйдешь за край пола.
+    walkBy(dy) {
+        this.walkZ = clamp(this.walkZ + dy * WALK_SPEED, WALK_FORWARD, WALK_BACK);
+        this.camera.position.z = this.walkZ;
+    }
+
+    /* ПОПАДАНИЕ ПО ДВЕРИ.
+
+       Исправлены два прежних промаха. Координаты берём из прямоугольника
+       самого холста, а не из размеров окна: при малейшем расхождении — полоса
+       состояния, вырез экрана — луч уходил мимо. И проверяем всю группу двери
+       целиком (косяк, полотно, ручку), а не одно полотно: попасть пальцем в
+       узкую створку на телефоне трудно. */
+    pickDoorAt(clientX, clientY) {
         if (this.isSelecting || !this.isRunning) return;
 
-        this.mouse.x = (e.clientX ? (e.clientX / window.innerWidth) * 2 - 1 : (e.touches[0].clientX / window.innerWidth) * 2 - 1);
-        this.mouse.y = (e.clientY ? -(e.clientY / window.innerHeight) * 2 + 1 : -(e.touches[0].clientY / window.innerHeight) * 2 + 1);
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+
+        this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
-        const intersects = this.raycaster.intersectObjects(this.activeDoorMeshes.map(d => d.doorMesh));
+        const intersects = this.raycaster.intersectObjects(this.activeDoorMeshes.map(d => d.group), true);
+        if (intersects.length === 0) return;
 
-        if (intersects.length > 0) {
-            const mesh = intersects[0].object;
-            if (!mesh.userData.isActive) return;
+        const chosen = this.doorOf(intersects[0].object);
+        if (!chosen || !chosen.doorMesh.userData.isActive) return;
 
-            const chosen = this.activeDoorMeshes.find(d => d.doorMesh === mesh);
-            this.isSelecting = true;
-            this.triggerSelectionSequence(chosen);
+        this.isSelecting = true;
+        this.triggerSelectionSequence(chosen);
+    }
+
+    // От задетого лучом кусочка поднимаемся вверх до группы своей двери
+    doorOf(object) {
+        for (let node = object; node; node = node.parent) {
+            const found = this.activeDoorMeshes.find(d => d.group === node);
+            if (found) return found;
         }
+        return null;
     }
 
     triggerSelectionSequence(chosen) {
@@ -572,6 +737,13 @@ export class QuantumCorridorScene {
         let progress = 0;
         const startFov = this.camera.fov;
 
+        // Откуда начинается взгляд. Если головой не вертели, это ровно прежняя
+        // точка (0, startY, startZ - 10) и пролёт идёт как раньше. Если
+        // вертели — камера не дёргается в первый же кадр.
+        const startLook = new THREE.Vector3(0, 0, -10)
+            .applyQuaternion(this.camera.quaternion)
+            .add(this.camera.position);
+
         const sequenceInterval = setInterval(() => {
             if (phase === 0) {
                 progress += 0.025; 
@@ -582,9 +754,9 @@ export class QuantumCorridorScene {
                 this.camera.position.y = THREE.MathUtils.lerp(startY, exactDoorY, easeP);
                 this.camera.position.z = THREE.MathUtils.lerp(startZ, targetZ, easeP); 
                 
-                const lookX = THREE.MathUtils.lerp(0, exactDoorX, easeP);
-                const lookY = THREE.MathUtils.lerp(startY, exactDoorY, easeP); 
-                const lookZ = THREE.MathUtils.lerp(startZ - 10, targetZ, easeP);
+                const lookX = THREE.MathUtils.lerp(startLook.x, exactDoorX, easeP);
+                const lookY = THREE.MathUtils.lerp(startLook.y, exactDoorY, easeP); 
+                const lookZ = THREE.MathUtils.lerp(startLook.z, targetZ, easeP);
                 this.camera.lookAt(lookX, lookY, lookZ); 
 
                 if (progress === 1) { 
@@ -672,5 +844,23 @@ export class QuantumCorridorScene {
         this.camera.fov = this.isMobile ? 85 : 60;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.refitCorridor();
+    }
+
+    /* ПЕРЕСЧЁТ ШИРИНЫ КОРИДОРА ПОД КАДР.
+
+       Раньше ширина считалась один раз при сборке сцены. В приложении кадр
+       успевает измениться после этого — полоса состояния, поворот экрана,
+       разворот на весь экран, — и коридор оставался рассчитанным под старый
+       размер: крайние двери уезжали за край. Теперь стены и двери переезжают
+       вместе с кадром. Пропорции, цвета и расстановка по длине не меняются —
+       двигается только отступ от середины. */
+    refitCorridor() {
+        this.fitCorridorWidth();
+        if (this.leftWall) this.leftWall.position.x = -this.wallX;
+        if (this.rightWall) this.rightWall.position.x = this.wallX;
+        for (const door of this.activeDoorMeshes) {
+            door.group.position.x = door.isLeft ? -this.doorX : this.doorX;
+        }
     }
 }

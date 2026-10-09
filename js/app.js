@@ -18,6 +18,8 @@ import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
 import { initSpace, syncSpace } from './views/space/index.js';
+import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
+import { cancelAll as cancelAllReminders } from './core/reminders.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
@@ -351,6 +353,19 @@ async function boot() {
   initDay();
   initQuantum();
   initSpace();
+
+  // Ежедневная проверка прав и «рубильник». Пока ACCESS_ENABLED = false,
+  // этот блок не делает ничего: ни запросов, ни блокировок.
+  // Включать только после проверки, что сервер отвечает всем устройствам —
+  // иначе через сутки без связи заблокируются сразу все.
+  if (ACCESS_ENABLED) {
+    new AccessController({
+      apiBase: API_BASE,
+      getToken: () => getMeta('token'),
+      // Закрытое приложение не должно будить человека
+      cancelAlarms: cancelAllReminders
+    }).start();
+  }
   onChange(render);
 
   // Меню, язык, настройки

@@ -61,6 +61,10 @@ async function mount(host) {
   rootEl = document.createElement('div');
   rootEl.className = 'qm-root qm-embedded';
   rootEl.innerHTML = TEMPLATE;
+
+  // Крестик внутри раздела просит его закрыть — возвращаемся к моментам
+  rootEl.addEventListener('qm-close', () => showPart('moments'));
+
   host.appendChild(rootEl);
 
   try {

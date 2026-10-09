@@ -26,6 +26,7 @@ export const CONFIG = {
     // Словарь мультиязычности
     translations: {
         ru: {
+            btnCloseSection: "Закрыть раздел",
             audioAdd: "Добавить аудио",
             audioRecord: "Записать",
             audioStopRec: "Остановить",
@@ -87,6 +88,7 @@ export const CONFIG = {
             modalBtnLater: "Позже (Оставить в дашборде)"
         },
         en: {
+            btnCloseSection: "Close section",
             audioAdd: "Add audio",
             audioRecord: "Record",
             audioStopRec: "Stop",
@@ -148,6 +150,7 @@ export const CONFIG = {
             modalBtnLater: "Later (Keep in Dashboard)"
         },
         uk: {
+            btnCloseSection: "Закрити розділ",
             audioAdd: "Додати аудіо",
             audioRecord: "Записати",
             audioStopRec: "Зупинити",

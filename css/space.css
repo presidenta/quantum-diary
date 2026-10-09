@@ -996,8 +996,42 @@
     border-color: transparent transparent transparent #0A0A0C;
 }
 
+/* ===== Выход из раздела ==================================================
+   Раздел занимает весь экран и перекрывает меню Ежедневника, поэтому у него
+   есть собственный выход. Крестик приглушён (opacity 0.3) и не тянет на себя
+   внимание, но всегда на месте — перезагружать приложение не нужно.
+   ======================================================================== */
+.qm-root .qm-close {
+    position: absolute;
+    top: 14px;
+    top: max(14px, env(safe-area-inset-top));
+    left: 14px;
+    left: max(14px, env(safe-area-inset-left));
+    z-index: 1001;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--qm-text);
+    font-family: var(--qm-font);
+    font-size: 27px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.3;
+    transition: opacity 0.18s ease;
+}
+
+.qm-root .qm-close:hover,
+.qm-root .qm-close:focus-visible {
+    opacity: 0.85;
+    outline: none;
+}
+
 /* ===== Встроенный режим ==================================================
-   Раздел живёт внутри карточки Пульта: собственная звёздная сетка не нужна.
+   Раздел живёт внутри Пульта: собственная звёздная сетка не нужна.
    ======================================================================== */
 .qm-root.qm-embedded {
     background-image: none;

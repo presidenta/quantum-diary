@@ -201,6 +201,12 @@ export class QuantumApp {
             });
         }
 
+        const closeBtn = document.getElementById('btn-space-close');
+        if (closeBtn) {
+            closeBtn.setAttribute('aria-label', this.t('btnCloseSection'));
+            closeBtn.title = this.t('btnCloseSection');
+        }
+
         this.renderChronicles();
         this.updateSnoozeButtonUI();
         this.updateSpeedUI();
@@ -246,6 +252,17 @@ export class QuantumApp {
         if (playZone) playZone.addEventListener('click', () => this.handleEyeCloseTransition(true));
         document.getElementById('btn-s4-save').addEventListener('click', () => this.saveDiaryEntry());
         document.getElementById('btn-snooze').addEventListener('click', () => this.handleSnooze());
+
+        // Крестик не закрывает раздел сам: он лишь сообщает об этом наружу,
+        // а что делать дальше — решает тот, кто модуль подключил.
+        const closeBtn = document.getElementById('btn-space-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                if (this.rootEl) {
+                    this.rootEl.dispatchEvent(new CustomEvent('qm-close', { bubbles: true }));
+                }
+            });
+        }
 
         // Кнопки модального окна "Окно возможностей открыто"
         document.getElementById('btn-modal-start').addEventListener('click', () => {
