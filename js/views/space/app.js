@@ -37,7 +37,9 @@ export class QuantumApp {
         // или перестановка дверей аудио не теряет.
         this.doorIds = JSON.parse(localStorage.getItem('quantum_doors_ids') || '[]');
         this.syncDoorIds(this.realities.length);
+        this.clearStoredPlaceholders();
 
+        this.screenBeforeSetup = 'screen-1';  // куда вернуть из настройки
         this.currentDoorId = null;       // дверь, выбранная в коридоре
         this.currentAudioRecord = null;  // её запись, если она есть
         this.audioEl = null;             // проигрыватель
@@ -388,7 +390,7 @@ export class QuantumApp {
             if (row) this.updateDoorStatus(row);
         });
         document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());
-        document.getElementById('btn-cancel-setup').addEventListener('click', () => this.showScreen('screen-1'));
+        document.getElementById('btn-cancel-setup').addEventListener('click', () => this.closeSettingsScreen());
 
         // Переключения табов скорости на экране Настройка реальности
         document.querySelectorAll('.speed-tab').forEach(tab => {
@@ -561,6 +563,20 @@ export class QuantumApp {
         document.getElementById('doors-count-select').value = count.toString();
         this.renderSetupInputs(count);
         this.showScreen('screen-setup');
+    }
+
+    /* Выход из настройки без сохранения — туда, откуда её открыли.
+
+       Если звали из коридора, коридор и возвращаем: он всё это время жив,
+       сцена не пересобирается, пройденное не теряется. */
+    closeSettingsScreen() {
+        const back = this.screenBeforeSetup;
+
+        if (back === null && this.scene3D) {
+            this.showScreen(null);
+            return;
+        }
+        this.showScreen(back || 'screen-1');
     }
 
     renderSetupInputs(count) {
@@ -1053,10 +1069,15 @@ export class QuantumApp {
             // должно остаться имя — иначе в коридоре она была бы безымянной.
             if (text === '' && !hasAudio && !hasPhoto) continue;
 
-            kept.push({
-                id: row.dataset.doorId,
-                text: text || this.t('doorNoName').replace('{i}', String(kept.length + 1))
-            });
+            /* Имя двери хранится таким, каким его написал человек, —
+               пустое остаётся пустым.
+
+               Раньше пустой двери тут же подставлялась служебная строка
+               «Дверь 1», и она записывалась в саму дверь. Дальше эта
+               подпись шла всюду: в коридор, на экран выбора, в хроники —
+               и выглядела как содержимое двери, хотя была заглушкой.
+               Теперь заглушка живёт только на экране, в doorDisplayName. */
+            kept.push({ id: row.dataset.doorId, text: text });
         }
 
         if (kept.length < CONFIG.doors.min) {
@@ -1124,7 +1145,41 @@ export class QuantumApp {
         }
 
         this.doorOrder = order;
-        return order.map(slot => this.realities[slot]);
+        return order.map(slot => this.doorDisplayName(slot));
+    }
+
+    /* Как дверь называется на экране.
+
+       Если человек дал двери имя — берём его. Если нет (дверь живёт одной
+       записью или фотографией) — показываем «Дверь N». В самой двери при
+       этом по-прежнему пусто. */
+    doorDisplayName(slot) {
+        const own = this.realities[slot];
+        if (own && own.trim()) return own;
+        return this.t('doorNoName').replace('{i}', String(slot + 1));
+    }
+
+    /* Разовая уборка за прежней ошибкой.
+
+       До этой правки пустым дверям записывалось имя «Дверь 1», «Двері 2»,
+       «Door 3» — служебная заглушка попадала в сами двери и оставалась там
+       навсегда. Здесь такие строки вычищаются: имя снова становится пустым,
+       а на экране его место занимает та же заглушка, но уже честная. */
+    clearStoredPlaceholders() {
+        const looksGenerated = /^\s*(Дверь|Двері|Door)\s*\d+\s*$/i;
+        let touched = false;
+
+        this.realities = this.realities.map(text => {
+            if (typeof text === 'string' && looksGenerated.test(text)) {
+                touched = true;
+                return '';
+            }
+            return text;
+        });
+
+        if (touched) {
+            localStorage.setItem('quantum_doors_texts', JSON.stringify(this.realities));
+        }
     }
 
     // Какой слот стоит на этом месте в коридоре
@@ -1145,12 +1200,46 @@ export class QuantumApp {
         const slot = this.slotOfDoor(index);
         this.currentSlot = slot;
 
-        this.currentChosenText = text;
+        this.currentChosenText = this.doorDisplayName(slot);
         this.currentDoorId = this.doorIds[slot] || null;
-        document.getElementById('txt-s3-chosen-reality').innerText = text;
+        document.getElementById('txt-s3-chosen-reality').innerText = this.currentChosenText;
         this.updateSpeedUI();
         this.showScreen('screen-3');
         this.prepareDoorAudio();
+        this.renderChosenDoorMedia();
+    }
+
+    /* Снимки выбранной двери прямо на экране перехода.
+
+       Раньше здесь была одна строка с названием двери и больше ничего:
+       что человек в эту дверь положил — слышно и видно не было. Теперь её
+       снимки показываются тут же, а запись слышна правой половиной
+       составной кнопки. */
+    async renderChosenDoorMedia() {
+        const box = document.getElementById('s3-door-media');
+        if (!box) return;
+
+        this.releasePhotoUrls(box);
+        box.innerHTML = '';
+        box.hidden = true;
+        if (!this.currentDoorId) return;
+
+        const photos = await getDoorPhotos(this.currentDoorId);
+        if (this._destroyed || !box.isConnected) return;
+        if (!photos.length) return;
+
+        for (const photo of photos) {
+            const cell = document.createElement('div');
+            cell.className = 'qm-s3-photo';
+
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(photo.blob);
+            img.alt = photo.fileName || '';
+            cell.appendChild(img);
+            box.appendChild(cell);
+        }
+
+        box.hidden = false;
     }
 
     saveDiaryEntry() {
@@ -1197,6 +1286,15 @@ export class QuantumApp {
         }
 
         list.innerHTML = this.renderRecentChronicles() + this.renderChronicleStats();
+        this.applyStatShares(list);
+    }
+
+    // Ширина каждой шкалы — её доля. Ставится кодом: см. renderChronicleStats.
+    applyStatShares(list) {
+        list.querySelectorAll('.qm-stat-bar span[data-share]').forEach(bar => {
+            const share = Number(bar.dataset.share);
+            bar.style.width = (Number.isFinite(share) ? share : 0) + '%';
+        });
     }
 
     /* Ключ записи для сводки.
@@ -1222,7 +1320,7 @@ export class QuantumApp {
     statNameOf(key, fallback) {
         if (key.indexOf('slot:') === 0) {
             const slot = Number(key.slice(5));
-            if (this.realities[slot]) return this.realities[slot];
+            if (slot >= 0 && slot < this.realities.length) return this.doorDisplayName(slot);
         }
         return fallback || this.t('emptyTrace');
     }
@@ -1248,29 +1346,62 @@ export class QuantumApp {
         </section>`;
     }
 
+    /* Доля каждой двери за всё время.
+
+       В списке стоят все двери, а не только открытые. У двери, которую ещё
+       ни разу не выбирали, своя строка и пустая шкала — видно, что она есть
+       и ждёт. Прежде такие двери в список не попадали вовсе, и наверху
+       оставалась одна-единственная строка во всю ширину: казалось, будто
+       шкала всегда полная.
+
+       Длина шкалы — доля этой двери от всех переходов. Половина переходов
+       в эту дверь — половина шкалы. */
     renderChronicleStats() {
         const counts = new Map();
 
+        // Сначала все нынешние двери, по порядку и с нулями
+        for (let slot = 0; slot < this.realities.length; slot++) {
+            counts.set('slot:' + slot, { key: 'slot:' + slot, slot, count: 0, fallback: '' });
+        }
+
         for (const item of this.history) {
             const key = this.statKeyOf(item);
-            const row = counts.get(key) || { key, count: 0, fallback: item.reality || '' };
+            const row = counts.get(key)
+                || { key, slot: null, count: 0, fallback: item.reality || '' };
             row.count += 1;
+            if (!row.fallback) row.fallback = item.reality || '';
             counts.set(key, row);
         }
 
         const total = this.history.length;
-        const rows = Array.from(counts.values()).sort((a, b) => b.count - a.count);
+
+        // Чаще открытые — выше; при равенстве держим порядок дверей
+        const rows = Array.from(counts.values()).sort((a, b) => {
+            if (b.count !== a.count) return b.count - a.count;
+            return (a.slot === null ? 99 : a.slot) - (b.slot === null ? 99 : b.slot);
+        });
 
         const body = rows.map(row => {
-            const share = Math.round((row.count / total) * 100);
+            const share = total > 0 ? Math.round((row.count / total) * 100) : 0;
             const name = this.statNameOf(row.key, row.fallback);
-            // share — наше собственное число, в разметку идёт без него не обойтись
-            return `<div class="qm-stat-row">
+
+            /* Доля едет в data-атрибуте, а не в style.
+
+               У страницы строгая политика безопасности: style-src 'self',
+               без unsafe-inline. Браузер молча отбрасывал атрибут
+               style="width:…", ширина у полоски не задавалась вовсе — а
+               внутренний блок без ширины растягивается на всю строку.
+               Оттого все шкалы и выглядели полными на сто процентов.
+
+               Политику не ослабляем: ширину ставит applyStatShares уже
+               после вставки, через CSSOM, — его та же политика пропускает
+               (так же работает кольцо диктофона). */
+            return `<div class="qm-stat-row${row.count === 0 ? ' qm-stat-idle' : ''}">
                 <div class="qm-stat-top">
                     <span class="qm-stat-name">${this.escapeHtml(name)}</span>
                     <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${share}%</span>
                 </div>
-                <div class="qm-stat-bar"><span style="width:${share}%"></span></div>
+                <div class="qm-stat-bar"><span data-share="${share}"></span></div>
             </div>`;
         }).join('');
 
@@ -1394,9 +1525,17 @@ export class QuantumApp {
             this.rootEl.classList.toggle('qm-immersive', screenKey === null);
         }
 
-        // Шестерёнка нужна только на главном экране
+        /* Шестерёнка стоит в шапке постоянно.
+
+           Прежде она жила только на главном экране, и из коридора или с
+           экрана выбора попасть в настройку дверей было нельзя — только
+           пройдя переход до конца. Теперь настройка открывается откуда
+           угодно, а «Отмена» возвращает ровно туда, откуда её позвали. */
         const gear = this.$('btn-gear');
-        if (gear) gear.hidden = screenKey !== 'screen-1';
+        if (gear) gear.hidden = screenKey === 'screen-setup';
+
+        // Откуда пришли в настройку: null означает коридор
+        if (screenKey !== 'screen-setup') this.screenBeforeSetup = screenKey;
 
         if (screenKey) {
             document.getElementById(screenKey).classList.remove('hidden');

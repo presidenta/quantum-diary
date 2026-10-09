@@ -123,6 +123,10 @@ export const TEMPLATE = [
     '        <p id="txt-s3-sub" class="qm-sub" data-i18n="screen3Subtitle"></p>',
     '        <h2 id="txt-s3-title" class="qm-title-lg" data-i18n="screen3MainTitle">Настройка реальности</h2>',
     '        <div id="txt-s3-chosen-reality" class="chosen-reality-box-clean"></div>',
+
+    /* Содержимое выбранной двери: её снимки. Запись слышна правой
+       половиной составной кнопки ниже. */
+    '        <div id="s3-door-media" class="qm-s3-media" hidden></div>',
     '        <p class="qm-speed-title" data-i18n="screen3SpeedTitle"></p>',
     '        <div class="speed-tabs-container">',
     '            <button type="button" class="speed-tab active" data-speed="1">',

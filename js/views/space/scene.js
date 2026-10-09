@@ -34,11 +34,40 @@ const PARTICLE_NEAR = 3;                  // ближе этого к камер
    коридора и были видны только в этом просвете: оттого и получалось
    скопление в конце при пустых стенах. */
 const SHELL_DEPTH = 0.6;                  // насколько вглубь от поверхности
-const CORRIDOR_FAR = -30;                 // дальний край, где кончается пол
 const FLOOR_Y = -2.5;
 const CEIL_Y = 4.5;
 const SURFACE_GAP = 0.05;                 // чтобы точка не лежала в самой плоскости
-const CLEAR_CONE = 0.14;                  // пустая воронка вдоль взгляда
+/* Пустая воронка вдоль взгляда.
+
+   Чем больше число, тем раньше звезде предел по глубине. Прежде стояло
+   0.14 — при нём ни одна звезда не доходила дальше z ≈ -25, а задней
+   стены ещё нет и нет до -38. Звёздное поле обрывалось в воздухе, и
+   перед стеной висело тёмное кольцо.
+
+   Теперь воронка узкая: она снимает только то, что идёт впритык к оси
+   взгляда, а остальные звёзды доходят до самой стены. Скопление у точки
+   схода больше не мешает — за ним стоит глухая стена, на которой пыль
+   читается пылью. */
+const CLEAR_CONE = 0.06;
+
+/* ГДЕ КОНЧАЕТСЯ КОРИДОР.
+
+   Раньше пол и потолок обрывались на z = -50, а чёрный квадрат с золотой
+   рамкой стоял на -85 — в тридцати пяти единицах пустоты за ними. Оттого
+   конец коридора и выглядел сломанным: поверхности пропадали, рамка висела
+   сама по себе, а звёзды уходили в этот просвет.
+
+   Теперь у коридора есть настоящая задняя стена. Пол, потолок и боковые
+   стены доходят ровно до неё, квадрат с рамкой лежит на ней, а звёзды не
+   доживают до неё двух единиц. Стена непрозрачна и пишет глубину, поэтому
+   за неё ничего не просачивается. */
+const CORRIDOR_END = -38;                 // плоскость задней стены
+const CORRIDOR_BACK = 10;                 // передний край пола, за спиной
+const CORRIDOR_LEN = CORRIDOR_BACK - CORRIDOR_END;
+const CORRIDOR_MID = (CORRIDOR_BACK + CORRIDOR_END) / 2;
+const CORRIDOR_WIDE = 16;                 // ширина пола и задней стены
+const CORRIDOR_TALL = 7;                  // высота стен
+const CORRIDOR_FAR = CORRIDOR_END + 2;    // дальше звёзды не залетают
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -48,6 +77,7 @@ export class QuantumCorridorScene {
         this.onDoorSelect = onDoorSelectCallback;
         this.activeDoorMeshes = [];
         this.clock = new THREE.Clock();
+        this.starCamZ = 5;           // где стояла камера, когда звёзды считались
         this.isRunning = false;
         this.isSelecting = false;
         this.tunnelMode = false;
@@ -199,38 +229,53 @@ export class QuantumCorridorScene {
             transparent: false
         });
 
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(16, 100), floorMat);
-        floor.rotation.x = -Math.PI / 2; 
-        floor.position.y = -2.5;
-        
-        const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(16, 100), ceilMat);
-        ceiling.rotation.x = Math.PI / 2; 
-        ceiling.position.y = 4.5;
+        // Пол и потолок кончаются ровно на задней стене, не раньше
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_WIDE, CORRIDOR_LEN), floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(0, FLOOR_Y, CORRIDOR_MID);
+
+        const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_WIDE, CORRIDOR_LEN), ceilMat);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.set(0, CEIL_Y, CORRIDOR_MID);
 
         const wallX = this.wallX;
-        const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(100, 7), wallMat);
-        leftWall.rotation.y = Math.PI / 2; 
-        leftWall.position.set(-wallX, 1, -40);
+        const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_LEN, CORRIDOR_TALL), wallMat);
+        leftWall.rotation.y = Math.PI / 2;
+        leftWall.position.set(-wallX, 1, CORRIDOR_MID);
 
-        const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(100, 7), wallMat);
-        rightWall.rotation.y = -Math.PI / 2; 
-        rightWall.position.set(wallX, 1, -40);
+        const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_LEN, CORRIDOR_TALL), wallMat);
+        rightWall.rotation.y = -Math.PI / 2;
+        rightWall.position.set(wallX, 1, CORRIDOR_MID);
 
-        // Черный квадратик в самом конце коридора (без изменений)
-        const endSquareGeo = new THREE.PlaneGeometry(2.4, 4.2);
-        const endSquareMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const endSquare = new THREE.Mesh(endSquareGeo, endSquareMat);
-        endSquare.position.set(0, 1, -85);
+        /* Задняя стена — заглушка коридора.
 
-        // Светящаяся тонкая рамка вокруг черного квадрата
+           Непрозрачна и пишет глубину: всё, что окажется за ней, обрезается
+           сразу, и ни одна звезда больше не просачивается наружу.
+
+           Материал тот же, что у боковых стен, и освещается так же. Сперва
+           она была MeshBasicMaterial — свет её не касался, и на широком
+           экране она читалась светлой панелью, висящей отдельно от чёрных
+           стен. Теперь это просто дальняя стена того же коридора. */
+        const endWallMat = new THREE.MeshStandardMaterial({ color: 0x07090e, roughness: 0.8 });
+        const endWall = new THREE.Mesh(
+            new THREE.PlaneGeometry(CORRIDOR_WIDE, CORRIDOR_TALL + 1), endWallMat);
+        endWall.position.set(0, 1, CORRIDOR_END);
+
+        // Светящаяся тонкая рамка, на ней — чёрный квадрат
         const endFrameGeo = new THREE.BoxGeometry(2.5, 4.3, 0.05);
         const endFrameMat = new THREE.MeshBasicMaterial({ color: 0xe5a93c });
         const endFrame = new THREE.Mesh(endFrameGeo, endFrameMat);
-        endFrame.position.set(0, 1, -85.1);
+        endFrame.position.set(0, 1, CORRIDOR_END + 0.05);
+
+        const endSquareGeo = new THREE.PlaneGeometry(2.4, 4.2);
+        const endSquareMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const endSquare = new THREE.Mesh(endSquareGeo, endSquareMat);
+        endSquare.position.set(0, 1, CORRIDOR_END + 0.1);
 
         this.leftWall = leftWall;
         this.rightWall = rightWall;
-        this.corridorGroup.add(floor, ceiling, leftWall, rightWall, endSquare, endFrame);
+        this.endWall = endWall;
+        this.corridorGroup.add(floor, ceiling, leftWall, rightWall, endWall, endFrame, endSquare);
     }
 
     /* Одна звезда у одной из четырёх поверхностей коридора.
@@ -238,44 +283,55 @@ export class QuantumCorridorScene {
        Сторона выбирается поровну, поэтому стены, пол и потолок заселены
        одинаково. Глубина — небольшой отступ внутрь от поверхности, так что
        сердцевина коридора остаётся пустой сама собой, без отдельных
-       проверок. */
-    spawnParticleOnSurface(index) {
+       проверок.
+
+       Место по ширине и высоте звезде даётся один раз и на всю жизнь:
+       плывёт она только вдоль коридора. Вместе с местом считаются её
+       собственные края по глубине — ближний и дальний, — и дальше она
+       ходит между ними по кругу. Поэтому плотность звёзд держится ровной
+       всё время, а не только в первую секунду.
+
+       Раньше отработавшая звезда отправлялась на общий дальний край. Все
+       они приходили в одну и ту же плоскость, и у конца коридора копилась
+       светящаяся стенка — это и был мусор, который ты видела. */
+    placeStar(layer, index) {
         const innerX = Math.max(0.4, this.wallX - SURFACE_GAP);
         const side = Math.floor(Math.random() * 4);   // 0 левая, 1 правая, 2 потолок, 3 пол
         const depth = Math.random() * SHELL_DEPTH;
+        let x, y;
 
         if (side === 0) {
-            this.pTargets[index * 3] = -innerX + depth;
-            this.pTargets[index * 3 + 1] = FLOOR_Y + Math.random() * (CEIL_Y - FLOOR_Y);
+            x = -innerX + depth;
+            y = FLOOR_Y + Math.random() * (CEIL_Y - FLOOR_Y);
         } else if (side === 1) {
-            this.pTargets[index * 3] = innerX - depth;
-            this.pTargets[index * 3 + 1] = FLOOR_Y + Math.random() * (CEIL_Y - FLOOR_Y);
+            x = innerX - depth;
+            y = FLOOR_Y + Math.random() * (CEIL_Y - FLOOR_Y);
         } else if (side === 2) {
-            this.pTargets[index * 3] = (Math.random() * 2 - 1) * innerX;
-            this.pTargets[index * 3 + 1] = CEIL_Y - SURFACE_GAP - depth;
+            x = (Math.random() * 2 - 1) * innerX;
+            y = CEIL_Y - SURFACE_GAP - depth;
         } else {
-            this.pTargets[index * 3] = (Math.random() * 2 - 1) * innerX;
-            this.pTargets[index * 3 + 1] = FLOOR_Y + SURFACE_GAP + depth;
+            x = (Math.random() * 2 - 1) * innerX;
+            y = FLOOR_Y + SURFACE_GAP + depth;
         }
 
-        /* Глубина — по всей длине коридора, но с пустой воронкой вдоль взгляда.
+        /* Пустая воронка вдоль взгляда.
 
            Чем ближе звезда к оси взгляда, тем раньше ей предел по глубине.
            Иначе дальние звёзды сходятся в точку схода и собираются там в
-           облако — именно оно и выглядело скоплением в конце коридора, —
-           а чёрный квадрат за ними переставал читаться пустотой. */
+           облако, а чёрный квадрат за ними перестаёт читаться пустотой. */
         const near = this.particleNearZ();
-        const radial = Math.hypot(
-            this.pTargets[index * 3],
-            this.pTargets[index * 3 + 1] - this.camera.position.y
-        );
+        const radial = Math.hypot(x, y - this.camera.position.y);
         const far = Math.max(CORRIDOR_FAR, this.camera.position.z - radial / CLEAR_CONE);
 
-        /* Вглубь звёзд меньше. Перспектива и так сгущает дальние — при
-           ровной плотности по объёму конец коридора выглядел бы гуще
-           начала. Смещение по глубине это выравнивает. */
-        const alongZ = Math.pow(Math.random(), 1.7);
-        this.pTargets[index * 3 + 2] = near - alongZ * (near - far);
+        layer.x[index] = x;
+        layer.y[index] = y;
+        layer.near[index] = near;
+        layer.far[index] = far;
+    }
+
+    // Ближе этого к камере пылинок не бывает; работает и на ходу по коридору
+    particleNearZ() {
+        return this.camera.position.z - PARTICLE_NEAR;
     }
 
     /* Круглая пылинка вместо квадрата.
@@ -310,58 +366,123 @@ export class QuantumCorridorScene {
         return texture;
     }
 
-    // Рубеж, ближе которого пылинок не бывает. Едет вместе с камерой, поэтому
-    // работает и когда человек идёт по коридору пальцем.
-    particleNearZ() {
-        return this.camera.position.z - PARTICLE_NEAR;
+    /* ТРИ СЛОЯ ЗВЁЗД РАЗНОГО РАЗМЕРА.
+
+       Прежде все пылинки были одного размера — коридор от этого читался
+       плоским: по одинаковым точкам глаз не понимает, что ближе, а что
+       дальше. Теперь звёзд три сорта. Мелкой пыли много, она держит фон;
+       средних меньше; крупных совсем немного, и они проплывают близко,
+       заметно обгоняя остальных.
+
+       Размер на экране всё равно падает с расстоянием (sizeAttenuation),
+       так что вместе эти три сорта дают разброс примерно от половины
+       пикселя у дальней пыли до трёх с половиной у ближней крупной. */
+    buildPerimeterParticles() {
+        const kinds = [
+            { count: 1100, size: 0.035, color: 0xbfd0ff, slow: 0.25, fast: 0.70 },
+            { count: 550,  size: 0.055, color: 0xffe9b5, slow: 0.50, fast: 1.40 },
+            { count: 150,  size: 0.090, color: 0xfff6de, slow: 0.95, fast: 2.30 }
+        ];
+
+        const sprite = this.createParticleSprite();
+        this.starLayers = [];
+        this.particleCount = kinds.reduce((sum, kind) => sum + kind.count, 0);
+
+        for (const kind of kinds) {
+            const layer = {
+                count: kind.count,
+                pos: new Float32Array(kind.count * 3),
+                x: new Float32Array(kind.count),
+                y: new Float32Array(kind.count),
+                near: new Float32Array(kind.count),
+                far: new Float32Array(kind.count),
+                speed: new Float32Array(kind.count)
+            };
+
+            for (let i = 0; i < kind.count; i++) {
+                this.placeStar(layer, i);
+                layer.speed[i] = kind.slow + Math.random() * (kind.fast - kind.slow);
+
+                // Первый раз звёзды раскиданы по всей длине, а не выстроены
+                // в одну плоскость: коридор полон с первого кадра.
+                const span = layer.near[i] - layer.far[i];
+                layer.pos[i * 3] = layer.x[i];
+                layer.pos[i * 3 + 1] = layer.y[i];
+                layer.pos[i * 3 + 2] = layer.far[i] + Math.random() * span;
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(layer.pos, 3));
+
+            /* Светящаяся пыль: круглая карта, сложение света, без записи глубины.
+
+               depthWrite: false — чтобы пылинки не загораживали друг друга и
+               не спорили за глубину. Проверка глубины остаётся включённой,
+               поэтому стены коридора и задняя заглушка их закрывают. */
+            layer.mat = new THREE.PointsMaterial({
+                color: kind.color,
+                size: kind.size,
+                sizeAttenuation: true,
+                map: sprite,
+                transparent: true,
+                opacity: 1,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            layer.mesh = new THREE.Points(geo, layer.mat);
+            this.corridorGroup.add(layer.mesh);
+            this.starLayers.push(layer);
+        }
     }
 
-    buildPerimeterParticles() {
-        this.particleCount = 1600; // Увеличенное число частиц для полного заполнения пространства
-        const pGeo = new THREE.BufferGeometry();
-        const pPos = new Float32Array(this.particleCount * 3);
+    // Звёзды коридора целиком: прячутся на время прыжка в туннель
+    setStarsVisible(visible) {
+        if (!this.starLayers) return;
+        for (const layer of this.starLayers) layer.mesh.visible = visible;
+    }
 
-        this.pTargets = new Float32Array(this.particleCount * 3);
-        this.pVelocities = new Float32Array(this.particleCount * 3); // Плавные вектора скорости
+    /* Ход звёзд: только вдоль коридора, шагом по времени кадра.
 
-        for (let i = 0; i < this.particleCount; i++) {
-            this.spawnParticleOnSurface(i);
+       Шаг считается от clock.getDelta(), поэтому на быстром и на медленном
+       телефоне звёзды плывут одинаково, а не дёргаются вслед за частотой
+       кадров.
 
-            // Частицы предварительно плотно распределены по объему с первой секунды
-            pPos[i * 3] = this.pTargets[i * 3];
-            pPos[i * 3 + 1] = this.pTargets[i * 3 + 1];
-            pPos[i * 3 + 2] = this.pTargets[i * 3 + 2];
+       Дойдя до своего ближнего края, звезда уходит на свой же дальний — не
+       на общий. Каждая ходит по своему отрезку, поэтому ни общей плоскости
+       прилёта, ни провала в плотности не возникает. */
+    moveStars(delta) {
+        if (!this.starLayers) return;
+        const shift = this.camera.position.z - this.starCamZ;
+        this.starCamZ = this.camera.position.z;
 
-            /* Движение только вдоль коридора.
+        for (const layer of this.starLayers) {
+            const pos = layer.mesh.geometry.attributes.position.array;
 
-               Боковой снос убран намеренно: звезда живёт в кадре около
-               сорока секунд, и прежнего сноса хватало, чтобы она ушла из
-               своей оболочки в середину коридора или сквозь стену. */
-            this.pVelocities[i * 3] = 0;
-            this.pVelocities[i * 3 + 1] = 0;
-            this.pVelocities[i * 3 + 2] = 0.5 + Math.random() * 1.5; // Медленно плывут на камеру
+            for (let i = 0; i < layer.count; i++) {
+                // Человек прошёл по коридору — края едут вместе с ним
+                if (shift !== 0) {
+                    layer.near[i] += shift;
+                    layer.far[i] = Math.max(CORRIDOR_FAR, layer.far[i] + shift);
+                }
+
+                let z = pos[i * 3 + 2] + layer.speed[i] * delta;
+                const near = layer.near[i];
+                const far = layer.far[i];
+                const span = near - far;
+
+                if (span > 0.5) {
+                    while (z > near) z -= span;
+                    if (z < far) z = far;
+                } else if (z > near) {
+                    z = far;
+                }
+
+                pos[i * 3 + 2] = z;
+            }
+
+            layer.mesh.geometry.attributes.position.needsUpdate = true;
         }
-
-        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-        // Светящаяся пыль: круглая карта, сложение света, без записи глубины.
-        //
-        // depthWrite: false — чтобы пылинки не загораживали друг друга и не
-        // спорили за глубину. Проверка глубины остаётся включённой, поэтому
-        // стены коридора по-прежнему их закрывают.
-        this.particlesMat = new THREE.PointsMaterial({
-            color: 0xffe9b5,
-            // Звёзды теперь идут вдоль всего коридора и проходят вплотную,
-            // поэтому размер меньше прежнего: иначе ближняя разрослась бы
-            // в пятно на пол-экрана.
-            size: 0.055,
-            map: this.createParticleSprite(),
-            transparent: true,
-            opacity: 1,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending
-        });
-        this.particlesMesh = new THREE.Points(pGeo, this.particlesMat);
-        this.corridorGroup.add(this.particlesMesh);
     }
 
     buildDoorExplosion() {
@@ -538,13 +659,14 @@ export class QuantumCorridorScene {
         this.tunnelMode = false;
         this.introBurst = 0; 
         this.corridorGroup.visible = true;
-        this.particlesMesh.visible = true;
+        this.setStarsVisible(true);
         this.tunnelMesh.visible = false;
         this.scene.background = null;
         this.camera.position.set(0, 1, 5);
         this.camera.rotation.set(0, 0, 0);
         this.viewYaw = 0;
         this.walkZ = 5;
+        this.starCamZ = 5;
 
         /* Возвращаем угол обзора коридора.
 
@@ -570,24 +692,7 @@ export class QuantumCorridorScene {
         const delta = this.clock.getDelta();
 
         if (!this.tunnelMode) {
-            // Рассредоточенные плавающие частицы
-            const positions = this.particlesMesh.geometry.attributes.position.array;
-            const nearZ = this.particleNearZ();
-            for (let i = 0; i < this.particleCount; i++) {
-                positions[i * 3] += this.pVelocities[i * 3] * delta;
-                positions[i * 3 + 1] += this.pVelocities[i * 3 + 1] * delta;
-                positions[i * 3 + 2] += this.pVelocities[i * 3 + 2] * delta;
-
-                // Зацикливание: когда частицы выходят за камеру, они возвращаются глубоко назад (-140)
-                if (positions[i * 3 + 2] > nearZ) {
-                    this.spawnParticleOnSurface(i);
-                    positions[i * 3] = this.pTargets[i * 3];
-                    positions[i * 3 + 1] = this.pTargets[i * 3 + 1];
-                    positions[i * 3 + 2] = CORRIDOR_FAR;
-                }
-            }
-            this.particlesMesh.geometry.attributes.position.needsUpdate = true;
-            
+            this.moveStars(delta);
         } else {
             const positions = this.tunnelMesh.geometry.attributes.position.array;
             for (let i = 0; i < this.tunnelCount; i++) {
@@ -902,6 +1007,26 @@ export class QuantumCorridorScene {
         if (this.rightWall) this.rightWall.position.x = this.wallX;
         for (const door of this.activeDoorMeshes) {
             door.group.position.x = door.isLeft ? -this.doorX : this.doorX;
+        }
+        // Стены переехали — звёзды переставляются к ним, иначе часть
+        // осталась бы висеть снаружи коридора
+        this.rebuildStars();
+    }
+
+    // Раздать звёздам новые места у нынешних стен, сохранив их скорости
+    rebuildStars() {
+        if (!this.starLayers) return;
+        this.starCamZ = this.camera.position.z;
+
+        for (const layer of this.starLayers) {
+            for (let i = 0; i < layer.count; i++) {
+                this.placeStar(layer, i);
+                const span = layer.near[i] - layer.far[i];
+                layer.pos[i * 3] = layer.x[i];
+                layer.pos[i * 3 + 1] = layer.y[i];
+                layer.pos[i * 3 + 2] = layer.far[i] + Math.random() * span;
+            }
+            layer.mesh.geometry.attributes.position.needsUpdate = true;
         }
     }
 }
