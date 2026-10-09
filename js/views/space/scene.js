@@ -69,6 +69,26 @@ const CORRIDOR_WIDE = 16;                 // ширина пола и задне
 const CORRIDOR_TALL = 7;                  // высота стен
 const CORRIDOR_FAR = CORRIDOR_END + 2;    // дальше звёзды не залетают
 
+/* ТУННЕЛЬ ПРЫЖКА.
+
+   Частицы летят на камеру, стоящую в начале координат. Глубина подобрана
+   так, чтобы весь поток был виден: дальше ста пятидесяти единиц точка
+   меньше пикселя при любом разумном размере. */
+const TUNNEL_NEAR = 6;                    // где частица обгоняет камеру
+const TUNNEL_DEPTH = 70;                  // длина трубы
+const TUNNEL_SPEED = 130;                 // единиц в секунду
+
+/* Труба, а не рой.
+
+   Частицы живут тонкой стенкой на одном радиусе, а не заполняют весь
+   объём. Тогда у трубы есть стенка: вблизи она проносится по краям
+   кадра, вдали сходится в кольцо, а середина остаётся пустой — в неё и
+   летишь. Прежде радиус был от 3 до 7, частицы попадали и на саму ось,
+   и вместо трубы получался звёздный разлёт из середины экрана. */
+const TUNNEL_R_MIN = 8.0;                 // внутренняя стенка
+const TUNNEL_R_MAX = 9.4;                 // внешняя стенка
+const TUNNEL_BEND = 6;                    // насколько труба уводит в сторону
+
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export class QuantumCorridorScene {
@@ -522,7 +542,7 @@ export class QuantumCorridorScene {
     }
 
     buildQuantumTunnel() {
-        this.tunnelCount = 5000;
+        this.tunnelCount = 12000;
         const tGeo = new THREE.BufferGeometry();
         const tPos = new Float32Array(this.tunnelCount * 3);
         
@@ -531,13 +551,35 @@ export class QuantumCorridorScene {
 
         for (let i = 0; i < this.tunnelCount; i++) {
             this.tunnelAngles[i] = Math.random() * Math.PI * 2;
-            this.tunnelRadii[i] = 3.0 + Math.random() * 4.0; 
-            tPos[i * 3 + 2] = 10 - Math.random() * 250; 
+            this.tunnelRadii[i] = TUNNEL_R_MIN + Math.random() * (TUNNEL_R_MAX - TUNNEL_R_MIN);
+            tPos[i * 3 + 2] = TUNNEL_NEAR - Math.random() * TUNNEL_DEPTH;
         }
-        
+
         tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3));
+
+        /* ПОЧЕМУ ТУННЕЛЬ БЫЛ НЕ ВИДЕН.
+
+           У частиц стоял размер 0.03 при включённом затухании по
+           расстоянию. Размер точки на экране равен размеру, умноженному на
+           высоту кадра и делённому на расстояние: на 20 единицах это 0.6
+           пикселя, на сотне — 0.13. Весь туннель уходил мельче пикселя, и
+           после вспышки двери человек видел чёрный экран с еле заметной
+           крупинкой в середине. Полёта не было никогда.
+
+           Теперь размер 0.3 и круглая карта — та же, что у звёзд коридора.
+           На двадцати единицах это шесть пикселей, у самой камеры — крупная
+           светящаяся черта. Длина трубы укорочена с 250 до 70 единиц:
+           дальний край сходился в точку, труба теряла жерло, а считался он
+           каждый кадр. На семидесяти единицах дальнее кольцо ещё читается
+           кольцом — и в него летишь. */
         this.tunnelMat = new THREE.PointsMaterial({
-            color: 0xffffff, size: 0.03, transparent: true, blending: THREE.AdditiveBlending
+            color: 0xffffff,
+            size: 0.3,
+            sizeAttenuation: true,
+            map: this.createParticleSprite(),
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
         });
         this.tunnelMesh = new THREE.Points(tGeo, this.tunnelMat);
         this.tunnelMesh.visible = false; 
@@ -705,15 +747,15 @@ export class QuantumCorridorScene {
         } else {
             const positions = this.tunnelMesh.geometry.attributes.position.array;
             for (let i = 0; i < this.tunnelCount; i++) {
-                let z = positions[i * 3 + 2] + 200.0 * delta; 
-                if (z > 5) z = -250; 
+                let z = positions[i * 3 + 2] + TUNNEL_SPEED * delta;
+                if (z > TUNNEL_NEAR) z = TUNNEL_NEAR - TUNNEL_DEPTH;
                 positions[i * 3 + 2] = z;
 
                 const angle = this.tunnelAngles[i];
                 const r = this.tunnelRadii[i];
                 
-                const bendX = (Math.sin(z * 0.015)) * 8;
-                const bendY = (Math.cos(z * 0.01) - 1) * 8; 
+                const bendX = Math.sin(z * 0.015) * TUNNEL_BEND;
+                const bendY = (Math.cos(z * 0.01) - 1) * TUNNEL_BEND;
                 
                 positions[i * 3] = Math.cos(angle) * r + bendX;
                 positions[i * 3 + 1] = Math.sin(angle) * r + bendY;

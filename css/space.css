@@ -253,10 +253,13 @@
 
 /* Кнопка «Отложить» — приглушённый вариант */
 /* Повторяет обычную .btn Ежедневника */
+/* Отсрочка. Стоит во всплывающем окне «Окно возможностей открыто», под
+   золотой кнопкой входа, и держит её же золотой строй: тёмная заливка,
+   золотой контур, золотая надпись. */
 .qm-root .btn-snooze {
     background: var(--qm-panel-2);
-    color: var(--qm-text);
-    border: 1px solid var(--qm-border-strong);
+    color: var(--qm-gold-lit);
+    border: 1px solid var(--qm-gold-line);
     min-height: 48px;
     padding: 0 16px;
     border-radius: var(--qm-radius-sm);
@@ -264,9 +267,11 @@
     font-family: var(--qm-font);
     font-size: 14px;
     font-weight: 600;
-    margin-top: 14px;
-    transition: box-shadow 0.18s ease;
+    margin-top: 10px;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease;
 }
+
+.qm-root .btn-snooze.hidden { display: none; }
 
 .qm-root .btn-snooze:hover,
 .qm-root .btn-snooze:active,

@@ -54,7 +54,12 @@ export const TEMPLATE = [
     '        </div>',
     '        <p class="modal-warning" data-i18n="modalWarning"></p>',
     '        <button id="btn-modal-start" class="btn-gold qm-block" data-i18n="modalBtnStart">Войти в суперпозицию</button>',
-    '        <button id="btn-modal-later" class="btn-link qm-block" data-i18n="modalBtnLater">Позже</button>',
+
+    /* Отсрочка живёт здесь, а не в хрониках: откладывать есть смысл в тот
+       миг, когда окно открылось и человек занят, — а не после перехода,
+       когда откладывать уже нечего. Надпись ставит updateSnoozeButtonUI:
+       в ней счётчик оставшихся отсрочек. */
+    '        <button type="button" id="btn-snooze" class="btn-snooze qm-block hidden"></button>',
     '    </div>',
     '</div>',
 
@@ -183,7 +188,6 @@ export const TEMPLATE = [
     '    <div class="qm-chronicles-wrap">',
     '        <div class="qm-cooldown-panel">',
     '            <div id="s5-cooldown-timer"></div>',
-    '            <button id="btn-snooze" class="btn-snooze hidden"></button>',
     '        </div>',
     '        <div class="qm-chronicles-head">',
     '            <h3 id="txt-s5-title" data-i18n="screen5Title"></h3>',

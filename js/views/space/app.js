@@ -443,7 +443,6 @@ export class QuantumApp {
         const playZone = document.getElementById('btn-s3-play');
         if (playZone) playZone.addEventListener('click', () => this.toggleDoorAudio());
         document.getElementById('btn-s4-save').addEventListener('click', () => this.activateAkasha());
-        document.getElementById('btn-snooze').addEventListener('click', () => this.handleSnooze());
 
         // Крестик не закрывает раздел сам: он лишь сообщает об этом наружу,
         // а что делать дальше — решает тот, кто модуль подключил.
@@ -462,9 +461,14 @@ export class QuantumApp {
             this.triggerSandShower(() => this.checkFirstTimeOrCorridor());
         });
 
-        document.getElementById('btn-modal-later').addEventListener('click', () => {
-            this.hideOpportunityModal();
-        });
+        // Отложить на десять минут прямо из окна и закрыть его
+        const snooze = document.getElementById('btn-snooze');
+        if (snooze) {
+            snooze.addEventListener('click', () => {
+                this.handleSnooze();
+                this.hideOpportunityModal();
+            });
+        }
     }
 
     updateSpeedUI() {
@@ -1688,6 +1692,7 @@ export class QuantumApp {
 
     updateSnoozeButtonUI() {
         const btn = document.getElementById('btn-snooze');
+        if (!btn) return;
         if (this.notifications.canSnooze()) {
             btn.classList.remove('hidden');
             btn.innerText = `${this.t('btnSnooze')} (${3 - this.notifications.snoozeCount}/3)`;
@@ -1698,7 +1703,10 @@ export class QuantumApp {
 
     showOpportunityModal() {
         const modal = document.getElementById('modal-opportunity');
-        if (modal) modal.classList.remove('hidden');
+        if (!modal) return;
+        // Счётчик оставшихся отсрочек всегда свежий к моменту показа
+        this.updateSnoozeButtonUI();
+        modal.classList.remove('hidden');
     }
 
     hideOpportunityModal() {
@@ -1744,11 +1752,9 @@ export class QuantumApp {
                         modalTimerVal.innerText = `${mins}мин ${secs}сек`;
                     }
 
-                    if (disp) {
-                        disp.innerText = this.t('windowOpen');
-                        const snoozeBtn = document.getElementById('btn-snooze');
-                        if (snoozeBtn) snoozeBtn.classList.add('hidden');
-                    }
+                    // Кнопка отсрочки теперь живёт во всплывающем окне, и
+                    // показывает её showOpportunityModal — прятать нечего
+                    if (disp) disp.innerText = this.t('windowOpen');
 
                     if (!this.windowTriggered) {
                         this.windowTriggered = true;
