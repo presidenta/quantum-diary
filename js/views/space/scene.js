@@ -87,7 +87,38 @@ const TUNNEL_SPEED = 130;                 // единиц в секунду
    и вместо трубы получался звёздный разлёт из середины экрана. */
 const TUNNEL_R_MIN = 8.0;                 // внутренняя стенка
 const TUNNEL_R_MAX = 9.4;                 // внешняя стенка
-const TUNNEL_BEND = 6;                    // насколько труба уводит в сторону
+
+/* ИЗГИБ ТРУБЫ.
+
+   Прежний изгиб шёл по одной очень длинной волне: её период был около
+   четырёхсот двадцати единиц при длине трубы в семьдесят. На всю трубу
+   приходилась седьмая часть волны — труба просто чуть кренилась в одну
+   сторону и никуда не поворачивала.
+
+   Теперь период волны сопоставим с длиной трубы: по горизонтали она
+   успевает увести вправо и обратно влево, по вертикали качает медленнее и
+   не в такт — выходит живой извив, а не синусоида в одной плоскости.
+
+   Вдобавок волна едет навстречу: поворот не стоит на месте, а наплывает,
+   как и должно быть, когда летишь. Скорость наплыва мала по сравнению со
+   скоростью песчинок, иначе труба виляла бы, как хвост.
+
+   У самой камеры изгиба нет: множитель растёт от нуля у носа до единицы в
+   конце трубы. Иначе стенка оказалась бы сдвинута прямо на глазах и в неё
+   пришлось бы влететь. */
+const TUNNEL_BEND = 11;                   // насколько труба уводит в сторону
+const TUNNEL_WAVE_X = 0.085;              // период по горизонтали ≈ 74 единицы
+const TUNNEL_WAVE_Y = 0.055;              // по вертикали медленнее и не в такт
+
+/* Скорость, с которой поворот наплывает.
+
+   Полёт длится около двух секунд. При медленном наплыве за это время
+   труба успевала качнуться на шестую часть волны — поворота не видно
+   вовсе. При 2.2 рад/с полный извив занимает без малого три секунды: за
+   полёт труба уводит в одну сторону и начинает возвращаться. Вертикаль
+   идёт не в такт, поэтому путь получается винтовым, а не маятником. */
+const TUNNEL_DRIFT_X = 2.2;
+const TUNNEL_DRIFT_Y = 1.5;
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -574,7 +605,7 @@ export class QuantumCorridorScene {
     }
 
     buildQuantumTunnel() {
-        this.tunnelCount = 12000;
+        this.tunnelCount = 6000;
         const tGeo = new THREE.BufferGeometry();
         const tPos = new Float32Array(this.tunnelCount * 3);
         
@@ -606,7 +637,7 @@ export class QuantumCorridorScene {
            кольцом — и в него летишь. */
         this.tunnelMat = new THREE.PointsMaterial({
             color: 0xffffff,
-            size: 0.38,
+            size: 0.19,
             sizeAttenuation: true,
             map: this.createGrainSprite(),
             transparent: true,
@@ -778,6 +809,7 @@ export class QuantumCorridorScene {
             this.moveStars(delta);
         } else {
             const positions = this.tunnelMesh.geometry.attributes.position.array;
+            const now = this.clock.getElapsedTime();
             for (let i = 0; i < this.tunnelCount; i++) {
                 let z = positions[i * 3 + 2] + TUNNEL_SPEED * delta;
                 if (z > TUNNEL_NEAR) z = TUNNEL_NEAR - TUNNEL_DEPTH;
@@ -785,10 +817,14 @@ export class QuantumCorridorScene {
 
                 const angle = this.tunnelAngles[i];
                 const r = this.tunnelRadii[i];
-                
-                const bendX = Math.sin(z * 0.015) * TUNNEL_BEND;
-                const bendY = (Math.cos(z * 0.01) - 1) * TUNNEL_BEND;
-                
+
+                // Ноль у камеры, единица в конце трубы: нос всегда прямой
+                const away = Math.min(1, (TUNNEL_NEAR - z) / TUNNEL_DEPTH);
+                const sway = away * away * TUNNEL_BEND;
+
+                const bendX = Math.sin(z * TUNNEL_WAVE_X + now * TUNNEL_DRIFT_X) * sway;
+                const bendY = Math.cos(z * TUNNEL_WAVE_Y + now * TUNNEL_DRIFT_Y) * sway * 0.7;
+
                 positions[i * 3] = Math.cos(angle) * r + bendX;
                 positions[i * 3 + 1] = Math.sin(angle) * r + bendY;
             }
