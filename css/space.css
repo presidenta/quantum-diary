@@ -1366,12 +1366,6 @@
     line-height: 0;
 }
 
-.qm-root .qm-act-face::before {
-    content: "\1F97A";
-    font-size: 48px;
-    line-height: 1;
-    display: inline-block;
-}
 
 /* Пластина с надписью: утоплена в капсулу, своя фаска и своя рамка */
 .qm-root .qm-act-main {
@@ -1466,18 +1460,14 @@
    открываются, когда уходит. Класс ставит app.js: одного :hover мало —
    на телефоне он остаётся «залипшим» после касания, и смайлик закрывал
    глаза навсегда. Окончательно глаза закрываются уже на экране отсчёта. */
-.qm-root .qm-act.qm-eyes-shut .qm-act-face::before { content: "\1F60C"; }
 
 @media (hover: hover) and (pointer: fine) {
-    .qm-root .qm-act:hover .qm-act-face::before { content: "\1F60C"; }
 }
 
-.qm-root .qm-act:active .qm-act-face::before { content: "\1F60C"; }
 
 /* Узкий телефон: надпись мельче, круг меньше — чтобы капсула не ломалась */
 @media (max-width: 400px) {
     .qm-root .qm-act { gap: 7px; padding: 8px 9px 8px 7px; border-radius: 14px; }
-    .qm-root .qm-act-face::before { font-size: 40px; }
     .qm-root .qm-act-main { font-size: 17px; min-height: 54px; padding: 7px 10px; }
     .qm-root .qm-act-play { width: 52px; height: 52px; }
     .qm-root .qm-play-glyph { border-width: 10px 0 10px 16px; }
@@ -1708,4 +1698,280 @@
 /* Кому движение мешает — тому без движения */
 @media (prefers-reduced-motion: reduce) {
     .qm-root .qm-tome.qm-tome-on .qm-tome-flare { animation: none; }
+}
+
+
+/* ============================================================================
+   ЗОЛОТО С ФОТОПЛАСТИН — ПЕРЕНОС СО СТРАНИЦЫ ВЫБОРА
+
+   До сих пор золото рисовалось градиентами: слои бликов, отражение,
+   отсвет снизу. Издали похоже, вблизи видно, что это рисунок. Владелец
+   выбрал настоящие пластины — снимки полированного металла, нарезанные
+   по кнопкам. Градиентная отливка больше не применяется к вкладкам и
+   капсуле, но из --pult-* никуда не делась; там же лежит перелив
+   кромки --pult-rim, и у фотопластин он остаётся прежним.
+
+   ПРИЁМ. Рамка объявляется прозрачной, и её место занимает нижний слой
+   фона, прижатый к border-box; пластина кладётся верхним слоем в
+   padding-box. Списки origin и clip обязаны совпадать по длине с
+   числом слоёв, иначе браузер повторит первое значение и кромка
+   зальётся пластиной.
+
+   ФУНКЦИОНАЛ НЕ ТРОНУТ: меняются поверхности, цвета и форма знака. Что
+   куда ведёт, что чем переключается и какие классы ставит скрипт —
+   всё как было.
+   ========================================================================== */
+
+/* ---- Вкладки -------------------------------------------------------------
+   Раньше невыбранная вкладка была тёмной, а выбранная золотой. Владелец
+   попросил все золотые — так на макете. Но различать выбранную всё равно
+   надо, иначе непонятно, где ты находишься: теперь её метит не цвет, а
+   тёплый ореол вокруг. Пластина у каждой своя и постоянная, меняется
+   только свечение. */
+.qm-tab,
+.qm-tab:hover,
+.qm-tab:focus-visible,
+.qm-tab:active,
+.qm-tab.active {
+    color: var(--pult-ink, #231703);
+    background-image: url(../img/gold/n01.jpg), var(--pult-rim);
+    background-repeat: no-repeat, no-repeat;
+    background-position: center, center;
+    background-size: cover, auto;
+    background-origin: padding-box, border-box;
+    background-clip: padding-box, border-box;
+    box-shadow: var(--pult-bar-edge);
+}
+.qm-tabs .qm-tab:nth-child(2),
+.qm-tabs .qm-tab:nth-child(2):hover,
+.qm-tabs .qm-tab:nth-child(2):focus-visible,
+.qm-tabs .qm-tab:nth-child(2):active,
+.qm-tabs .qm-tab:nth-child(2).active {
+    background-image: url(../img/gold/n02.jpg), var(--pult-rim);
+}
+.qm-tab:hover,
+.qm-tab.active {
+    box-shadow:
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 0 3px rgba(255, 216, 124, .34),
+        0 0 22px rgba(255, 214, 120, .62),
+        0 4px 12px rgba(0, 0, 0, .65);
+}
+
+/* ---- Капсула перехода ----------------------------------------------------
+   Общая плита — своя пластина, в неё утоплены три части: круг со
+   смайликом, панель с надписью и круг с Play. У каждой части своя
+   пластина, своя кромка и две внутренние тени — тёмная сверху, светлая
+   снизу. Это зеркало приёма выпуклой кнопки: у неё свет сверху, у
+   утопленного гнезда наоборот, и глубина читается без единой
+   дополнительной картинки. */
+.qm-root .qm-act {
+    gap: 12px;
+    padding: 8px;
+    border: 2px solid transparent;
+    border-radius: 18px;
+    background:
+        url(../img/gold/sv-big.jpg) center/cover no-repeat padding-box,
+        var(--pult-rim) border-box;
+    box-shadow: var(--pult-bar-edge);
+}
+.qm-root .qm-act.qm-act-pressed {
+    transform: translateY(2px);
+    box-shadow:
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 30px rgba(255, 224, 140, .55),
+        0 2px 7px rgba(0, 0, 0, .6);
+}
+
+.qm-root .qm-act-face,
+.qm-root .qm-act-play {
+    flex: none;
+    width: 66px;
+    height: 66px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background:
+        url(../img/gold/sv-c2.jpg) center/cover no-repeat padding-box,
+        var(--pult-rim) border-box;
+    box-shadow:
+        inset 0 3px 7px rgba(46, 30, 4, .5),
+        inset 0 -2px 5px rgba(255, 248, 222, .4),
+        0 0 0 1px rgba(10, 8, 4, .9);
+}
+.qm-root .qm-act-face {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+/* ---- Смайлик, вариант Л7 -------------------------------------------------
+   Не картинка и не эмодзи: эмодзи приносит свой кружок и свой цвет, а
+   кружок здесь золотой, из той же пластины. Поэтому по золоту идут
+   только черты. Каждая — дуга из одной границы коробки, скруглённой
+   наполовину; тем же приёмом рисуется закрытый глаз, только дуга
+   смотрит вверх. Цвет тёмный, со светлым подбоем снизу: так черты
+   читаются выбитыми в металле, а не наклеенными поверх. */
+.qm-root .qm-act-face i {
+    position: absolute;
+    display: block;
+    border-color: #2A1C02;
+    border-style: solid;
+    border-width: 0;
+    filter: drop-shadow(0 1px 0 rgba(255, 248, 222, .55));
+}
+.qm-root .qm-act-face .qm-brow {
+    width: 14px; height: 6px;
+    border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+    top: 23%;
+}
+.qm-root .qm-act-face .qm-brow-l { left: 17%; transform: rotate(-6deg); }
+.qm-root .qm-act-face .qm-brow-r { right: 17%; transform: rotate(6deg); }
+
+/* Глаз: верх круглый, низ подобран — поднятое нижнее веко, главная
+   примета довольного взгляда. Бликов два: крупный сверху и мелкая искра
+   с другой стороны. Один блик — отражение, два — влажный живой глаз. */
+.qm-root .qm-act-face .qm-eye {
+    width: 14px; height: 16px; top: 42%;
+    background: #1E1402;
+    border-radius: 50% 50% 38% 38% / 58% 58% 40% 40%;
+    box-shadow: 0 1px 1.5px rgba(255, 248, 222, .55);
+}
+.qm-root .qm-act-face .qm-eye-l { left: 16%; }
+.qm-root .qm-act-face .qm-eye-r { right: 16%; }
+.qm-root .qm-act-face .qm-eye::before {
+    content: ""; position: absolute;
+    left: 20%; top: 16%; width: 6px; height: 6px;
+    border-radius: 50%; background: #FFFFFF;
+}
+.qm-root .qm-act-face .qm-eye::after {
+    content: ""; position: absolute;
+    right: 18%; bottom: 20%; width: 3px; height: 3px;
+    border-radius: 50%; background: rgba(255, 255, 255, .9);
+}
+.qm-root .qm-act-face .qm-mouth {
+    width: 19px; height: 12px; left: 50%; margin-left: -9.5px; top: 69%;
+    border-bottom-width: 2.5px; border-radius: 0 0 50% 50%;
+}
+.qm-root .qm-act-face .qm-cheek {
+    width: 11px; height: 7px; border-radius: 50%; top: 62%;
+    background: radial-gradient(ellipse at 50% 50%,
+        rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.qm-root .qm-act-face .qm-cheek-l { left: 7%; }
+.qm-root .qm-act-face .qm-cheek-r { right: 7%; }
+
+/* Зажмурился. Класс ставит app.js — так и было, трогать нечего. Глаз
+   превращается в дугу вверх: заливка снимается, остаётся одна верхняя
+   граница. Блики при этом обязаны исчезнуть, иначе они висят в воздухе
+   над закрытым глазом. */
+.qm-root .qm-act.qm-eyes-shut .qm-act-face .qm-eye,
+.qm-root .qm-act:active .qm-act-face .qm-eye {
+    height: 8px; top: 46%;
+    background: none; box-shadow: none;
+    border-top-width: 2.4px;
+    border-radius: 50% 50% 0 0;
+}
+.qm-root .qm-act.qm-eyes-shut .qm-act-face .qm-eye::before,
+.qm-root .qm-act.qm-eyes-shut .qm-act-face .qm-eye::after,
+.qm-root .qm-act:active .qm-act-face .qm-eye::before,
+.qm-root .qm-act:active .qm-act-face .qm-eye::after { display: none; }
+
+@media (hover: hover) and (pointer: fine) {
+    .qm-root .qm-act:hover .qm-act-face .qm-eye {
+        height: 8px; top: 46%;
+        background: none; box-shadow: none;
+        border-top-width: 2.4px;
+        border-radius: 50% 50% 0 0;
+    }
+    .qm-root .qm-act:hover .qm-act-face .qm-eye::before,
+    .qm-root .qm-act:hover .qm-act-face .qm-eye::after { display: none; }
+}
+
+/* ---- Панель с надписью --------------------------------------------------- */
+.qm-root .qm-act-main {
+    min-height: 62px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background:
+        url(../img/gold/sv-l.jpg) center/cover no-repeat padding-box,
+        var(--pult-rim) border-box;
+    color: var(--pult-ink, #231703);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-shadow: 0 0 3px rgba(255, 250, 228, .95), 0 0 8px rgba(255, 250, 228, .8);
+    box-shadow:
+        inset 0 3px 7px rgba(46, 30, 4, .5),
+        inset 0 -2px 5px rgba(255, 248, 222, .4),
+        0 0 0 1px rgba(10, 8, 4, .9);
+}
+.qm-root .qm-act-main:active,
+.qm-root .qm-act-play:active {
+    box-shadow:
+        inset 0 4px 9px rgba(46, 30, 4, .62),
+        inset 0 -2px 5px rgba(255, 252, 236, .55),
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 30px rgba(255, 240, 190, .7);
+}
+
+/* ---- Треугольник Play ----------------------------------------------------
+   Обрезается по форме, а не строится рамкой: так его можно увеличить
+   нажатием, не пересчитывая восемь чисел border-width.
+
+   При нажатии знак растёт в полтора раза и одевается в ту же ленту,
+   что идёт по кромке кнопок. Полтора — выбор владельца из двух
+   показанных; предел, при котором знак ещё остаётся внутри круга, был
+   1,85. Точка отсчёта смещена влево, на 46%: треугольник тяжелее
+   слева, и при росте из середины уезжал бы вправо. */
+.qm-root .qm-play-glyph {
+    position: relative;
+    width: 22px;
+    height: 24px;
+    margin-left: 5px;
+    border: 0;
+    background: #2A1C02;
+    clip-path: polygon(6% 0%, 100% 50%, 6% 100%);
+    transform-origin: 46% 50%;
+    transition: background .16s ease, transform .16s ease;
+}
+.qm-root .qm-act-play:active .qm-play-glyph {
+    background: var(--pult-rim);
+    transform: scale(1.5);
+}
+/* Тёмная сердцевина: доли подобраны так, чтобы при увеличении полоса
+   ленты по краю не раздувалась вместе со знаком и оставалась тонкой. */
+.qm-root .qm-act-play:active .qm-play-glyph::before {
+    content: ""; position: absolute; inset: 0;
+    background: #2A1C02;
+    clip-path: polygon(10% 7%, 91% 50%, 10% 93%);
+}
+
+/* Запись играет — знак становится квадратом «стоп». Обрезку здесь надо
+   снять, иначе квадрат останется треугольным. */
+.qm-root .qm-act-play.qm-play-on .qm-play-glyph {
+    width: 17px; height: 17px; margin-left: 0;
+    border: 0; border-radius: 3px;
+    background: #2A1C02;
+    clip-path: none;
+    transform: none;
+}
+.qm-root .qm-act-play.qm-play-on .qm-play-glyph::before { content: none; }
+
+/* Круг у двери без записи приглушён и не нажимается — как было */
+.qm-root .qm-act-play.qm-play-idle {
+    opacity: .45;
+    cursor: default;
+}
+
+/* Узкий телефон */
+@media (max-width: 400px) {
+    .qm-root .qm-act { gap: 8px; padding: 7px; border-radius: 15px; }
+    .qm-root .qm-act-face,
+    .qm-root .qm-act-play { width: 56px; height: 56px; }
+    .qm-root .qm-act-main { font-size: 15px; min-height: 54px; padding: 7px 10px; }
+    .qm-root .qm-play-glyph { width: 19px; height: 21px; }
+    .qm-root .qm-act-play.qm-play-on .qm-play-glyph { width: 15px; height: 15px; }
 }

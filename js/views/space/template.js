@@ -151,7 +151,16 @@ export const TEMPLATE = [
        палец или курсор оказывается на любой её части, и открывает, когда
        уходит. Нажатие на любую половину утапливает капсулу целиком. */
     '        <div class="qm-act" id="qm-act">',
-    '            <span class="qm-act-face" aria-hidden="true"></span>',
+    /* Лицо нарисовано, а не взято эмодзи: эмодзи приносит свой кружок и
+       свой цвет, а кружок здесь золотой, из той же пластины, что
+       капсула. Поэтому по золоту идут только черты — бровки, глаза,
+       щёки и улыбка. Узлы декоративные, нажатий не ловят. */
+    '            <span class="qm-act-face" aria-hidden="true">',
+    '                <i class="qm-brow qm-brow-l"></i><i class="qm-brow qm-brow-r"></i>',
+    '                <i class="qm-eye qm-eye-l"></i><i class="qm-eye qm-eye-r"></i>',
+    '                <i class="qm-cheek qm-cheek-l"></i><i class="qm-cheek qm-cheek-r"></i>',
+    '                <i class="qm-mouth"></i>',
+    '            </span>',
     '            <button type="button" id="btn-s3" class="qm-act-main">',
     '                <span data-i18n="screen3Btn">Закрой глаза</span>',
     '            </button>',

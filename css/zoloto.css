@@ -1,0 +1,1673 @@
+/* ============================================================================
+   ЗОЛОТО ПУЛЬТА — страница выбора.
+
+   Живёт отдельно от приложения нарочно. Ни один файл проекта сюда не
+   подключён, и ни одно правило отсюда не достаёт до проекта: страница
+   открывается только по прямой ссылке zoloto.html. Когда вариант принят,
+   удаляются три вещи — zoloto.html, css/zoloto.css и папка img/zoloto, —
+   а выбранное переносится в app.css и space.css.
+
+   Инлайновых стилей нет: политика безопасности проекта запрещает атрибут
+   style и тег <style>, и эта страница ту же политику объявляет у себя.
+   ========================================================================== */
+
+:root {
+  --z-bg:    #080709;
+  --z-panel: #101013;
+  --z-text:  #ECE7DE;
+  --z-muted: #9A9388;
+  --z-gold:  #E3C77C;
+
+  /* ОБВОДКА — СНЯТА С ЖИВОГО САЙТА, НЕ ПОДОБРАНА НА ГЛАЗ.
+
+     Зашёл на presidenta.github.io/quantum-diary, прочитал вычисленные
+     стили кнопки и взял их как есть: рамка в два пикселя, залитая
+     градиентом, который проходит через чистый белый. Именно белый и
+     даёт то ощущение подсветки — однотонная золотая нить, которую я
+     ставил до этого, выглядела тусклой, потому что белого в ней нет.
+
+     Снаружи рамки — тёмная линия в один пиксель и мягкая тень: тоже
+     с сайта. */
+  --z-rim: linear-gradient(135deg,
+             #FFFBE8  0%, #F3D375 13%, #FFFFFF 25%, #D9A83F 38%,
+             #FFF4C0 52%, #C8902C 66%, #FFF9DC 80%, #AE7D21 100%);
+
+  /* Один радиус на все кнопки, золотые и чёрные, — те же 11 пикселей,
+     что на сайте. Пока золото сидело в border-image, углы рисовала сама
+     картинка, и у каждой кнопки они выходили свои. Теперь золото — фон,
+     а border-radius режет его по одной дуге: углы совпадают всюду и
+     золото никуда не вылезает. */
+  --z-edge: 11px;
+
+  /* Тени вокруг рамки — как на сайте */
+  --z-frame: 0 0 0 1px rgba(10, 8, 4, .9), 0 4px 12px rgba(0, 0, 0, .65);
+
+  /* Нажатие: кнопка проседает, вокруг вспыхивает тёплое гало. Свечение
+     взято у выбранной вкладки сайта и усилено. */
+  /* Наведение: кнопка остаётся на месте и начинает светиться. Подъём
+     убран — от него чёрная кнопка «вставала», хотя должна лежать
+     в плите. */
+  --z-frame-glow:
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 0 3px rgba(255, 216, 124, .40),
+      0 0 24px rgba(255, 214, 120, .75),
+      0 0 52px rgba(255, 198, 88, .45),
+      0 4px 12px rgba(0, 0, 0, .65);
+
+  /* Нажатие: свечение вспыхивает сильнее. */
+  --z-frame-press:
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 0 4px rgba(255, 228, 150, .55),
+      0 0 34px rgba(255, 224, 140, .95),
+      0 0 72px rgba(255, 204, 96, .60),
+      0 1px 4px rgba(0, 0, 0, .6);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 28px 20px 60px;
+  background: var(--z-bg);
+  color: var(--z-text);
+  font: 15px/1.6 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.z-head { max-width: 1000px; margin: 0 auto 36px; }
+.z-head h1 { margin: 0 0 10px; font-size: clamp(30px, 5vw, 44px); font-weight: 800; }
+.z-lead { margin: 0 0 14px; font-size: 16px; }
+.z-note {
+  margin: 0; padding: 14px 16px; border-radius: 12px;
+  background: var(--z-panel); border: 1px solid rgba(227, 199, 124, .22);
+  font-size: 14px; color: var(--z-muted);
+}
+.z-note b { color: var(--z-gold); }
+
+.z-block { max-width: 1000px; margin: 0 auto 44px; }
+.z-block h2 {
+  margin: 0 0 4px; font-size: 13px; font-weight: 700;
+  letter-spacing: 1.6px; text-transform: uppercase; color: var(--z-gold);
+}
+.z-sub { margin: 0 0 20px; font-size: 14px; color: var(--z-muted); }
+.z-cap {
+  margin: 18px 0 8px; font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--z-muted);
+}
+
+.z-row {
+  display: grid; gap: 16px 22px; align-items: center;
+  grid-template-columns: minmax(200px, 290px) 1fr;
+  padding: 18px 0; border-top: 1px solid rgba(227, 199, 124, .12);
+}
+.z-label b { display: block; font-size: 16px; margin: 2px 0 4px; }
+.z-label i { display: block; font-style: normal; font-size: 13px; color: var(--z-muted); }
+.z-code {
+  display: inline-block; padding: 2px 9px; border-radius: 6px;
+  background: rgba(227, 199, 124, .14); border: 1px solid rgba(227, 199, 124, .4);
+  color: var(--z-gold); font-size: 12px; font-weight: 700; letter-spacing: 1px;
+}
+.z-set { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+
+/* ============================================================================
+   КНОПКА
+
+   Золото — фон, обрезанный радиусом, а не border-image. Из-за этого
+   углы одинаковые у всех кнопок, и золото не выступает за рамку.
+   ========================================================================== */
+.z-btn {
+  /* Рамка прозрачная, а её место занимает нижний слой фона, прижатый к
+     border-box. Два слоя обязаны совпадать по длине со списками
+     origin и clip, иначе браузер повторит первое значение и рамка
+     пропадёт. */
+  border: 2px solid transparent;
+  border-radius: var(--z-edge);
+  font-family: inherit; font-weight: 700; letter-spacing: .6px;
+  text-transform: uppercase; cursor: pointer;
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, center;
+  background-size: cover, auto;
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: var(--z-frame);
+  transition: box-shadow .16s ease, transform .1s ease;
+}
+.z-btn:hover { box-shadow: var(--z-frame-glow); }
+.z-btn:focus-visible { outline: none; box-shadow: var(--z-frame-glow); }
+.z-btn:active { box-shadow: var(--z-frame-press); }
+
+@media (prefers-reduced-motion: reduce) {
+  .z-btn { transition: none; }
+
+}
+
+.z-wide  { width: 340px; height: 48px; font-size: 12px; }
+.z-plate { width: 250px; height: 64px; font-size: 13px; }
+.z-chip  { width: 120px; height: 42px; font-size: 14px; letter-spacing: 0; }
+
+/* ============================================================================
+   С — СВЕТЛОЕ ЗОЛОТО
+
+   Все пластины взяты со светлого листа: тёмных провалов в них нет вовсе,
+   поэтому ни надпись, ни цифра нигде не теряются. Надпись тёмная, в
+   светлом ореоле — на золоте это читается лучше всего.
+   ========================================================================== */
+.z-s {
+  color: #2A1C02;
+  text-shadow:
+     0 0 3px rgba(255, 250, 228, .95),
+     0 0 7px rgba(255, 250, 228, .85),
+     0 0 14px rgba(255, 246, 214, .6);
+}
+.z-s1 { background-image: url(../img/zoloto/sv-big.jpg), var(--z-rim); }
+.z-s2 { background-image: url(../img/zoloto/sv-l.jpg), var(--z-rim); }
+.z-s3 { background-image: url(../img/zoloto/sv-c2.jpg), var(--z-rim); }
+.z-s4 { background-image: url(../img/zoloto/sv-r.jpg), var(--z-rim); }
+.z-s5 { background-image: url(../img/zoloto/sv-a.jpg), var(--z-rim); }
+.z-s6 { background-image: url(../img/zoloto/sv-b.jpg), var(--z-rim); }
+.z-s7 { background-image: url(../img/zoloto/sv-c.jpg), var(--z-rim); }
+
+/* ============================================================================
+   ТРАФАРЕТ — слово, вырезанное из золотой пластины.
+
+   Пластина кладётся под слово как есть, своим файлом, и обрезается по
+   контуру букв; всё, что вне букв, остаётся чёрным. Никакого
+   придуманного золота: цвет в буквах ровно тот, что на пластине.
+
+   Пластина взята светлая, поэтому тёмных букв не бывает. На прошлой,
+   зеркальной, в отливке были глубокие провалы, и куски слов пропадали
+   на чёрном фоне.
+
+   РАЗМЕР 100% 100%, А НЕ cover. Пластина натягивается ровно на коробку
+   слова, целиком. При cover её края обрезались бы, и в коротком слове
+   оставалась бы только середина.
+
+   Каждое слово — свой inline-block со своей пластиной. Поэтому слова
+   размечены отдельными span: одна пластина на всю строку растянулась бы
+   через пробелы, и каждому слову достался бы случайный её кусок.
+   ========================================================================== */
+.z-cut {
+  display: inline-block;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+/* Если background-clip: text не поддержан, буквы не исчезнут, а
+   останутся золотыми. */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .z-cut { color: #C9A23E; -webkit-text-fill-color: #C9A23E; }
+}
+
+.z-p1 { background-image: url(../img/zoloto/sv-big.jpg); }
+.z-p2 { background-image: url(../img/zoloto/sv-l.jpg); }
+.z-p3 { background-image: url(../img/zoloto/sv-c2.jpg); }
+.z-p4 { background-image: url(../img/zoloto/sv-r.jpg); }
+
+.z-big {
+  margin: 0 0 14px;
+  font-size: clamp(28px, 6vw, 56px);
+  font-weight: 800; letter-spacing: .5px; line-height: 1.2;
+}
+.z-mid { margin: 0 0 12px; font-size: clamp(20px, 3.6vw, 32px); font-weight: 800; }
+
+/* ============================================================================
+   Т — ЧЁРНАЯ КНОПКА С ЗОЛОТОЙ НАДПИСЬЮ
+
+   Поле тёмное, рамка та же, надпись вырезана из той же светлой пластины.
+   ========================================================================== */
+.z-t {
+  background-image: linear-gradient(180deg, #121014 0%, #09080A 100%), var(--z-rim);
+  font-size: 13px;
+}
+.z-t.z-chip { font-size: 15px; }
+
+/* ---------- Макет пульта ---------- */
+.z-mock {
+  padding: 16px; border-radius: 16px;
+  background: #090809; border: 1px solid rgba(227, 199, 124, .22);
+}
+.z-mock-tabs { display: flex; gap: 12px; margin-bottom: 18px; }
+/* Надпись на вкладках макета крупнее.
+
+   Было 11 пикселей против 12 на кнопке сверху, но дело не в самих
+   числах: верхняя кнопка 340 пикселей шириной, а вкладка почти 480, и
+   та же буква на ней выглядит мельче. Поэтому кегль поднят до 13.5 —
+   так обе надписи читаются одинаково крупно. */
+.z-mock-tabs .z-btn { flex: 1; min-width: 0; height: 48px; font-size: 13.5px; }
+.z-mock-plate { width: 260px; max-width: 100%; height: 66px; font-size: 13px; margin-bottom: 18px; }
+.z-mock-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.z-mock-grid .z-btn { height: 44px; font-size: 14px; letter-spacing: 0; }
+
+/* ---------- Подвал ---------- */
+.z-foot {
+  max-width: 1000px; margin: 0 auto; padding-top: 22px;
+  border-top: 1px solid rgba(227, 199, 124, .12);
+  font-size: 14px; color: var(--z-muted);
+}
+.z-back a { color: var(--z-gold); }
+
+/* ---------- Телефон ---------- */
+@media (max-width: 720px) {
+  body { padding: 20px 14px 48px; }
+  .z-row { grid-template-columns: 1fr; gap: 12px; }
+  .z-wide, .z-plate { width: 100%; }
+  .z-chip { width: 104px; }
+  .z-mock-tabs .z-btn { font-size: 9px; letter-spacing: 0; line-height: 1.3; }
+}
+
+/* ============================================================================
+   КАПСУЛА ПЕРЕХОДА — смайлик, «Закрой глаза», Play.
+
+   Собрана из той же светлой пластины, что и кнопки: общая плита, в неё
+   утоплены круг под смайлик, панель под надпись и круг с Play.
+
+   Утопленность рисуется двумя внутренними тенями — тёмная сверху,
+   светлая снизу. Это зеркало предыдущего приёма: у выступающей кнопки
+   свет сверху, у утопленного гнезда наоборот, и глаз читает глубину без
+   единой картинки.
+   ========================================================================== */
+.z-caps {
+  display: flex; align-items: center; gap: 12px;
+  width: 440px; max-width: 100%; height: 84px; padding: 8px;
+  border: 2px solid transparent;
+  border-radius: 18px;
+  background:
+      url(../img/zoloto/sv-big.jpg) center/cover no-repeat padding-box,
+      var(--z-rim) border-box;
+  box-shadow: var(--z-frame);
+  transition: box-shadow .16s ease;
+}
+.z-caps:hover { box-shadow: var(--z-frame-glow); }
+/* У кружков та же обводка, что у кнопок: градиент с белым проблеском
+   в прозрачной рамке. Радиус 50%, поэтому лента идёт по окружности. */
+.z-caps-face, .z-caps-play {
+  flex: none; width: 66px; height: 66px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid transparent;
+  background:
+      url(../img/zoloto/sv-c2.jpg) center/cover no-repeat padding-box,
+      var(--z-rim) border-box;
+  box-shadow:
+      inset 0 3px 7px rgba(46, 30, 4, .5),
+      inset 0 -2px 5px rgba(255, 248, 222, .4),
+      0 0 0 1px rgba(10, 8, 4, .9);
+  cursor: pointer;
+  transition: box-shadow .16s ease;
+}
+.z-caps-face:hover, .z-caps-play:hover {
+  box-shadow:
+      inset 0 3px 7px rgba(46, 30, 4, .5),
+      inset 0 -2px 5px rgba(255, 248, 222, .4),
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 20px rgba(255, 238, 180, .55);
+}
+/* ---- Смайлик рисуется прямо по золоту ----------------------------------
+   Не картинка и не эмодзи: эмодзи приносит свой цвет и свой кружок, а
+   кружок у нас уже есть — он золотой. Поэтому по нему рисуются только
+   черты: две бровки, два глаза и улыбка. Каждая черта — дуга из одной
+   границы коробки, скруглённой наполовину; тем же приёмом рисуют
+   закрытый глаз, только дуга смотрит вверх.
+
+   Цвет черт тёмный, с тонким светлым подбоем снизу — так они читаются
+   выбитыми в металле, а не наклеенными поверх. */
+.z-caps-face { position: relative; }
+.z-caps-face i {
+  position: absolute; display: block;
+  border-color: #2A1C02; border-style: solid; border-width: 0;
+  filter: drop-shadow(0 1px 0 rgba(255, 248, 222, .55));
+}
+/* ЧЕТЫРЕ ЛИЦА НА СРАВНЕНИЕ.
+
+   Отличаются только глазами и пропорциями черт; приём один и тот же —
+   каждая черта это дуга из одной границы коробки, скруглённой
+   наполовину. Класс на кружке выбирает лицо.
+
+     z-f1  мелкие глаза, всё чёрное  — самый первый вариант
+     z-f2  крупные глаза, всё чёрное — он же, но глаза больше
+     z-f3  белок кольцом вокруг зрачка, сверху блик
+     z-f4  тёмный глаз, белое мягким пятном у низа
+   -------------------------------------------------------------------- */
+
+/* ---- z-f1: мелкие глаза, всё чёрное ---- */
+.z-f1 .z-brow { width: 13px; height: 6px; border-top-width: 2.5px; border-radius: 50% 50% 0 0; top: 30%; }
+.z-f1 .z-brow-l { left: 20%; transform: rotate(-8deg); }
+.z-f1 .z-brow-r { right: 20%; transform: rotate(8deg); }
+.z-f1 .z-eye { width: 8px; height: 10px; border-radius: 50%; background: #221603; top: 44%; }
+.z-f1 .z-eye-l { left: 23%; }
+.z-f1 .z-eye-r { right: 23%; }
+.z-f1 .z-mouth { width: 17px; height: 9px; left: 50%; margin-left: -8.5px; top: 62%;
+                 border-bottom-width: 2.5px; border-radius: 0 0 50% 50%; }
+
+/* ---- z-f2: крупные глаза, всё чёрное, без белого ---- */
+.z-f2 .z-brow { width: 15px; height: 7px; border-top-width: 2.6px; border-radius: 50% 50% 0 0; top: 26%; }
+.z-f2 .z-brow-l { left: 15%; transform: rotate(-11deg); }
+.z-f2 .z-brow-r { right: 15%; transform: rotate(11deg); }
+.z-f2 .z-eye { width: 14px; height: 16px; border-radius: 50%; background: #221603; top: 39%;
+               box-shadow: 0 1px 1px rgba(255, 248, 222, .5); }
+.z-f2 .z-eye-l { left: 16%; }
+.z-f2 .z-eye-r { right: 16%; }
+.z-f2 .z-mouth { width: 18px; height: 10px; left: 50%; margin-left: -9px; top: 70%;
+                 border-bottom-width: 2.8px; border-radius: 0 0 50% 50%; }
+
+/* ---- z-f3: белок кольцом вокруг зрачка ---- */
+.z-f3 .z-brow { width: 18px; height: 8px; border-top-width: 3px; border-radius: 50% 50% 0 0; top: 23%; }
+.z-f3 .z-brow-l { left: 13%; transform: rotate(-10deg); }
+.z-f3 .z-brow-r { right: 13%; transform: rotate(10deg); }
+.z-f3 .z-eye {
+  width: 17px; height: 19px; border-radius: 50%; background: #FFFFFF; top: 36%;
+  box-shadow: inset 0 0 0 1.2px rgba(42, 28, 4, .45), 0 1px 2px rgba(42, 28, 4, .35);
+}
+.z-f3 .z-eye-l { left: 13%; }
+.z-f3 .z-eye-r { right: 13%; }
+.z-f3 .z-eye::before {
+  content: ""; position: absolute; left: 50%; top: 56%;
+  width: 10px; height: 11px; margin: -5.5px 0 0 -5px;
+  border-radius: 50%; background: #221603;
+}
+.z-f3 .z-eye::after {
+  content: ""; position: absolute; left: 56%; top: 22%;
+  width: 5px; height: 5px; border-radius: 50%; background: #FFFFFF;
+}
+.z-f3 .z-mouth { width: 22px; height: 12px; left: 50%; margin-left: -11px; top: 70%;
+                 border-bottom-width: 3px; border-radius: 0 0 50% 50%; }
+
+/* ---- z-f4: тёмный глаз, белое мягким пятном у низа ---- */
+.z-f4 .z-brow { width: 15px; height: 7px; border-top-width: 2.6px; border-radius: 50% 50% 0 0; top: 26%; }
+.z-f4 .z-brow-l { left: 15%; transform: rotate(-11deg); }
+.z-f4 .z-brow-r { right: 15%; transform: rotate(11deg); }
+.z-f4 .z-eye {
+  width: 14px; height: 16px; border-radius: 50%; top: 39%;
+  background:
+    radial-gradient(ellipse 62% 42% at 50% 80%,
+      rgba(255, 255, 255, .95) 0%,
+      rgba(255, 255, 255, .72) 38%,
+      rgba(255, 255, 255, 0) 72%),
+    #221603;
+  box-shadow: 0 1px 1px rgba(255, 248, 222, .5);
+}
+.z-f4 .z-eye-l { left: 16%; }
+.z-f4 .z-eye-r { right: 16%; }
+.z-f4 .z-mouth { width: 18px; height: 10px; left: 50%; margin-left: -9px; top: 70%;
+                 border-bottom-width: 2.8px; border-radius: 0 0 50% 50%; }
+.z-caps-main {
+  flex: 1; min-width: 0; height: 62px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background:
+      url(../img/zoloto/sv-l.jpg) center/cover no-repeat padding-box,
+      var(--z-rim) border-box;
+  box-shadow:
+      inset 0 3px 7px rgba(46, 30, 4, .5),
+      inset 0 -2px 5px rgba(255, 248, 222, .4),
+      0 0 0 1px rgba(10, 8, 4, .9);
+  font-weight: 700; font-size: 15px; letter-spacing: .6px;
+  color: #2A1C02;
+  text-shadow: 0 0 3px rgba(255, 250, 228, .95), 0 0 8px rgba(255, 250, 228, .8);
+  cursor: pointer;
+  transition: box-shadow .16s ease, transform .1s ease;
+}
+/* Тёмная панель под золотую надпись — второй вариант капсулы */
+.z-caps-dark {
+  background:
+      linear-gradient(180deg, #121014 0%, #09080A 100%) padding-box,
+      var(--z-rim) border-box;
+}
+.z-caps-main:hover {
+  box-shadow:
+      inset 0 3px 7px rgba(46, 30, 4, .5),
+      inset 0 -2px 5px rgba(255, 248, 222, .4),
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 20px rgba(255, 238, 180, .5);
+}
+
+/* Треугольник Play — в цвет надписи.
+
+   Белый светящийся знак был лишним: он спорил с текстом и выбивался из
+   набора. Теперь треугольник берёт currentColor, то есть тот же цвет,
+   что буквы рядом. Круг под ним золотой, значит знак тёмный — и так же
+   у второй капсулы, где панель чёрная: кружок Play всё равно золотой.
+   Светлый подбой снизу оставляет ощущение выбитого в металле. */
+/* Треугольник обрезается по форме. Фильтра на нём больше нет, поэтому
+   обрезка ничему не мешает: раньше она срезала свечение, а сейчас
+   светиться нечему — вместо свечения по краю идёт рамка. */
+.z-tri {
+  position: relative;
+  width: 22px; height: 24px; margin-left: 5px;
+  background: currentColor;
+  clip-path: polygon(6% 0%, 100% 50%, 6% 100%);
+  transform-origin: 46% 50%;
+  transition: background .16s ease, transform .16s ease;
+}
+
+.z-caps-play { color: #2A1C02; }
+
+.z-caps-face:active, .z-caps-play:active, .z-caps-main:active {
+  box-shadow:
+      inset 0 4px 9px rgba(46, 30, 4, .62),
+      inset 0 -2px 5px rgba(255, 252, 236, .55),
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 30px rgba(255, 240, 190, .7);
+}
+@media (prefers-reduced-motion: reduce) {
+  .z-caps-face, .z-caps-play, .z-caps-main, .z-caps, .z-btn { transition: none; }
+}
+@media (max-width: 720px) {
+  .z-caps { width: 100%; gap: 9px; padding: 8px; height: 76px; }
+  .z-caps-face, .z-caps-play { width: 56px; height: 56px; }
+  .z-caps-main { height: 56px; font-size: 13px; }
+}
+
+/* ============================================================================
+   Г — ПРЕЖНИЕ КНОПКИ, ВЕРНУТЫ ДЛЯ СРАВНЕНИЯ
+
+   Оставлены ровно такими, какими были: зеркальное золото с тёмными
+   провалами, посаженное через border-image. Углы здесь берутся из самой
+   картинки, поэтому у каждой кнопки они свои — это и видно рядом с
+   новым набором.
+   ========================================================================== */
+.z-g {
+  border: 0;
+  background: none;
+  border-style: solid;
+  border-color: transparent;
+  border-image-slice: 24 fill;
+  border-image-repeat: stretch;
+  border-width: 9px;
+  box-shadow: 0 0 0 1px rgba(10, 8, 4, .9), 0 4px 12px rgba(0, 0, 0, .65);
+  color: #2A1C02;
+  text-shadow:
+     0 0 3px rgba(255, 248, 222, .95),
+     0 0 7px rgba(255, 248, 222, .85),
+     0 0 14px rgba(255, 246, 214, .6);
+}
+.z-g1 { border-image-source: url(../img/zoloto/g-tab1.jpg); }
+.z-g2 { border-image-source: url(../img/zoloto/g-tab2.jpg); }
+.z-g3 { border-image-source: url(../img/zoloto/g-plate.jpg); border-image-slice: 30 fill; border-width: 11px; }
+.z-g4 { border-image-source: url(../img/zoloto/g-c1.jpg); border-image-slice: 26 fill; }
+.z-g5 { border-image-source: url(../img/zoloto/g-c2.jpg); border-image-slice: 26 fill; }
+.z-g6 { border-image-source: url(../img/zoloto/g-c3.jpg); border-image-slice: 26 fill; }
+.z-g7 { border-image-source: url(../img/zoloto/g-c5.jpg); border-image-slice: 26 fill; }
+.z-g8 { border-image-source: url(../img/zoloto/g-c6.jpg); border-image-slice: 26 fill; }
+.z-g9 { border-image-source: url(../img/zoloto/g-c9.jpg); border-image-slice: 26 fill; }
+
+/* То же зеркальное золото, но фоном — под общей рамкой с сайта */
+.z-gr1 { background-image: url(../img/zoloto/g-tab1.jpg),  var(--z-rim); }
+.z-gr2 { background-image: url(../img/zoloto/g-tab2.jpg),  var(--z-rim); }
+.z-gr3 { background-image: url(../img/zoloto/g-c1.jpg),    var(--z-rim); }
+.z-gr4 { background-image: url(../img/zoloto/g-c9.jpg),    var(--z-rim); }
+
+/* ============================================================================
+   О — БУКВЫ ТЕМ ЖЕ ГРАДИЕНТОМ, ЧТО ОБВОДКА
+
+   Надпись заливается не пластиной, а --z-rim: тем самым градиентом с
+   белым проблеском, которым обведены кнопки. Буква и кант оказываются
+   из одного материала, и надпись читается частью оправы, а не рисунком
+   поверх неё.
+
+   Градиент натягивается на коробку слова целиком (100% 100%), поэтому
+   белый проблеск всегда попадает внутрь надписи, а не уезжает за её
+   край, как было бы при cover.
+   ========================================================================== */
+.z-cut-rim {
+  display: inline-block;
+  background-image: var(--z-rim);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .z-cut-rim { color: #F3D375; -webkit-text-fill-color: #F3D375; }
+}
+
+/* На золотой кнопке такие буквы светлые на светлом и сами по себе
+   пропадают. Тень здесь не для красоты: она возвращает им контур.
+   text-shadow тут бесполезен — он рисуется под прозрачным текстом и
+   обрезается вместе с ним, поэтому контур даёт filter по готовой
+   картинке буквы. */
+.z-rim-on-gold .z-cut-rim {
+  filter: drop-shadow(0 1px 1px rgba(20, 12, 1, 1))
+          drop-shadow(0 0 2px rgba(20, 12, 1, .95))
+          drop-shadow(0 0 5px rgba(20, 12, 1, .8));
+}
+
+/* Второй комплект: контур ещё плотнее. На зеркальном золоте, где рядом
+   оказываются светлое и тёмное, более тонкий контур терялся. */
+.z-rim-hard .z-cut-rim {
+  filter: drop-shadow(0 1px 0 rgba(14, 8, 0, 1))
+          drop-shadow(0 -1px 0 rgba(14, 8, 0, .9))
+          drop-shadow(1px 0 0 rgba(14, 8, 0, .9))
+          drop-shadow(-1px 0 0 rgba(14, 8, 0, .9))
+          drop-shadow(0 0 6px rgba(14, 8, 0, .85));
+}
+
+/* Постоянное свечение — только чтобы показать на снимке, как кнопка
+   выглядит под курсором. В работе этого класса не будет. */
+.z-lit { box-shadow: var(--z-frame-glow) !important; }
+.z-lit-press { box-shadow: var(--z-frame-press) !important; }
+
+/* ============================================================================
+   z-f5 — ФИНАЛЬНОЕ ЛИЦО
+
+   Что здесь от решения дизайнера, а не от копирования образца:
+
+   ГЛАЗА КРУПНЫЕ И НИЗКО. 16x18 в кружке 62 — примерно четверть лица
+   на глаз. Чем ниже и шире посажены глаза, тем младше читается лицо:
+   у ребёнка глаза ниже середины черепа, у взрослого выше. Поэтому
+   верх глаза на 41%, а не на 36%.
+
+   ДВА БЛИКА, А НЕ ОДИН. Мягкое белое пятно у низа — от образца, оно
+   даёт «просящий» взгляд. Сверху-слева добавлена маленькая резкая
+   точка: один блик читается как отражение, два — как влажный живой
+   глаз. Это и есть вся разница между «нарисовано» и «няшно».
+
+   БРОВКИ ТОНЬШЕ И ВЫШЕ. 2.2 пикселя вместо 2.8 и подъём к центру на
+   девять градусов. Толстая бровь сразу делает лицо сердитым, тонкая и
+   приподнятая — удивлённым и добрым.
+
+   РОТ МЕНЬШЕ РАЗМАХА ГЛАЗ. 15 против 36 между зрачками. Широкая улыбка
+   во всё лицо читается ухмылкой; маленькая — смущением.
+
+   ЩЁЧКИ. Два тёплых пятна под глазами, едва заметные. На золоте их
+   почти не видно по отдельности, но лицо от них теплеет.
+   -------------------------------------------------------------------- */
+.z-f5 .z-brow {
+  width: 14px; height: 7px;
+  border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+  top: 24%;
+}
+.z-f5 .z-brow-l { left: 16%; transform: rotate(-9deg); }
+.z-f5 .z-brow-r { right: 16%; transform: rotate(9deg); }
+
+.z-f5 .z-eye {
+  width: 16px; height: 18px; border-radius: 50%; top: 41%;
+  background:
+    radial-gradient(ellipse 58% 38% at 50% 82%,
+      rgba(255, 255, 255, .97) 0%,
+      rgba(255, 255, 255, .78) 36%,
+      rgba(255, 255, 255, 0) 70%),
+    #1E1402;
+  box-shadow: 0 1px 1.5px rgba(255, 248, 222, .55);
+}
+.z-f5 .z-eye-l { left: 14%; }
+.z-f5 .z-eye-r { right: 14%; }
+/* Вторая точка света — та самая «влажность» */
+.z-f5 .z-eye::after {
+  content: ""; position: absolute;
+  left: 22%; top: 18%; width: 4.5px; height: 4.5px;
+  border-radius: 50%; background: rgba(255, 255, 255, .95);
+}
+
+.z-f5 .z-mouth {
+  width: 15px; height: 9px; left: 50%; margin-left: -7.5px; top: 72%;
+  border-bottom-width: 2.4px; border-radius: 0 0 50% 50%;
+}
+
+/* Щёчки */
+.z-f5 .z-cheek {
+  width: 11px; height: 7px; border-radius: 50%; top: 62%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.z-f5 .z-cheek-l { left: 8%; }
+.z-f5 .z-cheek-r { right: 8%; }
+
+/* Закрытые глаза у финального лица */
+.z-f5.shut .z-eye {
+  width: 17px; height: 9px; background: none; box-shadow: none;
+  border-top-width: 2.6px; border-radius: 50% 50% 0 0;
+  top: 48%;
+}
+.z-f5.shut .z-eye::after { display: none; }
+.z-f5.shut .z-brow { top: 25%; }
+.z-f5.shut .z-mouth { width: 18px; margin-left: -9px; top: 70%; }
+
+/* Закрытые глаза у прочих лиц — та же дуга */
+.z-f1.shut .z-eye, .z-f2.shut .z-eye, .z-f3.shut .z-eye, .z-f4.shut .z-eye {
+  width: 16px; height: 8px; background: none; box-shadow: none;
+  border-top-width: 2.8px; border-radius: 50% 50% 0 0;
+  top: 47%;
+}
+.z-f3.shut .z-eye::before, .z-f3.shut .z-eye::after,
+.z-f4.shut .z-eye::after { display: none; }
+
+/* ============================================================================
+   СВЕЧЕНИЕ ТРЕУГОЛЬНИКА ПРИ НАЖАТИИ
+
+   drop-shadow обводит непрозрачные пиксели, а не коробку, поэтому
+   свечение ложится ровно по трём сторонам треугольника — так же, как
+   ободок светится по контуру кнопки. Сразу видно, что Play нажат.
+   ========================================================================== */
+.z-tri { transition: filter .16s ease; }
+.z-caps-play:active .z-tri,
+.z-caps-play.z-play-lit .z-tri {
+  /* Тени в фильтре накладываются цепочкой: каждая следующая работает
+     по результату предыдущей. Первые две, совсем тугие, спекаются в
+     светлый ободок по самой кромке знака, остальные дают разлёт.
+     Цвет почти белый нарочно: тёплое свечение на тёплом золоте глазу
+     незаметно, нужен сдвиг по светлоте, а не по тону. */
+  filter: drop-shadow(0 0 0.8px rgba(255, 252, 238, 1))
+          drop-shadow(0 0 1.6px rgba(255, 248, 222, 1))
+          drop-shadow(0 0 4px rgba(255, 240, 190, 1))
+          drop-shadow(0 0 9px rgba(255, 228, 150, .95))
+          drop-shadow(0 0 20px rgba(255, 212, 110, .85))
+          drop-shadow(0 0 38px rgba(255, 198, 80, .6));
+}
+
+/* Треугольник рисуется границами, поэтому общее правило «border-color
+   у черт лица» до него не достаёт, а вот сброс border-width — достать
+   мог бы. Цвет берётся от currentColor самим border-left. */
+
+/* ============================================================================
+   НАЖАТЫЙ PLAY — РАМКА ПО КРАЮ ТРЕУГОЛЬНИКА
+
+   Свечения здесь нет нарочно: светлый ореол на светлом золоте глазу
+   незаметен, и владелец от него отказался. Вместо него по краю знака
+   идёт та же лента, что обведены кнопки, — становится видно, что
+   треугольник нажат, и он остаётся частью одного набора.
+
+   Как сделана обводка у фигуры, которую нельзя обвести border: сам
+   треугольник заливается лентой, а поверх ложится второй, поменьше,
+   с тёмной заливкой. Между их краями и остаётся лента — это и есть
+   рамка. Меньший треугольник получен сжатием большего к центру
+   тяжести, поэтому полоса идёт по всем трём сторонам.
+   ========================================================================== */
+/* Нажатый знак вырастает почти вдвое.
+
+   Масштаб 1.85, не больше: знак 22x24, кружок внутри оправы 62. При
+   таком увеличении дальний угол треугольника отходит от центра на 28
+   пикселей при радиусе 31 — упирается в край, но не вылезает. Точка
+   отсчёта сдвинута к 46% по ширине, иначе треугольник растёт вправо и
+   съезжает из середины кружка. */
+.z-caps-play:active .z-tri,
+.z-caps-play.z-play-lit .z-tri,
+.z-caps-play.z-play-lit15 .z-tri {
+  background: var(--z-rim);
+  transform: scale(1.85);
+}
+/* Второй размер на сравнение: полтора раза вместо 1.85 */
+.z-caps-play.z-play-lit15 .z-tri { transform: scale(1.5); }
+/* Тёмная сердцевина. Доли подобраны так, чтобы при увеличении полоса
+   рамки не раздувалась вместе со знаком и оставалась тонкой. */
+.z-caps-play:active .z-tri::before,
+.z-caps-play.z-play-lit .z-tri::before,
+.z-caps-play.z-play-lit15 .z-tri::before {
+  content: ""; position: absolute; inset: 0;
+  background: currentColor;
+  clip-path: polygon(10% 7%, 91% 50%, 10% 93%);
+}
+
+/* Гнездо при нажатии слегка утапливается — без затемнения, рамке оно
+   не нужно. */
+.z-caps-play:active,
+.z-caps-play.z-play-lit,
+.z-caps-play.z-play-lit15 {
+  box-shadow:
+      inset 0 4px 9px rgba(46, 30, 4, .62),
+      inset 0 -2px 5px rgba(255, 252, 236, .5),
+      0 0 0 1px rgba(10, 8, 4, .9);
+}
+
+/* ============================================================================
+   z-f6 — ТО ЖЕ ЛИЦО, ДРУГАЯ ПРОПОРЦИЯ
+
+   От z-f5 отличается двумя числами, и оба про равновесие:
+
+   ГЛАЗА 14x16 ВМЕСТО 16x18. Минус два пикселя по каждой стороне. У
+   z-f5 глаза забирали почти всё лицо, и низу оставалось слишком мало
+   — отсюда ощущение, что чего-то не хватает.
+
+   УЛЫБКА 18 ВМЕСТО 15, ДУГА ГЛУБЖЕ. Рот подтянут к размаху глаз: не
+   вровень, но и не вдвое меньше. Когда рот втрое уже глаз, лицо
+   читается несобранным, будто черты не договорились между собой.
+
+   Остальное — бровки, блики, щёчки — ровно как у z-f5.
+   -------------------------------------------------------------------- */
+.z-f6 .z-brow {
+  width: 14px; height: 7px;
+  border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+  top: 25%;
+}
+.z-f6 .z-brow-l { left: 17%; transform: rotate(-9deg); }
+.z-f6 .z-brow-r { right: 17%; transform: rotate(9deg); }
+
+.z-f6 .z-eye {
+  width: 14px; height: 16px; border-radius: 50%; top: 42%;
+  background:
+    radial-gradient(ellipse 58% 38% at 50% 82%,
+      rgba(255, 255, 255, .97) 0%,
+      rgba(255, 255, 255, .78) 36%,
+      rgba(255, 255, 255, 0) 70%),
+    #1E1402;
+  box-shadow: 0 1px 1.5px rgba(255, 248, 222, .55);
+}
+.z-f6 .z-eye-l { left: 16%; }
+.z-f6 .z-eye-r { right: 16%; }
+.z-f6 .z-eye::after {
+  content: ""; position: absolute;
+  left: 22%; top: 18%; width: 4px; height: 4px;
+  border-radius: 50%; background: rgba(255, 255, 255, .95);
+}
+
+.z-f6 .z-mouth {
+  width: 18px; height: 11px; left: 50%; margin-left: -9px; top: 70%;
+  border-bottom-width: 2.5px; border-radius: 0 0 50% 50%;
+}
+
+.z-f6 .z-cheek {
+  width: 11px; height: 7px; border-radius: 50%; top: 62%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.z-f6 .z-cheek-l { left: 7%; }
+.z-f6 .z-cheek-r { right: 7%; }
+
+.z-f6.shut .z-eye {
+  width: 16px; height: 8px; background: none; box-shadow: none;
+  border-top-width: 2.6px; border-radius: 50% 50% 0 0;
+  top: 48%;
+}
+.z-f6.shut .z-eye::after { display: none; }
+.z-f6.shut .z-brow { top: 26%; }
+.z-note-i { margin-top: 6px; }
+.z-note-i b { color: var(--z-gold); }
+
+/* Строка во всю ширину: подпись сверху, образцы под ней. Нужна там, где
+   рядом должны стоять две капсулы — в колонке 660 пикселей две по 440
+   не помещаются и переносятся друг под друга. */
+.z-row-wide { grid-template-columns: 1fr; }
+.z-row-wide .z-set { gap: 18px; }
+
+/* ============================================================================
+   z-f7 — РАДОСТНЫЕ ГЛАЗА. Взято от z-f6, изменены только глаза и бровь.
+
+   ПОЧЕМУ ПРЕЖНИЕ ГЛАЗА ЧИТАЛИСЬ ЖАЛОБНЫМИ. Дело было не в размере, а в
+   месте блика. У z-f4…z-f6 белое лежало у НИЗА глаза — это та самая
+   примета «просящего» взгляда, её и использует оригинальный смайлик.
+   Глаз с нижним бликом всегда читается умоляющим, сколько его ни
+   уменьшай.
+
+   ЧТО ДЕЛАЕТ ГЛАЗ РАДОСТНЫМ — три вещи, и все три здесь:
+
+   1. БЛИК НАВЕРХУ. Крупная точка света в верхней половине. Высокий
+      катчлайт читается как взгляд вверх и наружу — внимание, интерес,
+      радость. Нижний читается как взгляд исподлобья.
+
+   2. НИЖНЕЕ ВЕКО ПОДНЯТО. При настоящей улыбке нижнее веко идёт вверх,
+      и глаз снизу становится плоским, а не круглым. Это главный
+      признак искренней радости, по нему же отличают живую улыбку от
+      вежливой. Сделано формой: нижние радиусы сильно меньше верхних.
+
+   3. ВТОРАЯ ИСКРА. Маленькая точка на противоположной стороне. Один
+      блик — отражение, два — живой влажный глаз.
+
+   Бровки подняты и распрямлены: сведённые к центру сразу дают тревогу.
+   -------------------------------------------------------------------- */
+.z-f7 .z-brow {
+  width: 14px; height: 6px;
+  border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+  top: 23%;
+}
+.z-f7 .z-brow-l { left: 17%; transform: rotate(-6deg); }
+.z-f7 .z-brow-r { right: 17%; transform: rotate(6deg); }
+
+.z-f7 .z-eye {
+  width: 14px; height: 16px; top: 42%;
+  background: #1E1402;
+  /* Верх круглый, низ подобран — поднятое нижнее веко */
+  border-radius: 50% 50% 38% 38% / 58% 58% 40% 40%;
+  box-shadow: 0 1px 1.5px rgba(255, 248, 222, .55);
+}
+.z-f7 .z-eye-l { left: 16%; }
+.z-f7 .z-eye-r { right: 16%; }
+/* Главный блик — крупный, в верхней половине */
+.z-f7 .z-eye::before {
+  content: ""; position: absolute;
+  left: 20%; top: 16%; width: 6px; height: 6px;
+  border-radius: 50%; background: #FFFFFF;
+}
+/* Вторая искра — мелкая, по другую сторону */
+.z-f7 .z-eye::after {
+  content: ""; position: absolute;
+  right: 18%; bottom: 20%; width: 3px; height: 3px;
+  border-radius: 50%; background: rgba(255, 255, 255, .9);
+}
+
+.z-f7 .z-mouth {
+  width: 19px; height: 12px; left: 50%; margin-left: -9.5px; top: 69%;
+  border-bottom-width: 2.5px; border-radius: 0 0 50% 50%;
+}
+.z-f7 .z-cheek {
+  width: 11px; height: 7px; border-radius: 50%; top: 62%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.z-f7 .z-cheek-l { left: 7%; }
+.z-f7 .z-cheek-r { right: 7%; }
+
+/* ============================================================================
+   z-f8 — РАДОСТЬ ДУГАМИ
+
+   Второй путь к той же радости: глаз сощурен в дугу. Это предельный
+   случай поднятого нижнего века — зрачка не видно вовсе, и лицо
+   читается смеющимся. Блик здесь не нужен: отражаться нечему.
+
+   Дуга смотрит ВВЕРХ. Та же дуга вниз означала бы закрытые глаза или
+   огорчение — разница только в направлении.
+   -------------------------------------------------------------------- */
+.z-f8 .z-brow {
+  width: 14px; height: 6px;
+  border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+  top: 25%;
+}
+.z-f8 .z-brow-l { left: 17%; transform: rotate(-6deg); }
+.z-f8 .z-brow-r { right: 17%; transform: rotate(6deg); }
+.z-f8 .z-eye {
+  width: 16px; height: 9px; top: 44%; background: none;
+  border-top-width: 3px; border-radius: 50% 50% 0 0;
+}
+.z-f8 .z-eye-l { left: 15%; }
+.z-f8 .z-eye-r { right: 15%; }
+.z-f8 .z-mouth {
+  width: 20px; height: 13px; left: 50%; margin-left: -10px; top: 66%;
+  border-bottom-width: 2.6px; border-radius: 0 0 50% 50%;
+}
+.z-f8 .z-cheek {
+  width: 11px; height: 7px; border-radius: 50%; top: 60%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.z-f8 .z-cheek-l { left: 7%; }
+.z-f8 .z-cheek-r { right: 7%; }
+
+/* ============================================================================
+   z-f9 и z-f10 — СЧАСТЛИВОЕ ЛИЦО
+
+   ГЛАВНОЕ НАБЛЮДЕНИЕ: за «счастье» отвечает рот, а не глаза. Тонкая
+   дуга — вежливая улыбка, её держат из приличия. Открытый рот, то есть
+   закрашенная фигура, читается смехом, и лицо сразу становится
+   довольным, какими бы ни были глаза. Поэтому у обоих вариантов рот
+   залит, а не нарисован линией.
+
+   ГЛАЗА. Нижнее веко поднято сильнее, чем у z-f7: нижние радиусы
+   втрое меньше верхних, и глаз снизу почти прямой. Так выглядит глаз
+   при искренней улыбке — её потому и отличают от вежливой, что
+   вежливая нижнее веко не поднимает.
+
+   Высота меньше ширины на два пикселя: прищур. Круглый глаз читается
+   удивлением, слегка сжатый по вертикали — удовольствием.
+
+   БЛИК. Два варианта нарочно:
+     z-f9   без блика вовсе — глаз чистый и графичный
+     z-f10  одна высокая искра — взгляд живее, но чуть «мультяшнее»
+   Разница заметна только рядом, поэтому они стоят друг под другом.
+   -------------------------------------------------------------------- */
+.z-f9 .z-brow, .z-f10 .z-brow {
+  width: 15px; height: 6px;
+  border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+  top: 22%;
+}
+.z-f9 .z-brow-l, .z-f10 .z-brow-l { left: 15%; transform: rotate(-5deg); }
+.z-f9 .z-brow-r, .z-f10 .z-brow-r { right: 15%; transform: rotate(5deg); }
+
+.z-f9 .z-eye, .z-f10 .z-eye {
+  width: 15px; height: 13px; top: 44%;
+  background: #1E1402;
+  /* Верх круглый, низ почти прямой — поднятое нижнее веко */
+  border-radius: 50% 50% 28% 28% / 64% 64% 36% 36%;
+  box-shadow: 0 1px 1.5px rgba(255, 248, 222, .55);
+}
+.z-f9 .z-eye-l, .z-f10 .z-eye-l { left: 15%; }
+.z-f9 .z-eye-r, .z-f10 .z-eye-r { right: 15%; }
+
+/* Одна высокая искра — только у z-f10 */
+.z-f10 .z-eye::before {
+  content: ""; position: absolute;
+  left: 22%; top: 16%; width: 5px; height: 5px;
+  border-radius: 50%; background: #FFFFFF;
+}
+
+/* Открытый рот: закрашенная фигура с прямым верхом и круглым низом */
+.z-f9 .z-mouth, .z-f10 .z-mouth {
+  width: 21px; height: 11px; left: 50%; margin-left: -10.5px; top: 66%;
+  background: #1E1402; border-width: 0;
+  border-radius: 2px 2px 50% 50% / 2px 2px 100% 100%;
+  box-shadow: 0 1px 1px rgba(255, 248, 222, .5);
+}
+.z-f9 .z-cheek, .z-f10 .z-cheek {
+  width: 11px; height: 7px; border-radius: 50%; top: 58%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.z-f9 .z-cheek-l, .z-f10 .z-cheek-l { left: 6%; }
+.z-f9 .z-cheek-r, .z-f10 .z-cheek-r { right: 6%; }
+
+/* ============================================================================
+   z-f11 и z-f12 — СЧАСТЛИВОЕ ЛИЦО С ЗАКРЫТЫМ РТОМ
+
+   Открытый рот отменён: он читался не смехом, а криком. Закрашенная
+   дыра посреди лица забирает всё внимание на себя, и никакие глаза её
+   уже не перевешивают. Рот снова дуга.
+
+   Значит, радость должна жить в глазах — и вот чем она делается, когда
+   рот закрыт:
+
+   КРУГЛЫЙ ГЛАЗ. Идея владельца и она верная: ровный круг вместо овала
+   читается открытым и доверчивым. Овал всегда немного настороженный,
+   потому что похож на прищур.
+
+   ВЫСОКАЯ ИСКРА. Одна, крупная, в верхней трети. Низкий блик — это
+   «пожалуйста», высокий — «смотрю и радуюсь».
+
+   СКЛАДКА ПОД ГЛАЗОМ (только z-f12). Тонкая дуга чуть ниже глаза. Это
+   приподнятая щека: при искренней улыбке она поджимает нижнее веко и
+   даёт складку. Её рисуют, когда нужно показать радость, не открывая
+   рта, — на лице без неё улыбка выглядит вежливой. Самая дешёвая
+   деталь из всех и самая работающая.
+   -------------------------------------------------------------------- */
+.z-f11 .z-brow, .z-f12 .z-brow {
+  width: 15px; height: 6px;
+  border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+  top: 22%;
+}
+.z-f11 .z-brow-l, .z-f12 .z-brow-l { left: 15%; transform: rotate(-6deg); }
+.z-f11 .z-brow-r, .z-f12 .z-brow-r { right: 15%; transform: rotate(6deg); }
+
+.z-f11 .z-eye, .z-f12 .z-eye {
+  width: 15px; height: 15px; border-radius: 50%; top: 42%;
+  background: #1E1402;
+  box-shadow: 0 1px 1.5px rgba(255, 248, 222, .55);
+}
+.z-f11 .z-eye-l, .z-f12 .z-eye-l { left: 15%; }
+.z-f11 .z-eye-r, .z-f12 .z-eye-r { right: 15%; }
+.z-f11 .z-eye::before, .z-f12 .z-eye::before {
+  content: ""; position: absolute;
+  left: 20%; top: 15%; width: 5.5px; height: 5.5px;
+  border-radius: 50%; background: #FFFFFF;
+}
+
+.z-f11 .z-mouth, .z-f12 .z-mouth {
+  width: 19px; height: 11px; left: 50%; margin-left: -9.5px; top: 69%;
+  border-bottom-width: 2.5px; border-radius: 0 0 50% 50%;
+}
+.z-f11 .z-cheek, .z-f12 .z-cheek {
+  width: 11px; height: 7px; border-radius: 50%; top: 61%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.z-f11 .z-cheek-l, .z-f12 .z-cheek-l { left: 6%; }
+.z-f11 .z-cheek-r, .z-f12 .z-cheek-r { right: 6%; }
+
+/* Складка под глазом — только у z-f12 */
+.z-f12 .z-fold {
+  position: absolute; display: block;
+  width: 13px; height: 5px; top: 64%;
+  border-color: rgba(34, 22, 3, .7); border-style: solid;
+  border-top-width: 1.6px; border-radius: 50% 50% 0 0;
+}
+.z-f12 .z-fold-l { left: 16%; }
+.z-f12 .z-fold-r { right: 16%; }
+
+/* ============================================================================
+   z-f13…z-f16 — ГЛАЗА С ПРИСЛАННЫХ СМАЙЛИКОВ
+
+   На четырёх эмодзи глаза всего двух типов, и оба перенесены сюда:
+
+     дуга вверх      — 😄 😁 😆, разной крутизны и толщины
+     круглая точка   — 😀, без блика вовсе
+
+   Взяты только глаза. Рот наш, закрытой дугой; бровки, щёчки и
+   пропорции лица — от z-f6, где они собраннее всего. На золоте черты
+   тоньше, чем в эмодзи: там они лежат на плоской заливке, а здесь на
+   металле с бликами, и толстая линия выглядит грубой заплатой.
+
+     z-f13  мягкая дуга       — спокойная улыбка глазами
+     z-f14  круглая точка     — открытый, простодушный взгляд
+     z-f15  крепкий прищур    — смех, глаза почти зажмурены
+     z-f16  дуга со складкой  — то же, что 13, плюс приподнятая щека
+   -------------------------------------------------------------------- */
+.z-f13 .z-brow, .z-f14 .z-brow, .z-f15 .z-brow, .z-f16 .z-brow {
+  width: 15px; height: 6px;
+  border-top-width: 2.2px; border-radius: 50% 50% 0 0;
+  top: 23%;
+}
+.z-f13 .z-brow-l, .z-f14 .z-brow-l, .z-f15 .z-brow-l, .z-f16 .z-brow-l { left: 15%; transform: rotate(-6deg); }
+.z-f13 .z-brow-r, .z-f14 .z-brow-r, .z-f15 .z-brow-r, .z-f16 .z-brow-r { right: 15%; transform: rotate(6deg); }
+
+/* --- z-f13: мягкая дуга --- */
+.z-f13 .z-eye, .z-f16 .z-eye {
+  width: 17px; height: 9px; top: 44%; background: none;
+  border-top-width: 2.8px; border-radius: 50% 50% 0 0;
+}
+.z-f13 .z-eye-l, .z-f16 .z-eye-l { left: 14%; }
+.z-f13 .z-eye-r, .z-f16 .z-eye-r { right: 14%; }
+
+/* --- z-f14: круглая точка, без блика --- */
+.z-f14 .z-eye {
+  width: 13px; height: 13px; border-radius: 50%; top: 43%;
+  background: #1E1402;
+  box-shadow: 0 1px 1.5px rgba(255, 248, 222, .55);
+}
+.z-f14 .z-eye-l { left: 17%; }
+.z-f14 .z-eye-r { right: 17%; }
+
+/* --- z-f15: крепкий прищур.
+
+   Дуга поднимается ровно на вертикальный радиус скругления. У z-f13 это
+   4,5 пикселя, и при первой попытке у z-f15 вышло 7 — на глаз почти то
+   же самое. Чтобы прищур читался смехом, коробка стала выше, а радиус
+   довели до 78%: подъём 11 пикселей против 4,5, разница очевидна. --- */
+.z-f15 .z-eye {
+  width: 15px; height: 14px; top: 40%; background: none;
+  border-top-width: 3.2px; border-radius: 78% 78% 0 0;
+}
+.z-f15 .z-eye-l { left: 15%; }
+.z-f15 .z-eye-r { right: 15%; }
+
+/* --- рот и щёчки, общие --- */
+.z-f13 .z-mouth, .z-f14 .z-mouth, .z-f16 .z-mouth {
+  width: 19px; height: 11px; left: 50%; margin-left: -9.5px; top: 68%;
+  border-bottom-width: 2.5px; border-radius: 0 0 50% 50%;
+}
+.z-f15 .z-mouth {
+  width: 21px; height: 13px; left: 50%; margin-left: -10.5px; top: 66%;
+  border-bottom-width: 2.6px; border-radius: 0 0 50% 50%;
+}
+.z-f13 .z-cheek, .z-f14 .z-cheek, .z-f15 .z-cheek, .z-f16 .z-cheek {
+  width: 11px; height: 7px; border-radius: 50%; top: 60%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(150, 96, 20, .42) 0%, rgba(150, 96, 20, 0) 72%);
+}
+.z-f13 .z-cheek-l, .z-f14 .z-cheek-l, .z-f15 .z-cheek-l, .z-f16 .z-cheek-l { left: 6%; }
+.z-f13 .z-cheek-r, .z-f14 .z-cheek-r, .z-f15 .z-cheek-r, .z-f16 .z-cheek-r { right: 6%; }
+
+.z-f16 .z-fold {
+  position: absolute; display: block;
+  width: 13px; height: 5px; top: 60%;
+  border-color: rgba(34, 22, 3, .6); border-style: solid;
+  border-top-width: 1.5px; border-radius: 50% 50% 0 0;
+}
+.z-f16 .z-fold-l { left: 16%; }
+.z-f16 .z-fold-r { right: 16%; }
+
+/* ============================================================================
+   СЕРИЯ Г ПОД ОБВОДКОЙ О6
+
+   Золото берётся из серии Г — там каждая кнопка вырезана отдельно, и у
+   всех девяти своё отражение. Одна текстура на весь пульт убивала
+   смысл: ради того их и резали по одной.
+
+   Оправа и надпись — от О6: та же лента по краю, те же буквы, залитые
+   лентой, тот же плотный контур. Поэтому кнопки разные по золоту, но
+   собраны в один набор.
+   ========================================================================== */
+.z-gm1 { background-image: url(../img/zoloto/g-tab1.jpg),  var(--z-rim); }
+.z-gm2 { background-image: url(../img/zoloto/g-tab2.jpg),  var(--z-rim); }
+.z-gm3 { background-image: url(../img/zoloto/g-plate.jpg), var(--z-rim); }
+.z-gm4 { background-image: url(../img/zoloto/g-c1.jpg),    var(--z-rim); }
+.z-gm5 { background-image: url(../img/zoloto/g-c2.jpg),    var(--z-rim); }
+.z-gm6 { background-image: url(../img/zoloto/g-c3.jpg),    var(--z-rim); }
+.z-gm7 { background-image: url(../img/zoloto/g-c5.jpg),    var(--z-rim); }
+.z-gm8 { background-image: url(../img/zoloto/g-c6.jpg),    var(--z-rim); }
+.z-gm9 { background-image: url(../img/zoloto/g-c9.jpg),    var(--z-rim); }
+
+/* Отдельный показ Play: кружок сам по себе, без капсулы. */
+.z-play-demo { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.z-play-demo figure { margin: 0; text-align: center; }
+.z-play-demo figcaption { margin-top: 8px; font-size: 13px; color: var(--z-muted); }
+
+/* Верхняя полка макета: кнопки Г3 в своих размерах, над вкладками */
+.z-mock-top { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+
+/* ============================================================================
+   КОЛЬЦО О6 ПОВЕРХ КНОПКИ СЕРИИ Г
+
+   У кнопок серии Г золото сидит в border-image — место рамки занято, и
+   градиентную обводку туда уже не положить. Растягивать их текстуру
+   фоном нельзя: тогда теряется родная оправа, ради которой каждую
+   кнопку и вырезали отдельно.
+
+   Поэтому обводка рисуется кольцом снаружи, отдельным слоем. Приём:
+   прямоугольник заливается лентой, а из него вырезается внутренность —
+   две маски, внешняя по всей коробке и внутренняя по её содержимому,
+   вычитаются друг из друга. Остаётся ровно полоса по краю.
+   ========================================================================== */
+.z-ring { position: relative; }
+.z-ring::after {
+  content: "";
+  position: absolute; inset: -3px;
+  border-radius: 14px;
+  padding: 2px;
+  background: var(--z-rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Ещё одна подложка из листа: по замеру разброса она в шестёрке лучших */
+.z-gm10 { background-image: url(../img/zoloto/g-c7.jpg), var(--z-rim); }
+
+/* ============================================================================
+   z-f1a — Л1 С ЧУТЬ БОЛЬШИМИ ЧЕРТАМИ
+
+   От z-f1 отличается парой пикселей на каждой черте: глаз 10x12 вместо
+   8x10, улыбка 19 вместо 17 и на пиксель глубже, бровка на пиксель
+   шире. Лицо то же, просто черты чуть увереннее — у z-f1 они
+   терялись на фоне металла.
+   -------------------------------------------------------------------- */
+.z-f1a .z-brow { width: 14px; height: 7px; border-top-width: 2.6px; border-radius: 50% 50% 0 0; top: 29%; }
+.z-f1a .z-brow-l { left: 19%; transform: rotate(-8deg); }
+.z-f1a .z-brow-r { right: 19%; transform: rotate(8deg); }
+.z-f1a .z-eye { width: 10px; height: 12px; border-radius: 50%; background: #221603; top: 43%; }
+.z-f1a .z-eye-l { left: 21%; }
+.z-f1a .z-eye-r { right: 21%; }
+/* Белая точка в каждом глазу — как у z-f11, но мельче: у того глаз
+   15 пикселей и блик 5,5, здесь глаз 10, и тот же блик занял бы
+   половину зрачка. Доля сохранена, размер уменьшен до 3,6. */
+.z-f1a .z-eye::before {
+  content: ""; position: absolute;
+  left: 20%; top: 16%; width: 3.6px; height: 3.6px;
+  border-radius: 50%; background: #FFFFFF;
+}
+.z-f1a .z-mouth {
+  width: 19px; height: 10px; left: 50%; margin-left: -9.5px; top: 63%;
+  border-bottom-width: 2.6px; border-radius: 0 0 50% 50%;
+}
+
+/* ============================================================================
+   z-f1b — ПРОСТОЕ ЛИЦО, БЕЗ БРОВЕЙ
+
+   Две точки и дуга, больше ничего. Так устроен 🙂, и в этом его сила:
+   чем меньше черт, тем спокойнее лицо. Бровь — самая выразительная
+   деталь, она же самая опасная: чуть не тот угол, и лицо из доброго
+   становится сердитым или встревоженным. Без неё промахнуться негде.
+
+   Раз бровей нет, глаза подняты к середине лица: иначе над ними
+   остаётся пустое поле, и голова кажется слишком большой.
+
+   Закрытые глаза — та же дуга вверх, что у остальных лиц.
+   -------------------------------------------------------------------- */
+.z-f1b .z-brow { display: none; }
+.z-f1b .z-eye {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #221603; top: 38%;
+  box-shadow: 0 1px 1px rgba(255, 248, 222, .45);
+}
+.z-f1b .z-eye-l { left: 24%; }
+.z-f1b .z-eye-r { right: 24%; }
+.z-f1b .z-mouth {
+  width: 20px; height: 10px; left: 50%; margin-left: -10px; top: 61%;
+  border-bottom-width: 2.6px; border-radius: 0 0 50% 50%;
+}
+.z-f1b.shut .z-eye {
+  width: 13px; height: 7px; background: none; box-shadow: none;
+  border-top-width: 2.6px; border-radius: 50% 50% 0 0;
+  top: 42%;
+}
+
+/* ============================================================================
+   НОВЫЕ ПОДЛОЖКИ С ПРИСЛАННОГО ЛИСТА
+
+   Двенадцать штук, вырезаны по настоящей границе. По замеру разброса
+   яркости n04 даёт 47.8 — вровень с лучшими прежними; слабее всех
+   n12 с 26.7, но и он держится выше тех четырёх, что были плоскими.
+   Обводка и буквы не тронуты: поменяны только подложки.
+   ========================================================================== */
+.z-n01 { background-image: url(../img/zoloto/n01.jpg), var(--z-rim); }
+.z-n02 { background-image: url(../img/zoloto/n02.jpg), var(--z-rim); }
+.z-n03 { background-image: url(../img/zoloto/n03.jpg), var(--z-rim); }
+.z-n04 { background-image: url(../img/zoloto/n04.jpg), var(--z-rim); }
+.z-n05 { background-image: url(../img/zoloto/n05.jpg), var(--z-rim); }
+.z-n06 { background-image: url(../img/zoloto/n06.jpg), var(--z-rim); }
+.z-n07 { background-image: url(../img/zoloto/n07.jpg), var(--z-rim); }
+.z-n08 { background-image: url(../img/zoloto/n08.jpg), var(--z-rim); }
+.z-n09 { background-image: url(../img/zoloto/n09.jpg), var(--z-rim); }
+.z-n10 { background-image: url(../img/zoloto/n10.jpg), var(--z-rim); }
+.z-n11 { background-image: url(../img/zoloto/n11.jpg), var(--z-rim); }
+.z-n12 { background-image: url(../img/zoloto/n12.jpg), var(--z-rim); }
+
+/* ============================================================================
+   СМАЙЛИКИ В ДВА РЯДА
+
+   Вариантов набралось пятнадцать, и в один столбик страница растянулась
+   на несколько экранов: пока доедешь до последнего, первый уже забылся.
+   Разложены по два в ряд — глаз сравнивает лица рядом, а не по памяти.
+   Подписи сняты, остались буквы: выбирать удобнее по лицу, а назвать
+   выбранное хватит кода.
+
+   Колонка объявлена minmax(0, 1fr), а не 1fr: у капсулы свои 440px, и
+   без нуля в минимуме она растянула бы колонку, а сетка вылезла бы за
+   край страницы. Внутри ячейки капсула отдана flex: 1 — занимает всё,
+   что осталось от буквы.
+   ========================================================================== */
+.z-faces {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px; padding: 4px 0 2px;
+}
+.z-face-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.z-face-cell .z-caps { width: auto; flex: 1; min-width: 0; }
+.z-face-cell .z-code { flex: none; }
+@media (max-width: 860px) {
+  .z-faces { grid-template-columns: 1fr; }
+}
+
+/* ============================================================================
+   МАТОВОЕ ЗОЛОТО ПОД СМАЙЛИК
+
+   Цвет взят с той же глянцевой подложки, которой одеты все кружки:
+   по замеру её средний тон #A0793C, серединка #9D7537, разброс яркости
+   31.4 — это и есть глянец, скачки от тёмного провала к блику.
+
+   Матовое оставляет тот же средний тон и убирает скачки: мягкая
+   растяжка сверху вниз, разброс около шести. Поэтому рядом с глянцевым
+   оно читается как то же золото, только без блеска, а не как другой
+   металл.
+
+   Светлый подбой снизу ослаблен, но не убран совсем: без него
+   поверхность становится краской, а не металлом. Обводка по окружности
+   та же, что у всех кнопок, — её трогать нечем.
+   ========================================================================== */
+.z-caps-face.z-mat {
+  background:
+      linear-gradient(180deg, #B08748 0%, #A37B3C 46%, #96702F 100%) padding-box,
+      var(--z-rim) border-box;
+  box-shadow:
+      inset 0 2px 6px rgba(42, 28, 4, .36),
+      inset 0 -1px 4px rgba(255, 244, 206, .14),
+      0 0 0 1px rgba(10, 8, 4, .9);
+}
+.z-caps-face.z-mat:hover {
+  box-shadow:
+      inset 0 2px 6px rgba(42, 28, 4, .36),
+      inset 0 -1px 4px rgba(255, 244, 206, .14),
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 20px rgba(255, 238, 180, .55);
+}
+
+/* ---- Л3М: Л3 на матовом, глаз мельче и белого меньше ----------------------
+   У Л3 белок 17×19 при зрачке 10×11 — белого выходит больше, чем тёмного,
+   и на матовом он лезет вперёд всего лица. Белок уменьшен до 15×17, а
+   зрачок наоборот подрос до 10,5×12: белое остаётся только ободком.
+   Искра с 5 убрана до 3,4. */
+.z-caps-face.z-f3m .z-eye { width: 15px; height: 17px; top: 37%; }
+.z-caps-face.z-f3m .z-eye-l { left: 15%; }
+.z-caps-face.z-f3m .z-eye-r { right: 15%; }
+.z-caps-face.z-f3m .z-eye::before {
+  left: 50%; top: 57%; width: 10.5px; height: 12px; margin: -6px 0 0 -5.25px;
+}
+.z-caps-face.z-f3m .z-eye::after {
+  left: 57%; top: 20%; width: 3.4px; height: 3.4px;
+}
+
+/* ---- Л7М: Л7 на матовом, блики мельче ----
+   Главный блик с 6 до 4,2, вторая искра с 3 до 2,2. Пропорция между
+   ними сохранена, иначе глаз теряет влажность. */
+.z-caps-face.z-f7m .z-eye::before { left: 21%; top: 17%; width: 4.2px; height: 4.2px; }
+.z-caps-face.z-f7m .z-eye::after { right: 19%; bottom: 21%; width: 2.2px; height: 2.2px; }
+
+/* ---- Л11М: Л11 на матовом, искра мельче ----
+   Круглый глаз 15 пикселей оставлен как есть — его хвалили; убрана
+   только искра, с 5,5 до 3,8. */
+.z-caps-face.z-f11m .z-eye::before { left: 21%; top: 16%; width: 3.8px; height: 3.8px; }
+
+/* ============================================================================
+   Л20 — ЧЁРНЫЙ КРУЖОК, ЗОЛОТЫЕ ЧЕРТЫ
+
+   Обратный ход: до сих пор лицо было тёмным по золоту, здесь золото
+   ушло в черты, а кружок стал чёрным. Обводка по окружности та же, и
+   выходит медальон — тёмное поле, светлый рисунок.
+
+   Подбой у черт теперь тёмный, а не светлый: светлая линия под золотом
+   на чёрном не видна, а тень отрывает рисунок от поля и не даёт ему
+   слиться с кружком.
+
+   Геометрия взята у Л1А: то лицо оказалось самым разборчивым на
+   металле, и менять пропорции заодно с цветом было бы нечестно —
+   тогда непонятно, что именно понравилось.
+   ========================================================================== */
+.z-caps-face.z-f20 {
+  background:
+      radial-gradient(120% 108% at 50% 0%,
+          #2E2518 0%, #191208 44%, #0C0803 78%, #070501 100%) padding-box,
+      var(--z-rim) border-box;
+  box-shadow:
+      inset 0 3px 9px rgba(0, 0, 0, .9),
+      inset 0 -2px 6px rgba(255, 234, 164, .16),
+      0 0 0 1px rgba(10, 8, 4, .95);
+}
+.z-caps-face.z-f20:hover {
+  box-shadow:
+      inset 0 3px 9px rgba(0, 0, 0, .9),
+      inset 0 -2px 6px rgba(255, 234, 164, .16),
+      0 0 0 1px rgba(10, 8, 4, .95),
+      0 0 20px rgba(255, 238, 180, .55);
+}
+/* Дуга в 2,6 пикселя не вмещает градиент — на такой ширине он всё
+   равно читается одним цветом. Поэтому у дуг плотное светлое золото, а
+   растяжка отдана глазам: там есть где развернуться. */
+.z-caps-face.z-f20 i {
+  border-color: #F4DE9F;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .9));
+}
+.z-caps-face.z-f20 .z-brow {
+  width: 14px; height: 7px; border-top-width: 2.6px;
+  border-radius: 50% 50% 0 0; top: 29%;
+}
+.z-caps-face.z-f20 .z-brow-l { left: 19%; transform: rotate(-8deg); }
+.z-caps-face.z-f20 .z-brow-r { right: 19%; transform: rotate(8deg); }
+.z-caps-face.z-f20 .z-eye {
+  width: 10px; height: 12px; border-radius: 50%; top: 43%;
+  background: linear-gradient(155deg, #FFF8E0 0%, #F0D183 38%, #D8A944 70%, #B98A2B 100%);
+}
+.z-caps-face.z-f20 .z-eye-l { left: 21%; }
+.z-caps-face.z-f20 .z-eye-r { right: 21%; }
+/* Искра белая: на золотом зрачке белая точка — это блик, а тёмная
+   прочиталась бы зрачком внутри зрачка. */
+.z-caps-face.z-f20 .z-eye::before {
+  content: ""; position: absolute;
+  left: 18%; top: 14%; width: 3.2px; height: 3.2px;
+  border-radius: 50%; background: #FFFFFF;
+}
+.z-caps-face.z-f20 .z-mouth {
+  width: 19px; height: 10px; left: 50%; margin-left: -9.5px; top: 63%;
+  border-bottom-width: 2.6px; border-radius: 0 0 50% 50%;
+}
+/* Белок стал тоньше, и прежний тёмный контур в 1,2 пикселя занял почти
+   всю его ширину — белое читалось серым. Контур сведён к 0,7. */
+.z-caps-face.z-f3m .z-eye {
+  box-shadow: inset 0 0 0 .7px rgba(42, 28, 4, .4), 0 1px 2px rgba(42, 28, 4, .35);
+}
+
+/* ============================================================================
+   Л3М2 — ТОТ ЖЕ Л3М, НО ГЛАЗА БЛИЖЕ И ЗОЛОТО ЯРЧЕ
+
+   Расстояние между глазами меняет возраст лица сильнее всего: широко
+   расставленные читаются детскими и удивлёнными, сведённые к середине —
+   собранными. У Л3М глаз отступал от края на 15%, здесь на 22%, то есть
+   пара съехалась к переносице примерно на треть зазора.
+
+   Золото то же матовое, только поднято по яркости: было 128 по свету,
+   стало около 150 — примерно на пятую часть светлее. Разброс не тронут,
+   значит блеск не вернулся, поверхность осталась матовой.
+   ========================================================================== */
+.z-caps-face.z-f3m2 {
+  background:
+      linear-gradient(180deg, #CBA059 0%, #BE924B 46%, #AE833C 100%) padding-box,
+      var(--z-rim) border-box;
+}
+.z-caps-face.z-f3m2 .z-eye-l { left: 22%; }
+.z-caps-face.z-f3m2 .z-eye-r { right: 22%; }
+
+/* ============================================================================
+   Л3М3 — СЕРЕДИНА МЕЖДУ Л3М И Л3М2
+
+   Всё взято у Л3М2 до последнего пикселя: то же светлое матовое золото,
+   тот же глаз, тот же белый ободок. Разошлись только глаза.
+
+     Л3М   — отступ 15%   (широко)
+     Л3М3  — отступ 18,5% (ровно посередине)
+     Л3М2  — отступ 22%   (близко)
+
+   Шаг взят половинный нарочно: разницу в полтора процента ширины
+   кружка глаз ещё ловит, а меньше — уже нет, и третий вариант стал бы
+   копией соседнего.
+   ========================================================================== */
+.z-caps-face.z-f3m3 .z-eye-l { left: 18.5%; }
+.z-caps-face.z-f3m3 .z-eye-r { right: 18.5%; }
+
+/* ============================================================================
+   Л3М3 — ЧЕЛОВЕЧЕСКИЙ ГЛАЗ И ЗОЛОТО ЖЕЛТЕЕ
+
+   ГЛАЗ. Белок остаётся прежних 15×17, а тёмное внутри ужимается с
+   10,5 до 7,6 пикселя — белого становится заметно больше, как и
+   просили.
+
+   Но просто чёрная точка в большом белке даёт не радость, а испуг:
+   суженный зрачок на широком белке — это лицо человека, который
+   чего-то испугался. У настоящего глаза тёмное устроено в два слоя:
+   радужка потеплее и чёрный зрачок в ней. Поэтому внутри кружка идёт
+   растяжка — чёрное ядро в 55% радиуса, вокруг тёплая коричневая
+   радужка. Тёмного по площади мало, а лицо остаётся живым.
+
+   КУДА СМОТРИТ. Зрачки сдвинуты к переносице и чуть вверх: левый
+   вправо, правый влево. Прямо по центру глаз читается кукольным,
+   врозь — рассеянным, вниз — грустным. Сведённый и поднятый взгляд
+   смотрит на того, кто держит телефон, и читается приветливым.
+
+   БЛИК. Один на оба глаза, сверху слева — значит, лампа одна, и она
+   там же, откуда светит золото. Два блика с разных сторон сразу ломают
+   ощущение настоящего.
+
+   ЗОЛОТО. Было #BE924B, тон 37°. Стало #CFA041, тон 40° — сдвиг на три
+   градуса в жёлтую сторону и на девять единиц светлее. Чистая жёлтая
+   краска это 60°, так что до неё по-прежнему далеко: это золото,
+   просто теплее и ярче. Матовость не тронута.
+   ========================================================================== */
+.z-caps-face.z-f3m3 {
+  background:
+      linear-gradient(180deg, #DCB253 0%, #CFA041 46%, #BE8E2D 100%) padding-box,
+      var(--z-rim) border-box;
+}
+
+/* Радужка с чёрным зрачком внутри. closest-side нужен, чтобы 100%
+   растяжки пришлось ровно на край кружка: при размере по умолчанию
+   граница ушла бы в угол коробки и радужка вышла бы размытой. */
+.z-caps-face.z-f3m3 .z-eye::before {
+  width: 7.6px; height: 7.6px; margin: -3.8px 0 0 -3.8px;
+  top: 47%; left: 50%;
+  background: radial-gradient(circle closest-side at 50% 50%,
+      #000000 0 55%, #3B2506 58%, #6B470F 100%);
+}
+.z-caps-face.z-f3m3 .z-eye-l::before { left: 56%; }
+.z-caps-face.z-f3m3 .z-eye-r::before { left: 44%; }
+
+/* Блик — на радужке, сверху слева у обоих глаз */
+.z-caps-face.z-f3m3 .z-eye::after {
+  width: 2.6px; height: 2.6px; margin: -1.3px 0 0 -1.3px; top: 34%;
+}
+.z-caps-face.z-f3m3 .z-eye-l::after { left: 43%; }
+.z-caps-face.z-f3m3 .z-eye-r::after { left: 31%; }
+
+/* ============================================================================
+   Л3030 — ГЛЯНЦЕВЫЙ Л3 С НАСТОЯЩИМ ЧЕЛОВЕЧЕСКИМ ГЛАЗОМ
+
+   Подложка Л3 не тронута: это он и есть, поменялись только глаза.
+   А глаз разобран на те слои, из которых он состоит у человека.
+   Нарисовать их нечем, кроме самого кружка и двух его псевдоэлементов,
+   поэтому слои упакованы по нескольку в один фон — порядок в списке
+   сверху вниз, первый лежит выше всех.
+
+   1. БЕЛОК НЕ БЕЛЫЙ. Чистый #FFFFFF читается пластмассой: у живого
+      белка низ теплее, верх уходит в тень от века. Отсюда растяжка от
+      белого снизу к тёплому серому сверху и тёмная внутренняя тень
+      по верхнему краю — то самое, что отличает глаз от нарисованного
+      кружка.
+
+   2. РАДУЖКА СВЕТИТСЯ ИЗНУТРИ. У неё светлая середина и тёмный обод
+      по краю (лимб). Без обода радужка выглядит плоской наклейкой.
+
+   3. ВОЛОКНА. Настоящая радужка состоит из нитей, идущих от зрачка к
+      краю. Дано повторяющейся конической растяжкой — на восьми
+      пикселях отдельных нитей не разобрать, но зернистость делает
+      радужку живой, а не залитой.
+
+   4. ЗРАЧОК чёрный и маленький, 46% радуги.
+
+   5. ДВА ОГОНЬКА. Крупный сверху слева — лампа. Мелкий снизу справа и
+      слабее — отсвет от того же света, отражённого с другой стороны.
+      Именно вторая искра читается как влажность; с одной глаз сухой.
+      Оба даны одним элементом: второй сделан тенью с отрицательным
+      разбросом, чтобы быть мельче.
+
+   Радужка голубая. На золоте это единственный по-настоящему холодный
+   цвет на всём лице, и он работает как контраст: тёплый металл вокруг
+   и холодный взгляд в середине — глаз цепляется именно за глаза.
+   Чтобы голубой не выглядел наклеенным, середина радужки взята
+   светлой, почти белёсой, а к лимбу уходит в густую синеву: так
+   устроен светлый глаз на свету.
+
+   Волокна тоже перекрашены: на янтаре они шли золотом по тёмному, на
+   голубом идут белым по синему, иначе радужка становится грязной.
+   ========================================================================== */
+.z-caps-face.z-f3030 .z-eye {
+  background: radial-gradient(ellipse 120% 100% at 50% 115%,
+      #FFFFFF 0%, #FBF6EC 46%, #E9E0CE 78%, #D2C7B0 100%);
+  box-shadow:
+      inset 0 2.4px 2.6px rgba(38, 24, 4, .38),
+      inset 0 0 0 .7px rgba(42, 28, 4, .45),
+      0 1px 2px rgba(42, 28, 4, .35);
+}
+.z-caps-face.z-f3030 .z-eye::before {
+  width: 9.6px; height: 9.6px; margin: -4.8px 0 0 -4.8px;
+  top: 47%; left: 50%;
+  background:
+      /* зрачок */
+      radial-gradient(circle closest-side at 50% 50%,
+          #000000 0 46%, rgba(0, 0, 0, 0) 48%),
+      /* лимб — тёмный обод по краю */
+      radial-gradient(circle closest-side at 50% 50%,
+          rgba(0, 0, 0, 0) 0 70%, rgba(12, 34, 58, .45) 85%, rgba(8, 24, 44, .72) 100%),
+      /* волокна */
+      repeating-conic-gradient(from 8deg at 50% 50%,
+          rgba(236, 250, 255, .17) 0deg 3deg, rgba(20, 56, 96, .17) 3deg 6deg),
+      /* тело радужки */
+      radial-gradient(circle closest-side at 50% 34%,
+          #D7EFFB 0%, #8CC4E6 38%, #528FC0 72%, #2A5E92 100%);
+  box-shadow: inset 0 1px 1.4px rgba(0, 0, 0, .45);
+}
+.z-caps-face.z-f3030 .z-eye-l::before { left: 56%; }
+.z-caps-face.z-f3030 .z-eye-r::before { left: 44%; }
+/* Огоньки: сам элемент — крупный сверху слева, тень от него — мелкий
+   снизу справа. Отрицательный разброс ужимает тень до искры. */
+.z-caps-face.z-f3030 .z-eye::after {
+  width: 3.2px; height: 3.2px; margin: -1.6px 0 0 -1.6px; top: 31%;
+  background: #FFFFFF;
+  box-shadow: 5.2px 5.6px 0 -1.2px rgba(255, 242, 214, .55);
+}
+.z-caps-face.z-f3030 .z-eye-l::after { left: 41%; }
+.z-caps-face.z-f3030 .z-eye-r::after { left: 29%; }
+
+/* ============================================================================
+   Л3040 и Л3041 — ГЛАЗ НЕ КРУГЛЫЙ, А МИНДАЛЕМ
+
+   Круглый глаз — условность мультфильма. У человека разрез миндалём:
+   верхнее веко идёт высокой дугой, нижнее почти прямое, а по краям
+   уголки. Риск известен заранее: острые уголки на шестидесяти пикселях
+   читаются прищуром, и доброе лицо становится хитрым. Поэтому уголки
+   оставлены мягкими, а наружный край поднят на пять градусов — поднятый
+   наружный уголок это то, что мы читаем как приветливость.
+
+   Форма дана через clip-path, а не border-radius: скругление углов
+   даёт эллипс, уголков из него не выжать. У clip-path есть известная
+   плата — он режет и тени элемента, поэтому тень от века нарисована не
+   box-shadow, а слоем в самом фоне. Зато есть и выигрыш: обрезка
+   касается и радужки тоже, и верхнее веко по-настоящему срезает ей
+   верх — ровно как у живого глаза, где радужка никогда не видна
+   целиком. Поэтому радужка здесь крупнее, 10,5 вместо 9,6: ей есть
+   куда уходить под веко.
+
+   Л3040 — на глянцевом золоте, Л3041 — на жёлтом матовом.
+   ========================================================================== */
+.z-caps-face.z-mind .z-eye {
+  width: 21px; height: 15px; top: 37%;
+  border-radius: 0;
+  background:
+      /* тень от верхнего века — слоем в фоне, его clip-path не трогает */
+      linear-gradient(180deg, rgba(34, 22, 3, .42) 0%,
+                              rgba(34, 22, 3, .12) 26%,
+                              rgba(34, 22, 3, 0) 48%),
+      radial-gradient(ellipse 120% 100% at 50% 115%,
+          #FFFFFF 0%, #FBF6EC 46%, #E9E0CE 78%, #D2C7B0 100%);
+  box-shadow: none;
+  clip-path: path("M1.2,7.3 C4,-0.8 17,-0.8 19.8,7.3 C20.4,8.1 20.4,8.7 19.8,9.5 C17,15.1 4,15.1 1.2,9.5 C0.6,8.7 0.6,8.1 1.2,7.3 Z");
+}
+.z-caps-face.z-mind .z-eye-l { left: 11%; transform: rotate(-5deg); }
+.z-caps-face.z-mind .z-eye-r { right: 11%; transform: rotate(5deg); }
+
+/* Радужка крупнее и зрачок шире: 52% вместо 46%. Узкий зрачок — это
+   испуг или яркий свет, широкий — интерес и доверие. На детских лицах
+   он всегда широкий, и это читается прежде всего остального. */
+.z-caps-face.z-mind .z-eye::before {
+  width: 12px; height: 12px; margin: -6px 0 0 -6px; top: 46%;
+  background:
+      radial-gradient(circle closest-side at 50% 50%,
+          #000000 0 52%, rgba(0, 0, 0, 0) 54%),
+      radial-gradient(circle closest-side at 50% 50%,
+          rgba(0, 0, 0, 0) 0 70%, rgba(12, 34, 58, .45) 85%, rgba(8, 24, 44, .72) 100%),
+      repeating-conic-gradient(from 8deg at 50% 50%,
+          rgba(236, 250, 255, .17) 0deg 3deg, rgba(20, 56, 96, .17) 3deg 6deg),
+      radial-gradient(circle closest-side at 50% 34%,
+          #D7EFFB 0%, #8CC4E6 38%, #528FC0 72%, #2A5E92 100%);
+}
+.z-caps-face.z-mind .z-eye-l::before { left: 52%; }
+.z-caps-face.z-mind .z-eye-r::before { left: 48%; }
+.z-caps-face.z-mind .z-eye::after { width: 3.6px; height: 3.6px; margin: -1.8px 0 0 -1.8px; top: 28%; }
+.z-caps-face.z-mind .z-eye-l::after { left: 40%; }
+.z-caps-face.z-mind .z-eye-r::after { left: 35%; }
+
+/* ЧТО ДЕЛАЕТ ЛИЦО НЯШНЫМ.
+
+   Работает не милая деталь, а пропорции младенца, и глаз считывает их
+   раньше, чем успевает разобрать черты:
+
+   1. ГЛАЗА БОЛЬШЕ. Было 19×13,5, стало 21×15. Крупный глаз на том же
+      лице — первое, что отличает детское от взрослого.
+   2. ЗРАЧОК ШИРЕ. 52% радужки вместо 46%.
+   3. БРОВИ ТОНЬШЕ И ВЫШЕ. Были тяжёлые дуги в три пикселя — такая
+      бровь делает лицо мужским и строгим. Стало два пикселя, длина с
+      18 до 15, наклон с 10 градусов до 6: чем ровнее бровь, тем
+      спокойнее лицо. Просвет до глаза увеличен — высокая бровь это
+      ещё и удивление, то самое открытое выражение.
+   4. РОТ МЕНЬШЕ. Был 22 пикселя в ширину при трёх в толщину — широкий
+      рот читается ухмылкой. Стало 17 и 2,4: маленький рот на крупных
+      глазах и есть детская пропорция.
+   5. ЩЁКИ. Два тёплых пятна по бокам — круглые щёки младенца.
+   6. НЕТ БЕЛКА НАД РАДУЖКОЙ. Это оказалось главной ошибкой первой
+      попытки: радужка стояла низко, и сверху оставалась светлая
+      полоска. Белок над радужкой — взгляд испуганного или очень
+      сонного человека, няшности в нём ноль. Радужка поднята под веко
+      и увеличена до 12, веко срезает ей верх, а снизу остаётся
+      тонкая светлая полоска — так смотрит довольный.
+   7. УГОЛКИ ПРИТУПЛЕНЫ. Чистая миндалина даёт острый кончик, а он
+      читается хитростью. На концах добавлены короткие скругления.
+
+   Общая середина чернил оставлена на месте, 33 при центре кружка 33:
+   перераспределено только внутри лица. */
+.z-caps-face.z-mind .z-brow {
+  width: 15px; height: 7px; border-top-width: 2px;
+  border-radius: 50% 50% 0 0; top: 25.8%;
+}
+.z-caps-face.z-mind .z-brow-l { left: 15.5%; transform: rotate(-6deg); }
+.z-caps-face.z-mind .z-brow-r { right: 15.5%; transform: rotate(6deg); }
+.z-caps-face.z-mind .z-mouth {
+  width: 17px; height: 10px; left: 50%; margin-left: -8.5px; top: 59%;
+  border-bottom-width: 2.4px; border-radius: 0 0 50% 50%;
+}
+.z-caps-face.z-mind .z-cheek {
+  width: 14px; height: 8.5px; border-radius: 50%; top: 57%;
+  background: radial-gradient(ellipse at 50% 50%,
+      rgba(146, 88, 16, .50) 0%, rgba(146, 88, 16, 0) 74%);
+}
+.z-caps-face.z-mind .z-cheek-l { left: 5%; }
+.z-caps-face.z-mind .z-cheek-r { right: 5%; }
+
+/* Жёлтое матовое золото под Л3041 — то же, что у Л3М3 */
+.z-caps-face.z-f3041 {
+  background:
+      linear-gradient(180deg, #DCB253 0%, #CFA041 46%, #BE8E2D 100%) padding-box,
+      var(--z-rim) border-box;
+  box-shadow:
+      inset 0 2px 6px rgba(42, 28, 4, .36),
+      inset 0 -1px 4px rgba(255, 244, 206, .14),
+      0 0 0 1px rgba(10, 8, 4, .9);
+}
