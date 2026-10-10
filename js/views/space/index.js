@@ -109,13 +109,15 @@ function applyTabLabels() {
   });
 }
 
+/* part === null — ничего не выбрано: обе кнопки погашены, обе части
+   скрыты. Это состояние, с которого пульт открывается. */
 function showPart(part) {
   const moments = document.getElementById('quantumMoments');
   const space = document.getElementById('quantumSpace');
   if (!moments || !space) return;
 
   const isSpace = part === 'space';
-  moments.hidden = isSpace;
+  moments.hidden = part !== 'moments';
   space.hidden = !isSpace;
 
   document.querySelectorAll('#quantumTabs .qm-tab').forEach(tab => {

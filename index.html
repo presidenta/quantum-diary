@@ -175,14 +175,19 @@
       <!-- Две части раздела. Подписи проставляет js/views/space/index.js
            из своего словаря, чтобы не расширять общий i18n. -->
       <div class="qm-tabs" id="quantumTabs" role="tablist">
-        <button type="button" class="qm-tab active" data-part="moments"
-                role="tab" aria-selected="true">Архитектор метавселенной</button>
+        <button type="button" class="qm-tab" data-part="moments"
+                role="tab" aria-selected="false">Архитектор метавселенной</button>
         <button type="button" class="qm-tab" data-part="space"
                 role="tab" aria-selected="false">Наблюдатель метавселенной</button>
       </div>
 
-      <!-- Часть 1: моменты дня. Разметка и логика не менялись. -->
-      <div id="quantumMoments">
+      <!-- Часть 1: моменты дня. Разметка и логика не менялись.
+
+           Скрыта при загрузке: пульт открывается с двумя погашенными
+           кнопками, и содержимое появляется только после выбора. Пока
+           одна из кнопок была нажата по умолчанию, выбор выглядел уже
+           сделанным за человека. -->
+      <div id="quantumMoments" hidden>
         <div class="card" id="quantumCard"></div>
         <!-- Живая часть: экран момента, удержание кнопки, хромотерапия -->
         <div id="quantumLive" class="q-live" hidden></div>
