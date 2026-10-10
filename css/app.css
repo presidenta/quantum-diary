@@ -431,26 +431,71 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    тёмная по нижнему (толщина), и мягкая тень под самим блоком. На
    золотых поверхностях текст тёмный: --pult-ink.
 
-   ЗОЛОТО ЗДЕСЬ СВОЁ, И ЭТО НАРОЧНО. Игровое --gold-3d оранжевое
-   (#EAA82C), а на эталоне пульта золото бледнее — латунь с шампанью.
-   Значения ниже сняты пипеткой прямо с эталонной картинки, поэтому они
-   заданы отдельными именами --pult-*, а игровые токены не тронуты:
-   остальной Ежедневник и «Игра мудрецов» остаются в своём золоте. */
+   ЗОЛОТО ЗДЕСЬ СВОЁ, И ЭТО НАРОЧНО. Игровое --gold-3d — одна плоская
+   заливка от жёлтого к коричневому, матовая. Владелец попросил золото
+   слитка: яркое, глянцевое, с зеркальным отражением.
+   Значения ниже сняты пипеткой прямо с присланной картинки — с фотографии
+   полированного золотого слитка, поэтому они заданы отдельными именами
+   --pult-*, а игровые токены не тронуты: остальной Ежедневник и «Игра
+   мудрецов» остаются в своём золоте.
+
+   ПОЧЕМУ ПОЛОС МНОГО, А НЕ ДВЕ. Полированный металл отражает не только
+   свет, но и темноту вокруг. На срезе через слиток яркое и тёмное идут
+   скачком: #FDE6B2 → #805918 → #EDC878 подряд, без плавного перехода.
+   Ровная заливка от светлого к тёмному даёт матовую латунь; зеркало даёт
+   именно резкий перелом посередине и отражённый свет под ним. Поэтому у
+   --pult-polish двенадцать остановок, а не четыре, и поверх идёт косая
+   полоса блика --pult-glare — тот самый зайчик на полированной грани. */
 :root {
-  --pult-gold-lit:  #F7E8BC;   /* блик по верхней кромке */
-  --pult-gold-hi:   #DCC68C;   /* светлая часть пластины */
-  --pult-gold:      #D1B988;
-  --pult-gold-mid:  #C0AA74;
-  --pult-gold-low:  #B6A067;   /* нижняя часть пластины */
-  --pult-gold-deep: #7E6A44;
-  --pult-gold-rim:  #5A4A2C;   /* тёмный кант под пластиной */
-  --pult-ink:       #35260F;   /* текст НА золоте */
-  --pult-text:      #C6B18A;   /* золотая надпись на тёмном */
-  --pult-text-lit:  #E8DABA;
-  --pult-line:      rgba(198, 177, 138, .26);
-  --pult-plate: linear-gradient(180deg,
-                  #D3BC8A 0%, var(--pult-gold) 30%,
-                  var(--pult-gold-mid) 72%, var(--pult-gold-low) 100%);
+  --pult-gold-lit:  #FFF6DC;   /* блик — почти белый, тёплый (#FFF3CD слитка) */
+  --pult-gold-hi:   #FBE3A6;
+  --pult-gold:      #EFC06A;
+  --pult-gold-mid:  #DFA63F;
+  --pult-gold-low:  #A56E2E;   /* насыщенная середина слитка */
+  --pult-gold-deep: #6E4415;
+  --pult-gold-rim:  #3A2309;   /* тёмная кромка, тень слитка */
+  --pult-ink:       #2A1904;   /* текст НА золоте */
+  --pult-text:      #DDB264;   /* золотая надпись на тёмном */
+  --pult-text-lit:  #FBE6B4;
+  --pult-line:      rgba(223, 166, 63, .30);
+
+  /* Полированная грань: светлая вершина, резкий перелом на 64% и
+     отражённый свет под ним. Доли подобраны так, чтобы середина кнопки,
+     где лежит надпись, попадала на светлое — тёмные чернила на тёмной
+     полосе не читались бы. */
+  --pult-polish: linear-gradient(180deg,
+                  #8A5A14  0%,   /* тёмная кромка */
+                  #FFEFC0  3%,   /* острый свет по верхнему ребру */
+                  #F2C965 11%,
+                  #E2AC3A 26%,
+                  #FFF0C4 40%,   /* узкий палевый блик — зеркало */
+                  #F6DC9B 44%,
+                  #E8B84E 50%,
+                  #C9901F 56%,
+                  #8C5714 61%,   /* резкий перелом: горизонт грани */
+                  #B87C24 66%,
+                  #DFA63F 78%,
+                  #F6D78F 90%,   /* отражённый свет снизу */
+                  #B07C25 97%,
+                  #6B4420 100%);
+
+  /* Зайчик: узкая косая полоса поверх золота. Без неё металл выглядит
+     крашеным, с ней — отполированным. */
+  --pult-glare: linear-gradient(100deg,
+                  rgba(255, 255, 255, 0)   33%,
+                  rgba(255, 255, 255, .34) 36%,
+                  rgba(255, 255, 255, .06) 39%,
+                  rgba(255, 255, 255, 0)   42%);
+
+  /* Общая «оправа» полированной пластины: острая светлая кромка сверху,
+     тёмная снизу, тонкий тёмный кант и тень под блоком. */
+  --pult-polish-edge:
+                  inset 0 1px 0 rgba(255, 253, 240, .95),
+                  inset 0 -1px 0 rgba(58, 35, 9, .85),
+                  inset 0 0 0 1px rgba(255, 240, 200, .22),
+                  0 0 0 1px var(--pult-gold-rim),
+                  0 6px 16px rgba(0, 0, 0, .7),
+                  0 1px 3px rgba(0, 0, 0, .5);
 }
 
 .q-title { margin: 0 0 8px; font-weight: 600; }
@@ -472,33 +517,41 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   padding: 11px 22px 11px 11px;
   border-radius: 9px;
   color: var(--pult-ink);
-  background: var(--pult-plate);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 248, 222, .32),
-    inset 0 2px 3px rgba(255, 252, 236, .7),
-    inset 0 -2px 5px rgba(90, 74, 44, .5),
-    0 0 0 1px var(--pult-gold-rim),
-    0 6px 16px rgba(0, 0, 0, .6);
+  /* Зайчик лежит поверх полированной грани — порядок слоёв важен */
+  background: var(--pult-glare), var(--pult-polish);
+  box-shadow: var(--pult-polish-edge);
 }
 .q-plate-text { min-width: 0; }
 
+/* Медальон: та же полированная грань, свёрнутая в диск.
+
+   У круга свет приходит из точки, а не сверху полосой, поэтому здесь
+   радиальный переход: блик в левом верхнем углу, насыщенное золото к
+   середине, тень по нижнему краю. */
 .q-arcana {
   width: 44px; height: 44px; border-radius: 50%;
-  border: 1.5px solid rgba(53, 38, 15, .7);
+  border: 1.5px solid rgba(42, 25, 4, .8);
   display: flex; align-items: center; justify-content: center; flex: none;
   /* XVIII — пять знаков, и на 16px они упирались в кольцо */
   font-family: var(--serif); font-size: 15px; letter-spacing: 0;
   color: var(--pult-ink);
-  background: radial-gradient(circle at 36% 28%, rgba(255, 250, 232, .55), rgba(173, 147, 89, .35) 78%);
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, .65), inset 0 -2px 4px rgba(90, 74, 44, .4);
+  background:
+    radial-gradient(circle at 34% 24%,
+      #FFF8DE 0%, #F6DC9B 18%, #E8B84E 44%,
+      #C9901F 68%, #8C5714 88%, #B87C24 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 253, 240, .9),
+    inset 0 -2px 4px rgba(58, 35, 9, .55),
+    0 1px 2px rgba(0, 0, 0, .5);
 }
 
 .q-head .q-label {
   font-size: 11px; letter-spacing: .5px;
-  color: rgba(53, 38, 15, .78);
+  color: rgba(42, 25, 4, .82); text-shadow: 0 1px 0 rgba(255, 250, 225, .35);
 }
 .q-arcana-name {
   margin: 1px 0 0; font-size: 19px; font-weight: 700; color: var(--pult-ink);
+  text-shadow: 0 1px 0 rgba(255, 250, 225, .4);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -528,8 +581,9 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 }
 .q-bar i.done {
   width: 12px; height: 12px;
-  background: radial-gradient(circle at 32% 30%, var(--pult-gold-lit), var(--pult-gold) 55%, var(--pult-gold-deep) 100%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .8), inset 0 1px 2px rgba(255, 255, 255, .7);
+  background: radial-gradient(circle at 32% 28%,
+    #FFF8DE 0%, #F6DC9B 22%, #E8B84E 50%, #8C5714 88%, #C9901F 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .8), inset 0 1px 2px rgba(255, 255, 255, .8);
 }
 
 .q-group { margin-bottom: 18px; }
@@ -544,7 +598,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   flex: 1; display: flex; align-items: center; gap: 2px;
   padding: 9px 6px; border-radius: 10px;
   background: linear-gradient(180deg, #403F3E 0%, #353533 100%);
-  border: 1px solid rgba(198, 177, 138, .42);
+  border: 1px solid rgba(223, 166, 63, .40);
   font-size: 14px; color: #DBD4C6; font-variant-numeric: tabular-nums;
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, .08), 0 3px 7px rgba(0, 0, 0, .55);
   transition: border-color .18s ease, box-shadow .18s ease;
@@ -558,7 +612,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 }
 .q-time.active {
   border-color: var(--pult-gold-mid); color: var(--pult-text-lit); font-weight: 700;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .1), 0 0 16px rgba(220, 198, 140, .3);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .1), 0 0 16px rgba(240, 198, 96, .34);
 }
 
 /* Выключенное время видно, но перечёркнуто: его можно вернуть одним нажатием */
@@ -569,7 +623,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    попадать в неё надо с первого раза, а не с третьего. */
 .q-time-off {
   flex: none; width: 26px; height: 30px; padding: 0; border: 0; border-radius: 8px;
-  background: none; color: rgba(198, 177, 138, .5); font-size: 16px; line-height: 1; cursor: pointer;
+  background: none; color: rgba(223, 166, 63, .5); font-size: 16px; line-height: 1; cursor: pointer;
 }
 .q-time-off:hover { color: var(--pult-text-lit); background: rgba(255, 255, 255, .07); }
 .q-time.off .q-time-off { color: var(--pult-text); }
@@ -585,7 +639,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    пульта почти чёрная, и бледное золото держится только на такой глубине. */
 #quantumCard {
   background: linear-gradient(180deg, #0C0D10 0%, #070809 100%);
-  border: 1px solid rgba(206, 187, 146, .34);
+  border: 1px solid rgba(223, 166, 63, .32);
   box-shadow: 0 10px 26px rgba(0, 0, 0, .7), inset 0 1px 2px rgba(255, 255, 255, .05);
 }
 
