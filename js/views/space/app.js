@@ -198,14 +198,30 @@ export class QuantumApp {
                 }
             }
 
-            // Применяем позиционирование относительно SVG
+            /* Перевод из координат рисунка в пиксели экрана.
+
+               Прежде здесь стояли числа 0.55 и 10 — масштаб и отступ,
+               снятые с цветка в 110 пикселей внутри поля в 130. Цветок
+               вырос, числа остались, и кванты поехали мимо рисунка: со
+               стороны это выглядело хаосом, хотя сам движок вёл их по
+               окружностям верно.
+
+               Теперь масштаб берётся из самого узла. Сторона viewBox у
+               цветка 200, отсюда и делитель; отступ — половина разницы
+               между полем и рисунком. Поменяется размер — пересчитается
+               само. */
             const iq1 = document.getElementById('iq1');
             const iq2 = document.getElementById('iq2');
-            if (iq1 && iq2) {
-                iq1.style.left = (10 + p2x * 0.55) + 'px';
-                iq1.style.top = (10 + p2y * 0.55) + 'px';
-                iq2.style.left = (10 + p3x * 0.55) + 'px';
-                iq2.style.top = (10 + p3y * 0.55) + 'px';
+            const svg = document.querySelector('.qm-root .flower-svg');
+            const поле = document.querySelector('.qm-root .flower-orbit-container');
+            if (iq1 && iq2 && svg && поле) {
+                const сторона = svg.clientWidth || 160;
+                const масштаб = сторона / 200;
+                const отступ = ((поле.clientWidth || сторона) - сторона) / 2;
+                iq1.style.left = (отступ + p2x * масштаб) + 'px';
+                iq1.style.top = (отступ + p2y * масштаб) + 'px';
+                iq2.style.left = (отступ + p3x * масштаб) + 'px';
+                iq2.style.top = (отступ + p3y * масштаб) + 'px';
             }
 
             this._raf = requestAnimationFrame(animateQ);

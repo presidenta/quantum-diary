@@ -1213,3 +1213,30 @@ body {
   #openDrawer { display: none; }
   .top { gap: 0; }
 }
+
+/* Золотая вкладка — та же тёмная плотная буква, что на всех золотых
+   кнопках. Прежнее правило красило только span и оставляло светлый
+   ореол; оно заменено этим. */
+.qm-tab:hover, .qm-tab:hover *,
+.qm-tab:focus-visible, .qm-tab:focus-visible *,
+.qm-tab:active, .qm-tab:active *,
+.qm-tab.active, .qm-tab.active * {
+  color: var(--gold-ink);
+  -webkit-text-fill-color: var(--gold-ink);
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 250, 225, .45);
+}
+/* Заливку снимаем только с подписи: у самой вкладки background-image —
+   это золотая пластина. */
+.qm-tab:hover > span,
+.qm-tab:focus-visible > span,
+.qm-tab:active > span,
+.qm-tab.active > span {
+  background-image: none;
+  filter: none;
+}
+
+/* Кнопки языка и обновления висят поверх страницы в правом верхнем
+   углу, и заголовок на телефоне заезжал под них. Шапка резервирует
+   под них место: ширина пары плюс отступ. */
+.top { padding-right: 150px; }
