@@ -2123,3 +2123,60 @@
     background: var(--ground);
     background-attachment: fixed;
 }
+
+
+/* ---- Золотая кнопка: эталон пульта ---------------------------------------
+   Второй из двух стандартов (первый — чёрная кнопка с золотым кантом).
+   Пластина ложится в padding-box, перелив занимает прозрачную рамку в
+   border-box. Текст на золоте тёмный со светлым ореолом: прорезанное
+   золото здесь не годится — светлая буква на светлой пластине пропадает,
+   а ореол, наоборот, её приподнимает.
+
+   Кнопка отвечает на руку: под курсором кант разгорается, под нажатием
+   уходит на пиксель вниз. */
+.qm-root .btn-gold {
+    border: 2px solid transparent;
+    background:
+        url(../img/gold/n01.jpg) center/cover no-repeat padding-box,
+        var(--pult-rim) border-box;
+    color: var(--gold-ink, #231703);
+    text-shadow: 0 0 3px rgba(255, 250, 228, .95), 0 0 8px rgba(255, 250, 228, .8);
+    box-shadow: var(--pult-bar-edge);
+    transition: box-shadow .16s ease, transform .1s ease;
+}
+.qm-root .btn-gold:hover,
+.qm-root .btn-gold:focus-visible {
+    box-shadow:
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 0 3px rgba(255, 216, 124, .34),
+        0 0 24px rgba(255, 214, 120, .62),
+        0 4px 12px rgba(0, 0, 0, .65);
+}
+.qm-root .btn-gold:active {
+    transform: translateY(1px);
+    box-shadow:
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 0 4px rgba(255, 228, 150, .5),
+        0 0 32px rgba(255, 224, 140, .85),
+        0 1px 4px rgba(0, 0, 0, .6);
+}
+
+/* ---- Заголовки и системные значки ----------------------------------------
+   Крупные заголовки взяли светлое золото --gold-bright, а не рядовое
+   --gold: рядом с ними стоят золотые подписи помельче, и если дать всем
+   один тон, заголовок перестанет быть заголовком. Светлее на ступень —
+   и порядок чтения восстанавливается.
+
+   Крестик выхода был белым и выпадал из набора: теперь он того же
+   золота, что надписи, только приглушён — это выход, а не действие. */
+.qm-root .qm-hero-title,
+.qm-root .qm-title-lg,
+.qm-root .qm-title-md {
+    color: var(--gold-bright, #FAEBB8);
+}
+.qm-root .qm-close { color: var(--gold, #E3C77C); }
+
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .btn-gold { transition: none; }
+    .qm-root .btn-gold:active { transform: none; }
+}
