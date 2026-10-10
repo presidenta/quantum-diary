@@ -300,16 +300,21 @@
 
 .qm-root .flower-orbit-container {
     position: relative;
-    width: 130px;
-    height: 130px;
+    width: 190px;
+    height: 190px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .qm-root .flower-svg {
-    width: 110px;
-    height: 110px;
+    /* Знак главного экрана, и он должен читаться знаком, а не значком.
+       Было 110 при поле орбиты 130 — на широком экране это выглядело
+       миниатюрой рядом с крупным заголовком. Выросли оба: поле до 190,
+       сам цветок до 160, пропорция между ними сохранена, поэтому
+       кванты по-прежнему ходят по краю, а не по рисунку. */
+    width: 160px;
+    height: 160px;
     /* Обводки «Цветка жизни» нарисованы через currentColor — цвет берётся отсюда */
     color: var(--qm-gold);
     filter: drop-shadow(0 0 14px var(--qm-gold-glow));

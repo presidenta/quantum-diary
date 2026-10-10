@@ -96,7 +96,16 @@ function applyTabLabels() {
   const dict = CONFIG.translations[currentLang()];
   document.querySelectorAll('#quantumTabs .qm-tab').forEach(tab => {
     const key = tab.dataset.part === 'space' ? 'tabSpace' : 'tabMoments';
-    tab.textContent = dict[key];
+    // Подпись живёт в своём span, а не прямо в кнопке. Прежняя строка
+    // tab.textContent = ... стирала всё содержимое вместе с этим span, и
+    // оформление надписи — прорезанное золото на чёрной вкладке, тёмная
+    // буква на золотой — до неё не доезжало: правила висят на span.
+    let label = tab.querySelector('span');
+    if (!label) {
+      label = document.createElement('span');
+      tab.replaceChildren(label);
+    }
+    label.textContent = dict[key];
   });
 }
 
