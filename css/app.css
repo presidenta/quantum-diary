@@ -928,27 +928,61 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .cal-count.all-done { color: var(--gold); }
 
 
+
 /* ============================================================================
-   ПУЛЬТ НА ФОТОПЛАСТИНАХ
+   ЕДИНЫЙ СТИЛЬ: ЧЁРНАЯ КНОПКА В ПОКОЕ, ЗОЛОТО КАК ОТКЛИК
 
-   Плашка аркана и окна расписания одеты теми же снимками полированного
-   металла, что вкладки и капсула перехода (css/space.css). Градиентная
-   отливка --pult-face-* остаётся в файле: на ней ещё держатся тёмные
-   места Ежедневника, и перелив кромки --pult-rim общий для всего.
+   Правило, из которого следует всё остальное: золото означает действие,
+   а не украшение. Кнопка в покое чёрная, с золотым кантом и золотой
+   буквой; золотой пластиной она наливается, когда её выбрали, нажали
+   или прошли. Пока все кнопки были золотыми, отличить пройденное от
+   предстоящего было нельзя.
 
-   ОКНА ВРЕМЕНИ. Раньше невыбранное окно было тёмным зеркалом, а
-   прожитое и текущее — золотыми. Владелец попросил все золотые. Чтобы
-   не потерять различие, текущее окно теперь метит не цвет, а тёплый
-   ореол, прожитое — светлая отбивка под надписью, а выключенное
-   по-прежнему приглушено и перечёркнуто.
-
-   Пластины чередуются по девяти: у настоящего пульта соседние кнопки
-   никогда не бывают с одинаковым рисунком металла, и именно это
-   отличает набор кнопок от одной картинки, разрезанной на части.
+   Буква везде одна и та же: прорезана в золоте и обведена темнотой со
+   всех сторон. На чёрной кнопке работает золото буквы, на золотой
+   пластине — тёмная обводка вокруг неё. Поэтому один приём читается на
+   обоих фонах, и подписи по всему приложению выглядят роднёй.
    ========================================================================== */
-.q-plate,
+
+/* Канты и разделители по всему приложению. Было почти невидимое золото
+   в четырнадцать процентов — линия читалась серой. Эти два значения
+   держат все рамки карточек, разделители меню и полосу, отделяющую
+   меню от страницы, поэтому стиль меняется разом и везде. */
+:root {
+  --line:        rgba(227, 199, 124, .34);
+  --line-strong: rgba(227, 199, 124, .58);
+}
+
+/* Чёрная кнопка: та же геометрия и тот же кант, что у золотой, —
+   меняется только заливка. */
+:root {
+  --pult-plate-dark:
+      linear-gradient(180deg, #131116 0%, #0A090B 100%) padding-box,
+      var(--pult-rim) border-box;
+}
+
+/* ---- Плашка аркана: всегда золотая, это не кнопка, а знак дня ---------- */
+.q-plate {
+  border: 2px solid transparent;
+  background:
+      url(../img/gold/n03.jpg) center/cover no-repeat padding-box,
+      var(--pult-rim) border-box;
+  box-shadow: var(--pult-bar-edge);
+}
+
+/* ---- Окна расписания ------------------------------------------------------
+   В покое чёрные. Пройденное и текущее — золотая пластина, у текущего
+   вдобавок тёплый ореол. Пластины чередуются по девяти: у настоящего
+   пульта соседние кнопки не бывают с одинаковым рисунком металла. */
 .q-time {
   border: 2px solid transparent;
+  background: var(--pult-plate-dark);
+  color: var(--pult-text);
+  box-shadow: var(--pult-bar-edge);
+}
+.q-time.done,
+.q-time.active {
+  color: var(--pult-ink);
   background-repeat: no-repeat, no-repeat;
   background-position: center, center;
   background-size: cover, auto;
@@ -956,30 +990,17 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   background-clip: padding-box, border-box;
   box-shadow: var(--pult-bar-edge);
 }
-.q-plate { background-image: url(../img/gold/n03.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+1), .q-times .q-time.active:nth-child(9n+1) { background-image: url(../img/gold/n04.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+2), .q-times .q-time.active:nth-child(9n+2) { background-image: url(../img/gold/n05.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+3), .q-times .q-time.active:nth-child(9n+3) { background-image: url(../img/gold/n06.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+4), .q-times .q-time.active:nth-child(9n+4) { background-image: url(../img/gold/n07.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+5), .q-times .q-time.active:nth-child(9n+5) { background-image: url(../img/gold/n08.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+6), .q-times .q-time.active:nth-child(9n+6) { background-image: url(../img/gold/n09.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+7), .q-times .q-time.active:nth-child(9n+7) { background-image: url(../img/gold/n10.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+8), .q-times .q-time.active:nth-child(9n+8) { background-image: url(../img/gold/n11.jpg), var(--pult-rim); }
+.q-times .q-time.done:nth-child(9n+9), .q-times .q-time.active:nth-child(9n+9) { background-image: url(../img/gold/n12.jpg), var(--pult-rim); }
 
-.q-time,
-.q-time.done,
-.q-time.active { color: var(--pult-ink); }
-
-.q-times .q-time:nth-child(9n+1) { background-image: url(../img/gold/n04.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+2) { background-image: url(../img/gold/n05.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+3) { background-image: url(../img/gold/n06.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+4) { background-image: url(../img/gold/n07.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+5) { background-image: url(../img/gold/n08.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+6) { background-image: url(../img/gold/n09.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+7) { background-image: url(../img/gold/n10.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+8) { background-image: url(../img/gold/n11.jpg), var(--pult-rim); }
-.q-times .q-time:nth-child(9n+9) { background-image: url(../img/gold/n12.jpg), var(--pult-rim); }
-
-/* Прожитое окно: та же пластина, но надпись потяжелее и со светлой
-   отбивкой — читается как отработавшая кнопка, а не как погашенная. */
-.q-time.done,
-.q-time.active {
-  font-weight: 700;
-  text-shadow: 0 1px 0 rgba(255, 250, 220, .45);
-}
-/* Текущее окно светится */
+/* Текущее окно светится — так видно, какое из пройденных идёт сейчас */
 .q-time.active {
   box-shadow:
       0 0 0 1px rgba(10, 8, 4, .9),
@@ -988,16 +1009,29 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
       0 3px 8px rgba(0, 0, 0, .6);
 }
 
-/* ---- Буквы как трафарет --------------------------------------------------
-   Буква не закрашивается цветом, а прорезается в золотой пластине:
-   фоном служит тот же перелив, что на кромке, и он виден только внутри
-   контура буквы. Обычная тень на таком тексте бесполезна — она рисуется
-   под прозрачной заливкой и срезается вместе с ней, поэтому обводка
-   собрана из drop-shadow: четыре тугие тени по сторонам дают контур,
-   пятая, размытая, отделяет надпись от блика под ней. */
+/* Крестик идёт против фона: на чёрной кнопке светлый, на золотой тёмный.
+   Иначе на одном из двух он пропадает. */
+.q-time .q-time-off { color: var(--pult-text); }
+.q-time.done .q-time-off,
+.q-time.active .q-time-off { color: var(--pult-ink); }
+
+/* ---- Буквы: один приём на всё приложение ----------------------------------
+   Буква не закрашивается цветом, а прорезается в золоте: фоном служит
+   тот же перелив, что на канте, и виден он только внутри контура.
+   Обычная тень здесь бесполезна — она рисуется под прозрачной заливкой
+   и срезается вместе с ней, поэтому обводка собрана из drop-shadow:
+   четыре тугие тени по сторонам дают контур, пятая, размытая, отделяет
+   надпись от блика под ней.
+
+   Невыбранные пункты меню нарочно остаются белыми: если позолотить всё,
+   выделение перестанет что-либо выделять. */
+#screenTitle,
 .q-arcana-name,
 .q-time-at,
-.qm-tab > span {
+.qm-tab > span,
+.lang-btn > span:first-child,
+.drawer-list button[aria-current="page"] > span:not(.count),
+.bottom-nav button[aria-current="page"] > span:not(.count) {
   background-image: var(--pult-rim);
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1013,3 +1047,27 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
           drop-shadow(0 0 6px rgba(14, 8, 0, .85));
 }
 .qm-tab > span { display: inline-block; }
+/* Обрезка по тексту накрывает весь элемент, поэтому она висит на самой
+   подписи, а не на кнопке: иначе значок рядом с ней гаснет вместе с
+   заливкой. Счётчик справа тоже остаётся при своём виде. */
+
+/* ---- Отклик у кнопок шапки ------------------------------------------------
+   «Обновить» и выбор языка стояли мёртвыми: ни подсветки под курсором,
+   ни хода под пальцем. Теперь кант разгорается, кнопка уходит на
+   пиксель вниз и возвращается — рука получает ответ. */
+.head-btn {
+  transition: border-color .16s ease, box-shadow .16s ease, transform .1s ease;
+}
+.head-btn:hover,
+.head-btn:focus-visible {
+  border-color: var(--gold-line-lit);
+  box-shadow: 0 0 14px rgba(255, 214, 120, .55);
+}
+.head-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 20px rgba(255, 224, 140, .75);
+}
+@media (prefers-reduced-motion: reduce) {
+  .head-btn { transition: none; }
+  .head-btn:active { transform: none; }
+}

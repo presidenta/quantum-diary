@@ -1723,12 +1723,23 @@
    ========================================================================== */
 
 /* ---- Вкладки -------------------------------------------------------------
-   Раньше невыбранная вкладка была тёмной, а выбранная золотой. Владелец
-   попросил все золотые — так на макете. Но различать выбранную всё равно
-   надо, иначе непонятно, где ты находишься: теперь её метит не цвет, а
-   тёплый ореол вокруг. Пластина у каждой своя и постоянная, меняется
-   только свечение. */
-.qm-tab,
+   В покое вкладка чёрная: та же геометрия и тот же кант, что у золотой,
+   меняется только заливка. Под курсором и у выбранной она наливается
+   золотой пластиной. Так цвет сам отвечает на вопрос «где я сейчас» —
+   пока обе были золотыми, ответа не было.
+
+   Своя пластина у каждой: у первой n01, у второй n02. Соседние кнопки
+   с одинаковым рисунком металла выдают картинку, разрезанную на части,
+   а не набор кнопок.
+
+   :focus-visible и :active здесь не для красоты. На телефоне мыши нет,
+   и без них плитка не отзывалась бы вовсе; клавиатурному обходу тоже
+   нужен видимый отклик. */
+.qm-tab {
+    color: var(--pult-text, #E3C77C);
+    background: var(--pult-plate-dark);
+    box-shadow: var(--pult-bar-edge);
+}
 .qm-tab:hover,
 .qm-tab:focus-visible,
 .qm-tab:active,
@@ -1740,22 +1751,17 @@
     background-size: cover, auto;
     background-origin: padding-box, border-box;
     background-clip: padding-box, border-box;
-    box-shadow: var(--pult-bar-edge);
-}
-.qm-tabs .qm-tab:nth-child(2),
-.qm-tabs .qm-tab:nth-child(2):hover,
-.qm-tabs .qm-tab:nth-child(2):focus-visible,
-.qm-tabs .qm-tab:nth-child(2):active,
-.qm-tabs .qm-tab:nth-child(2).active {
-    background-image: url(../img/gold/n02.jpg), var(--pult-rim);
-}
-.qm-tab:hover,
-.qm-tab.active {
     box-shadow:
         0 0 0 1px rgba(10, 8, 4, .9),
         0 0 0 3px rgba(255, 216, 124, .34),
         0 0 22px rgba(255, 214, 120, .62),
         0 4px 12px rgba(0, 0, 0, .65);
+}
+.qm-tabs .qm-tab:nth-child(2):hover,
+.qm-tabs .qm-tab:nth-child(2):focus-visible,
+.qm-tabs .qm-tab:nth-child(2):active,
+.qm-tabs .qm-tab:nth-child(2).active {
+    background-image: url(../img/gold/n02.jpg), var(--pult-rim);
 }
 
 /* ---- Капсула перехода ----------------------------------------------------
@@ -1974,4 +1980,60 @@
     .qm-root .qm-act-main { font-size: 15px; min-height: 54px; padding: 7px 10px; }
     .qm-root .qm-play-glyph { width: 19px; height: 21px; }
     .qm-root .qm-act-play.qm-play-on .qm-play-glyph { width: 15px; height: 15px; }
+}
+
+
+/* ---- Экран перехода в том же стиле ---------------------------------------
+   Выбор скорости жил по старым правилам: серая панель, серый кант, серая
+   подпись. Рядом с золотой капсулой это читалось чужим куском. Теперь
+   здесь то же правило, что везде: в покое чёрная кнопка с золотым кантом
+   и золотой буквой, выбранная наливается золотой пластиной.
+
+   Имя двери и подсказка под кнопками — не кнопки, нажимать их нельзя,
+   поэтому пластину они не получают: им достаётся только золотой кант,
+   чтобы рамки на экране были одной породы. */
+.qm-root .speed-tab {
+    border: 2px solid transparent;
+    background: var(--pult-plate-dark);
+    color: var(--pult-text, #E3C77C);
+    box-shadow: var(--pult-bar-edge);
+}
+.qm-root .speed-tab:hover,
+.qm-root .speed-tab.active {
+    color: var(--pult-ink, #231703);
+    background-image: url(../img/gold/n01.jpg), var(--pult-rim);
+    background-repeat: no-repeat, no-repeat;
+    background-position: center, center;
+    background-size: cover, auto;
+    background-origin: padding-box, border-box;
+    background-clip: padding-box, border-box;
+    box-shadow:
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 0 3px rgba(255, 216, 124, .34),
+        0 0 22px rgba(255, 214, 120, .62),
+        0 4px 12px rgba(0, 0, 0, .65);
+}
+.qm-root .speed-tab > span:not(.badge-rec) {
+    /* Прорезанная буква тоньше обычной: внутри неё не краска, а
+       металл, и на светлой пластине тонкий штрих теряется. Жирность
+       возвращает ей вес. */
+    font-weight: 700;
+    background-image: var(--pult-rim);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    -webkit-background-clip: text;
+            background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 1px 0 rgba(14, 8, 0, 1))
+            drop-shadow(0 -1px 0 rgba(14, 8, 0, .9))
+            drop-shadow(1px 0 0 rgba(14, 8, 0, .9))
+            drop-shadow(-1px 0 0 rgba(14, 8, 0, .9))
+            drop-shadow(0 0 6px rgba(14, 8, 0, .85));
+}
+
+.qm-root .speed-instruction-box,
+.qm-root .door-text-input {
+    border: 1px solid var(--line-strong);
 }
