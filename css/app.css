@@ -1071,3 +1071,76 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   .head-btn { transition: none; }
   .head-btn:active { transform: none; }
 }
+
+/* ---- Плашка аркана: тот же приём, но контур тоньше -----------------------
+   Номер аркана и слово «Аркан дня» набраны тем же прорезанным золотом,
+   что и всё остальное, иначе плашка выпадает из набора. Но контур у них
+   тоньше: у подписи кегль мелкий, а у римской цифры штрих узкий, и
+   плотная обводка в пять теней съедала бы их целиком. Здесь три мягкие
+   тени вместо пяти тугих — буква остаётся лёгкой и всё равно не тонет
+   в золоте. */
+.q-plate .q-label,
+.q-arcana span {
+  background-image: var(--pult-rim);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 1px 1px rgba(20, 12, 1, 1))
+          drop-shadow(0 0 2px rgba(20, 12, 1, .95))
+          drop-shadow(0 0 5px rgba(20, 12, 1, .8));
+}
+
+/* ---- Окна расписания живые ------------------------------------------------
+   Кнопка обязана отвечать на руку. Под курсором кант разгорается тёплым
+   ореолом, под нажатием окно уходит на пиксель вниз и свет становится
+   ярче — будто его придавили к панели. */
+.q-time { transition: background .18s ease, box-shadow .18s ease, color .18s ease, transform .1s ease; }
+.q-time:hover {
+  box-shadow:
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 0 3px rgba(255, 216, 124, .30),
+      0 0 18px rgba(255, 214, 120, .52),
+      0 3px 8px rgba(0, 0, 0, .6);
+}
+.q-time:active {
+  transform: translateY(1px);
+  box-shadow:
+      0 0 0 1px rgba(10, 8, 4, .9),
+      0 0 0 4px rgba(255, 228, 150, .50),
+      0 0 28px rgba(255, 224, 140, .85),
+      0 1px 4px rgba(0, 0, 0, .6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .q-time { transition: none; }
+  .q-time:active { transform: none; }
+}
+
+/* ---- Подложка: одна на всё приложение -------------------------------------
+   Фон был светлее обсидиана из игры, и виноват был не сам цвет, а то,
+   что лежало поверх: белые точки в двадцать два процента и два цветных
+   пятна, золотое и фиолетовое. Они поднимали поле и уводили его в
+   лиловый. Чистый --bg из game-tokens, #0B0A0F, заметно темнее.
+
+   Клетка вместо точек: две повторяющиеся растяжки, вдоль и поперёк,
+   золотом в пять процентов. Шаг сорок пикселей. Линия тоньше точки и
+   не светит, поэтому поле остаётся глубоким.
+
+   Собрано в один токен --ground и поставлено и странице, и рабочей
+   области раздела. Раньше сетка была только у страницы, а раздел шёл
+   ровной заливкой, и на переходе между ними была видна ступенька. */
+:root {
+  --ground:
+      repeating-linear-gradient(0deg,
+          rgba(227, 199, 124, .05) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg,
+          rgba(227, 199, 124, .05) 0 1px, transparent 1px 40px),
+      var(--bg);
+}
+body {
+  background: var(--ground);
+  background-attachment: fixed;        /* клетка не едет при прокрутке */
+}

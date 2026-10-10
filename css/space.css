@@ -2037,3 +2037,89 @@
 .qm-root .door-text-input {
     border: 1px solid var(--line-strong);
 }
+
+
+/* ---- Капсула: платформа неподвижна, кнопки живые -------------------------
+   Разделение, которое и делает капсулу капсулой: плита — это корпус,
+   она цельная и с места не трогается. Шевелятся только то, что нажимают,
+   — панель с надписью и круг Play. Пока вниз уезжала вся плита, вместе
+   с ней уезжал и смайлик, который никто не нажимал, и рука читала это
+   как «провалилось всё сразу».
+
+   Свет устроен в два слоя. Под курсором греется вся капсула — тёплый
+   ореол по контуру корпуса. Одновременно разгорается та часть, на
+   которой лежит палец. Так видно и что капсула отзывчива, и куда
+   именно попал курсор.
+
+   Смайлик не кнопка и нажатий не ловит, но на внимание отвечает: когда
+   курсор заходит на капсулу, он чуть подаётся вперёд. Это и есть его
+   «шевеление» — вместе с тем, что он жмурится. */
+.qm-root .qm-act { transition: box-shadow .18s ease; }
+.qm-root .qm-act:hover {
+    box-shadow:
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 0 3px rgba(255, 216, 124, .34),
+        0 0 26px rgba(255, 214, 120, .60),
+        0 4px 14px rgba(0, 0, 0, .65);
+}
+/* Плита при нажатии не двигается — только наливается светом */
+.qm-root .qm-act.qm-act-pressed {
+    transform: none;
+    box-shadow:
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 0 4px rgba(255, 228, 150, .48),
+        0 0 34px rgba(255, 224, 140, .80),
+        0 4px 14px rgba(0, 0, 0, .65);
+}
+
+.qm-root .qm-act-face,
+.qm-root .qm-act-main,
+.qm-root .qm-act-play {
+    transition: box-shadow .16s ease, transform .1s ease;
+}
+
+/* Свечение каждой части под курсором */
+.qm-root .qm-act:hover .qm-act-face,
+.qm-root .qm-act-main:hover,
+.qm-root .qm-act-play:hover {
+    box-shadow:
+        inset 0 3px 7px rgba(46, 30, 4, .5),
+        inset 0 -2px 5px rgba(255, 248, 222, .4),
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 20px rgba(255, 238, 180, .60);
+}
+
+/* Нажали — часть уходит вниз и светится сильнее */
+.qm-root .qm-act-main:active,
+.qm-root .qm-act-play:active {
+    transform: translateY(1px);
+    box-shadow:
+        inset 0 4px 9px rgba(46, 30, 4, .62),
+        inset 0 -2px 5px rgba(255, 252, 236, .55),
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 30px rgba(255, 240, 190, .75);
+}
+
+/* Смайлик подаётся вперёд, когда курсор заходит на капсулу */
+@media (hover: hover) and (pointer: fine) {
+    .qm-root .qm-act:hover .qm-act-face { transform: scale(1.06); }
+}
+.qm-root .qm-act.qm-act-pressed .qm-act-face { transform: scale(1.06); }
+
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .qm-act,
+    .qm-root .qm-act-face,
+    .qm-root .qm-act-main,
+    .qm-root .qm-act-play { transition: none; }
+    .qm-root .qm-act-main:active,
+    .qm-root .qm-act-play:active,
+    .qm-root .qm-act:hover .qm-act-face,
+    .qm-root .qm-act.qm-act-pressed .qm-act-face { transform: none; }
+}
+
+/* Рабочая область раздела стоит на той же подложке, что и страница:
+   иначе на границе между ними видна ступенька. */
+.qm-root {
+    background: var(--ground);
+    background-attachment: fixed;
+}
