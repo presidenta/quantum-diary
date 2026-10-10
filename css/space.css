@@ -970,17 +970,14 @@
    ======================================================================== */
 .qm-tabs {
     display: flex;
-    gap: 9px;
+    gap: 10px;
     width: 100%;
     padding: 8px;
-    background: linear-gradient(180deg, #17161A 0%, #0E0D10 100%);
-    border: 1px solid rgba(227, 199, 124, .30);
-    border-radius: 14px;
+    background: #090809;
+    border: 1px solid rgba(227, 199, 124, .26);
+    border-radius: 15px;
     margin-bottom: 20px;
-    box-shadow:
-        inset 0 1px 1px rgba(255, 255, 255, .05),
-        inset 0 3px 7px rgba(0, 0, 0, .6),
-        0 5px 14px rgba(0, 0, 0, .55);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .7), 0 5px 14px rgba(0, 0, 0, .55);
 }
 
 /* Вкладка — литая плитка металла.
@@ -989,73 +986,66 @@
    серебряной, но владелец попросил оставить тёмную: серебро светлее
    золота и перетягивало взгляд на себя.
 
-   Ни полос, ни фаски. Полосы давали бочонок, фаска — толщину. Здесь
-   тело почти ровное, сверху лежат два широких мягких пятна (свет
-   сверху-слева, тень снизу-справа), а по контуру идёт кромка,
-   одинаковая со всех четырёх сторон. */
+   Тёмная плитка — это та же отливка, что и золотая: те же углы, те же
+   доли, те же блики, только в чёрном. Так и задумано: золотая кнопка
+   отражает рядом с собой саму себя, но тёмную. */
 .qm-tab {
     flex: 1;
     min-width: 0;
-    border: none;
+    border: 2px solid transparent;
     font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: .8px;
     text-transform: uppercase;
-    padding: 14px 10px;
-    border-radius: 10px;
+    padding: 13px 10px;
+    border-radius: 11px;
     cursor: pointer;
     transition: background .2s ease, box-shadow .2s ease, color .2s ease;
 
-    color: var(--pult-dark-ink, #CCC4B5);
-    background: var(--pult-dark,
-        linear-gradient(118deg, rgba(255, 250, 235, .07) 0%, rgba(255, 250, 235, 0) 34%),
-        linear-gradient(180deg, #4F4536 0%, #453C2E 56%, #3A3226 100%));
-    box-shadow: var(--pult-dark-edge,
-        inset 0 0 0 1px rgba(227, 199, 124, .16),
-        0 0 0 1px #221C10,
-        0 4px 12px rgba(0, 0, 0, .55));
+    color: var(--pult-dark-ink, #EFE6D2);
+    background: var(--pult-bar-dark);
+    box-shadow: var(--pult-bar-edge, 0 0 0 1px rgba(10, 8, 4, .9), 0 4px 12px rgba(0, 0, 0, .65));
 }
 
-/* Наведение: серебро наливается золотом.
+/* Наведение и выбор: плитка наливается золотом.
 
    :focus-visible и :active здесь не для красоты. На телефоне мыши нет,
    и без них плитка не отзывалась бы вовсе; клавиатурному обходу тоже
-   нужен видимый отклик. */
+   нужен видимый отклик.
+
+   ВНИМАНИЕ, ВРЕМЕННО: здесь стоит --pult-bar-soft, вариант «тень», а у
+   плашки аркана — --pult-bar, вариант «отражение». Так владелец видит
+   оба на одном экране и выбирает. После выбора оба места переходят на
+   победивший токен, а проигравший удаляется. */
 .qm-tab:hover,
 .qm-tab:focus-visible,
 .qm-tab:active,
 .qm-tab.active {
     color: var(--pult-ink, #231703);
     text-shadow: 0 1px 0 rgba(255, 250, 220, .5);
-    background: var(--pult-bar,
-        linear-gradient(118deg, rgba(255, 253, 238, .5) 0%, rgba(255, 253, 238, 0) 34%),
-        linear-gradient(180deg, #FAEBB8 0%, #E8C86E 30%, #E1BD5B 56%, #C7A043 91%, #EFD492 100%));
-    box-shadow: var(--pult-bar-edge,
-        inset 0 0 0 1px rgba(255, 246, 206, .55),
-        0 0 0 1px #3C2A08,
-        0 4px 12px rgba(0, 0, 0, .6));
+    background: var(--pult-bar-soft);
+    box-shadow: var(--pult-bar-edge, 0 0 0 1px rgba(10, 8, 4, .9), 0 4px 12px rgba(0, 0, 0, .65));
 }
 
 /* Выбранная светится: тёплый ореол отделяет её от той, что просто
    позолотилась под курсором. */
 .qm-tab.active {
-    box-shadow:
-        inset 0 0 0 1px rgba(255, 246, 206, .55),
-        0 0 0 1px var(--pult-gold-rim, #3C2A08),
-        0 0 16px rgba(232, 200, 110, .35),
-        0 4px 12px rgba(0, 0, 0, .6);
+    box-shadow: var(--pult-bar-lit,
+        0 0 0 1px rgba(10, 8, 4, .9),
+        0 0 18px rgba(232, 200, 110, .34),
+        0 4px 12px rgba(0, 0, 0, .65));
 }
 
 /* Узкий телефон: «НАБЛЮДАТЕЛЬ МЕТАВСЕЛЕННОЙ» — двадцать пять знаков, и в
    половину экрана они помещаются только мелким кеглем. До 360 пикселей
    подпись идёт строкой; уже — переносится на две, и обе плитки
-   вырастают вместе, потому что их тянет flex. Высота остаётся общей. */
+   вырастают вместе, потому что их тянет flex. Высота остаётся общей.
+
+   Жирность здесь ниже: на 700 длинная подпись срывалась на две строки,
+   пока короткая оставалась в одну, и плитки выглядели разными. */
 @media (max-width: 460px) {
-    .qm-tabs { gap: 6px; padding: 6px; }
-    /* Жирность здесь ниже: на 700 «НАБЛЮДАТЕЛЬ МЕТАВСЕЛЕННОЙ» срывался
-       на две строки, а золотая плитка оставалась в одну — плитки
-       выглядели разными. */
+    .qm-tabs { gap: 7px; padding: 6px; }
     .qm-tab { font-size: 9.5px; font-weight: 600; letter-spacing: .1px; padding: 12px 3px; line-height: 1.3; }
 }
 

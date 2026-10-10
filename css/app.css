@@ -434,72 +434,111 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    ЗОЛОТО ЗДЕСЬ СВОЁ, И ЭТО НАРОЧНО. Игровое --gold-3d — одна плоская
    заливка от жёлтого к коричневому, матовая. Владелец попросил золото
    слитка: яркое, глянцевое, с зеркальным отражением.
-   Значения сняты пипеткой с образца Gemini: золотая и серебряная плитки,
-   плюс две фотографии — слиток и зеркальная кружка. Имена свои, --pult-*,
-   игровые токены не тронуты: остальной Ежедневник и «Игра мудрецов»
-   остаются в своём золоте.
+   Значения сняты пипеткой с образцов: золотой слиток, зеркальная кружка
+   и два макета. Имена свои, --pult-*, игровые токены не тронуты:
+   остальной Ежедневник и «Игра мудрецов» остаются в своём золоте.
 
-   ТРИ ПОДХОДА, ИЗ КОТОРЫХ ВЕРНЫМ ОКАЗАЛСЯ ТРЕТИЙ.
+   ГЛАВНОЕ ПРАВИЛО, К КОТОРОМУ ШЛИ ЧЕТЫРЕ ЗАХОДА.
+   Владелец сформулировал его точнее всех: «кнопка отражает саму себя,
+   только чёрную». Зеркалу нечего показывать, если вокруг ничего нет, —
+   значит, оно должно показывать соседнюю такую же кнопку. Отсюда вся
+   конструкция:
 
-   Первый — плавная заливка от светлого к тёмному. Получилась матовая
-   латунь: зеркалу неоткуда взяться, если нет ни бликов, ни отражений.
+     --pult-face-gold  золотая отливка
+     --pult-face-dark  ТА ЖЕ отливка, та же геометрия бликов и отражений,
+                       только в чёрном — это и есть отражение золотой
+                       кнопки в тёмном металле
+     --pult-rim        перелив по кромке, общий для обеих
 
-   Второй — много резких полос, снятых со среза слитка. Получился
-   бочонок: светлая полоса ровно посередине и тёмные края описывают
-   цилиндр, и глаз честно видит трубу, а не пластину.
+   Чего здесь нет и почему:
+   — Полос. Нарезка на полосы (релиз 58) давала ленту, а не отливку.
+   — Фаски. Светлая полоска сверху и тёмная снизу (релиз 57) рисуют
+     толщину, и кнопка читалась бочонком.
+   Кромка идёт по всем четырём сторонам одинаково — это кромка отливки,
+   а не фаска, и выпуклости от неё не возникает.
 
-   Третий, нынешний — цельный слиток. Тело почти ровное, переход по
-   высоте слабый, зато поверх лежат два широких мягких пятна: свет
-   сверху-слева и лёгкая тень снизу-справа. Полос нет вовсе. По всему
-   контуру идёт светлая кромка — именно кромка, одинаковая со всех
-   четырёх сторон, а не фаска: фаска светлая сверху и тёмная снизу,
-   и она-то и делала кнопку выпуклой. */
+   ЛАМПЫ. Свет приходит с двух сторон: большое мягкое пятно
+   сверху-слева и короткий резкий блик справа у верхнего угла. Снизу —
+   отсвет от поверхности, на которой слиток лежит. Одна лампа давала
+   плоскую крашеную поверхность. */
 :root {
   --pult-gold-lit:  #FAEBB8;   /* светлая кромка слитка */
   --pult-gold-hi:   #EFD892;
-  --pult-gold:      #E8C86E;   /* тело слитка у Gemini */
+  --pult-gold:      #E8C86E;   /* тело слитка */
   --pult-gold-mid:  #D2AB49;
   --pult-gold-low:  #C7A043;
   --pult-gold-deep: #7E5C12;
-  --pult-gold-rim:  #3C2A08;   /* тёмный контур по краю */
+  --pult-gold-rim:  #3C2A08;
   --pult-ink:       #231703;   /* текст НА золоте */
   --pult-text:      #E3C77C;   /* золотая надпись на тёмном */
   --pult-text-lit:  #FAEBB8;
   --pult-line:      rgba(227, 199, 124, .28);
+  --pult-dark-ink:  #EFE6D2;   /* текст на тёмном зеркале */
 
-  /* Золотая плитка: цельный слиток, без единой полосы */
-  --pult-bar:
-      linear-gradient(118deg, rgba(255, 253, 238, .50) 0%, rgba(255, 253, 238, 0) 34%),
-      linear-gradient(298deg, rgba(126, 92, 18, .30) 0%, rgba(126, 92, 18, 0) 32%),
-      /* отражение того, что лежит рядом: одно широкое мягкое пятно,
-         а не полоса — у полос получался бочонок */
-      radial-gradient(135% 42% at 44% 76%, rgba(120, 88, 16, .34) 0%, rgba(120, 88, 16, 0) 72%),
-      /* свет, отражённый от поверхности под слитком */
-      radial-gradient(150% 46% at 52% 116%, rgba(255, 246, 206, .60) 0%, rgba(255, 246, 206, 0) 62%),
+  /* Перелив по кромке. Чистое золото по кругу выглядит нарисованным;
+     у настоящей полировки кромка играет — где-то уходит в белый, где-то
+     в тёмную бронзу. */
+  --pult-rim: linear-gradient(135deg,
+                #FFFBE8  0%, #F3D375 13%, #FFFFFF 25%, #D9A83F 38%,
+                #FFF4C0 52%, #C8902C 66%, #FFF9DC 80%, #AE7D21 100%);
+
+  /* Золотая отливка */
+  --pult-face-gold:
+      linear-gradient(118deg, rgba(255, 253, 238, .50) 0%, rgba(255, 253, 238, 0) 34%) padding-box,
+      radial-gradient(58% 130% at 97% 13%, rgba(255, 255, 255, .42) 0%, rgba(255, 255, 255, 0) 60%) padding-box,
+      linear-gradient(298deg, rgba(126, 92, 18, .30) 0%, rgba(126, 92, 18, 0) 32%) padding-box,
+      /* ТЁМНОЕ ОТРАЖЕНИЕ ВНУТРИ ЗОЛОТА — то, из-за чего кнопка читается
+         зеркальной. Край у пятна почти резкий (переход на 62-80%):
+         зеркало показывает предмет, а у предмета есть край. Мягкая
+         растушёвка на его месте читалась бы как тень, а не отражение. */
+      radial-gradient(125% 36% at 46% 73%,
+        rgba(46, 32, 6, .80)  0%,
+        rgba(60, 42, 10, .66) 62%,
+        rgba(60, 42, 10, 0)   80%) padding-box,
+      /* отсвет от поверхности под слитком — светлая отбивка под отражением */
+      radial-gradient(150% 40% at 52% 112%, rgba(255, 248, 214, .72) 0%, rgba(255, 248, 214, 0) 58%) padding-box,
       linear-gradient(180deg,
         #FAEBB8  0%, #EFD892  7%, #E8C86E 30%,
-        #E1BD5B 56%, #D2AB49 80%, #C7A043 91%, #EFD492 100%);
+        #E1BD5B 56%, #D2AB49 80%, #C7A043 91%, #EFD492 100%) padding-box;
 
-  --pult-bar-edge:
-      inset 0 0 0 1px rgba(255, 246, 206, .55),
-      0 0 0 1px var(--pult-gold-rim),
-      0 4px 12px rgba(0, 0, 0, .6);
+  /* Та же отливка в чёрном — отражение золотой кнопки.
+     Доли и углы совпадают с золотой один в один; меняются только цвета,
+     и в отсветы добавлено немного золота: тёмный металл рядом с золотом
+     подбирает его тон. */
+  --pult-face-dark:
+      linear-gradient(118deg, rgba(255, 246, 214, .13) 0%, rgba(255, 246, 214, 0) 34%) padding-box,
+      radial-gradient(58% 130% at 97% 13%, rgba(255, 246, 214, .16) 0%, rgba(255, 246, 214, 0) 60%) padding-box,
+      linear-gradient(298deg, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, 0) 32%) padding-box,
+      radial-gradient(135% 42% at 44% 76%, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, 0) 72%) padding-box,
+      radial-gradient(150% 46% at 52% 116%, rgba(227, 199, 124, .30) 0%, rgba(227, 199, 124, 0) 62%) padding-box,
+      linear-gradient(180deg,
+        #2B2518  0%, #1F1B11  7%, #16130C 30%,
+        #110F09 56%, #0D0B07 80%, #0B0905 91%, #2C2517 100%) padding-box;
 
-  /* Невыбранная вкладка — тёмный металл, не серебро.
+  /* ВТОРОЙ ВАРИАНТ НА СРАВНЕНИЕ — тень вместо отражения.
 
-     Серебряная плитка была в образце, но владелец попросил оставить
-     вторую вкладку тёмной, как была. Золотой она становится только под
-     курсором, поэтому своего светлого металла ей не нужно. */
-  --pult-dark:
-      linear-gradient(118deg, rgba(255, 250, 235, .07) 0%, rgba(255, 250, 235, 0) 34%),
-      linear-gradient(180deg, #4F4536 0%, #453C2E 56%, #3A3226 100%);
+     Всё то же самое, кроме одного слоя: тёмное пятно размыто до конца,
+     без края. Такое пятно глаз читает как затенение поверхности, а не
+     как отражённый предмет. Владелец просил показать оба и выбрать;
+     после выбора лишний вариант уйдёт, чтобы не держать два золота. */
+  --pult-face-gold-soft:
+      linear-gradient(118deg, rgba(255, 253, 238, .50) 0%, rgba(255, 253, 238, 0) 34%) padding-box,
+      radial-gradient(58% 130% at 97% 13%, rgba(255, 255, 255, .42) 0%, rgba(255, 255, 255, 0) 60%) padding-box,
+      linear-gradient(298deg, rgba(126, 92, 18, .30) 0%, rgba(126, 92, 18, 0) 32%) padding-box,
+      radial-gradient(135% 52% at 46% 79%, rgba(120, 88, 16, .46) 0%, rgba(120, 88, 16, 0) 100%) padding-box,
+      radial-gradient(150% 40% at 52% 112%, rgba(255, 248, 214, .55) 0%, rgba(255, 248, 214, 0) 64%) padding-box,
+      linear-gradient(180deg,
+        #FAEBB8  0%, #EFD892  7%, #E8C86E 30%,
+        #E1BD5B 56%, #D2AB49 80%, #C7A043 91%, #EFD492 100%) padding-box;
 
-  --pult-dark-edge:
-      inset 0 0 0 1px rgba(227, 199, 124, .16),
-      0 0 0 1px #221C10,
-      0 4px 12px rgba(0, 0, 0, .55);
+  --pult-bar:      var(--pult-face-gold), var(--pult-rim) border-box;
+  --pult-bar-soft: var(--pult-face-gold-soft), var(--pult-rim) border-box;
+  --pult-bar-dark: var(--pult-face-dark), var(--pult-rim) border-box;
 
-  --pult-dark-ink: #CCC4B5;
+  --pult-bar-edge:  0 0 0 1px rgba(10, 8, 4, .9), 0 4px 12px rgba(0, 0, 0, .65);
+  --pult-bar-lit:   0 0 0 1px rgba(10, 8, 4, .9),
+                    0 0 18px rgba(232, 200, 110, .34),
+                    0 4px 12px rgba(0, 0, 0, .65);
 }
 
 .q-title { margin: 0 0 8px; font-weight: 600; }
@@ -519,7 +558,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   display: inline-flex; align-items: center; gap: 14px;
   min-width: 0;
   padding: 12px 24px 12px 13px;
-  border-radius: 12px;
+  border: 2px solid transparent;
+  border-radius: 13px;
   color: var(--pult-ink);
   background: var(--pult-bar);
   box-shadow: var(--pult-bar-edge);
@@ -601,40 +641,53 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 }
 .q-times { display: flex; gap: 10px; }
 
-/* Окно времени: утоплено в металл, с золотым контуром */
+/* Окно времени: тёмное зеркало в золотой оправе.
+
+   На макете у каждого окна золотая рамка, а внутри тёмная зеркальная
+   поверхность. Это та же пара, что у вкладок: золото и его тёмное
+   отражение. Прожитое и текущее время наливаются золотом — так видно,
+   что день набирается. */
 .q-time {
   flex: 1; display: flex; align-items: center; gap: 2px;
-  padding: 9px 6px; border-radius: 10px;
-  background: linear-gradient(180deg, #403F3E 0%, #353533 100%);
-  border: 1px solid rgba(223, 166, 63, .40);
-  font-size: 14px; color: #DBD4C6; font-variant-numeric: tabular-nums;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .08), 0 3px 7px rgba(0, 0, 0, .55);
-  transition: border-color .18s ease, box-shadow .18s ease;
+  padding: 8px 5px;
+  border: 2px solid transparent;
+  border-radius: 11px;
+  background: var(--pult-bar-dark);
+  font-size: 14px; color: var(--pult-dark-ink); font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 1px rgba(10, 8, 4, .9), 0 3px 8px rgba(0, 0, 0, .6);
+  transition: background .18s ease, box-shadow .18s ease, color .18s ease;
 }
-.q-time:hover { border-color: var(--pult-gold-mid); }
 .q-time-at { flex: 1; text-align: center; }
 
-.q-time.done {
-  background: linear-gradient(180deg, #3C3426 0%, #272118 100%);
-  border-color: var(--pult-gold-deep); color: var(--pult-text-lit); font-weight: 600;
+.q-time.done,
+.q-time.active {
+  background: var(--pult-bar-soft);
+  color: var(--pult-ink); font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 250, 220, .45);
+  box-shadow: 0 0 0 1px rgba(10, 8, 4, .9), 0 3px 8px rgba(0, 0, 0, .6);
 }
 .q-time.active {
-  border-color: var(--pult-gold-mid); color: var(--pult-text-lit); font-weight: 700;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .1), 0 0 16px rgba(240, 198, 96, .34);
+  box-shadow: 0 0 0 1px rgba(10, 8, 4, .9),
+              0 0 16px rgba(232, 200, 110, .36),
+              0 3px 8px rgba(0, 0, 0, .6);
 }
 
 /* Выключенное время видно, но перечёркнуто: его можно вернуть одним нажатием */
-.q-time.off { opacity: .55; }
+.q-time.off { opacity: .5; }
 .q-time.off .q-time-at { text-decoration: line-through; }
 
 /* Крестик. Палец толще значка, поэтому у кнопки свои 30 пикселей высоты:
-   попадать в неё надо с первого раза, а не с третьего. */
+   попадать в неё надо с первого раза, а не с третьего.
+
+   Цвет наследуется от окна: на тёмном зеркале крестик светлый, на
+   золоте — тёмный, иначе он пропадал бы на одном из двух. */
 .q-time-off {
   flex: none; width: 26px; height: 30px; padding: 0; border: 0; border-radius: 8px;
-  background: none; color: rgba(223, 166, 63, .5); font-size: 16px; line-height: 1; cursor: pointer;
+  background: none; color: inherit; opacity: .55;
+  font-size: 16px; line-height: 1; cursor: pointer;
 }
-.q-time-off:hover { color: var(--pult-text-lit); background: rgba(255, 255, 255, .07); }
-.q-time.off .q-time-off { color: var(--pult-text); }
+.q-time-off:hover { opacity: 1; background: rgba(255, 255, 255, .1); }
+.q-time.off .q-time-off { opacity: .9; }
 
 .q-next { margin: 4px 0 0; }
 .q-hint { margin: 10px 0 0; font-size: 12px; }
