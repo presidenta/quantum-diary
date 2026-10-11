@@ -1026,7 +1026,11 @@
 .qm-tab:hover,
 .qm-tab:focus-visible,
 .qm-tab:active,
-.qm-tab.active {
+.qm-tab.active,
+/* .qm-lit зажигает вкладку снаружи: её ставит опыт с двумя щелями,
+   когда на его поле наводят палец или мышь. Кнопка и поле под ней —
+   об одном, и отзываться они должны вместе. */
+.qm-tab.qm-lit {
     color: var(--pult-ink, #231703);
     text-shadow: 0 1px 0 rgba(255, 250, 220, .5);
     background: var(--pult-bar-soft);
@@ -1035,7 +1039,8 @@
 
 /* Выбранная светится: тёплый ореол отделяет её от той, что просто
    позолотилась под курсором. */
-.qm-tab.active {
+.qm-tab.active,
+.qm-tab.qm-lit {
     box-shadow: var(--pult-bar-lit,
         0 0 0 1px rgba(10, 8, 4, .9),
         0 0 18px rgba(232, 200, 110, .34),
@@ -1748,7 +1753,8 @@
 .qm-tab:hover,
 .qm-tab:focus-visible,
 .qm-tab:active,
-.qm-tab.active {
+.qm-tab.active,
+.qm-tab.qm-lit {
     color: var(--pult-ink, #231703);
     background-image: url(../img/gold/n01.jpg), var(--pult-rim);
     background-repeat: no-repeat, no-repeat;
@@ -1765,7 +1771,8 @@
 .qm-tabs .qm-tab:nth-child(2):hover,
 .qm-tabs .qm-tab:nth-child(2):focus-visible,
 .qm-tabs .qm-tab:nth-child(2):active,
-.qm-tabs .qm-tab:nth-child(2).active {
+.qm-tabs .qm-tab:nth-child(2).active,
+.qm-tabs .qm-tab:nth-child(2).qm-lit {
     background-image: url(../img/gold/n02.jpg), var(--pult-rim);
 }
 
@@ -2541,3 +2548,44 @@
    32-пиксельную кнопку на линию шрифта и роняло её вниз. По центру —
    значок стоит вровень с заголовком. */
 .qm-root .qm-chronicles-head { align-items: center; }
+
+
+/* ---- Телефон: экран начинается сверху, а не с пустой полосы --------------
+   Экраны раздела стояли по середине поля и резервировали сверху полосу
+   под крестик — почти два сантиметра на телефоне, в которых не было
+   ничего, кроме самого крестика. На «Настройке реальности» и в
+   «Дневнике Наблюдателя» это читалось как пустая страница с текстом
+   где-то внизу.
+
+   Теперь на телефоне содержимое прижато к верху: поле auto у первого
+   ребёнка обнулено, и середина больше никого не держит. Полоса под
+   крестик убрана — он встал внутрь самой карточки, в её левый верхний
+   угол, и карточка резервирует под него только свою строку. Высоты
+   экономится втрое.
+
+   На широком экране всё остаётся как было: там места вдоволь и
+   середина выглядит уместно. */
+@media (max-width: 480px) {
+    .qm-root .qm-screen {
+        padding-top: calc(10px + env(safe-area-inset-top));
+    }
+    .qm-root .qm-screen > :first-child { margin-top: 0; }
+
+    .qm-root .qm-close {
+        top: calc(8px + env(safe-area-inset-top));
+        left: max(14px, env(safe-area-inset-left));
+        width: 34px;
+        height: 34px;
+        font-size: 24px;
+    }
+
+    /* Строка под крестик: он стоит в левом верхнем углу карточки, и
+       первая фраза начинается под ним, а не рядом — иначе выключенная
+       по середине строка съехала бы вбок. */
+    .qm-root .card-panel { padding-top: 34px; }
+
+    /* На титульном экране карточки нет: подпись над цветком центрована,
+       и крестик слева ей не мешает. Запас сверху нужен только на высоту
+       самого крестика. */
+    .qm-root #screen-1 { padding-top: calc(44px + env(safe-area-inset-top)); }
+}

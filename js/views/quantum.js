@@ -134,23 +134,36 @@ export function renderQuantum() {
   const active = activeMoment(day.moments, now);
   const next = nextMoment(day.moments, now);
 
+  /* АРКАН ДНЯ ЖИВЁТ НА ГЛАВНОЙ, А НЕ ВНУТРИ ЧАСТИ.
+
+     Прежде он открывал карточку «Архитектора», и увидеть знак дня можно
+     было только зайдя в раздел. Но это не содержимое раздела — это то,
+     чем сегодняшний день начинается, и место ему там, где пульт ещё
+     ничей: под двумя погашенными кнопками, рядом с опытом.
+
+     Заодно это занимает пустоту, которая оставалась там на телефоне.
+
+     Рисуется в своё поле на главной; если поля в разметке нет, аркан
+     просто не показывается, а карточка собирается как прежде. */
+  const arcanaBox = $('quantumArcana');
+  if (arcanaBox) {
+    fill(arcanaBox,
+      h('div', { class: 'q-head' },
+        // Аркан — медальон на своей пластине, а не полоса во всю ширину.
+        h('div', { class: 'q-plate' },
+          h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
+          h('div', { class: 'q-plate-text' },
+            h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
+            h('p', { class: 'q-arcana-name', text: t(arcanaKey(day.arcana)) }))),
+
+        /* Справа от плашки — о чём этот аркан и пожелание к нему. Обе
+           строки берутся по номеру аркана, как и его название. */
+        h('div', { class: 'q-arcana-say' },
+          h('p', { class: 'q-arcana-day', text: t(`${arcanaKey(day.arcana)}.day`) }),
+          h('p', { class: 'q-arcana-wish', text: t(`${arcanaKey(day.arcana)}.wish`) }))));
+  }
+
   fill(card,
-    h('div', { class: 'q-head' },
-      // Аркан — медальон на своей пластине, а не полоса во всю ширину.
-      h('div', { class: 'q-plate' },
-        h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
-        h('div', { class: 'q-plate-text' },
-          h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
-          h('p', { class: 'q-arcana-name', text: t(arcanaKey(day.arcana)) }))),
-
-      /* Справа от плашки — о чём этот аркан и пожелание к нему.
-         Раньше здесь пустовало поле, а рядом с медальоном тесно стоял
-         счёт прожитого; счёт уехал к точкам, а место занял смысл дня.
-         Обе строки берутся по номеру аркана, как и его название. */
-      h('div', { class: 'q-arcana-say' },
-        h('p', { class: 'q-arcana-day', text: t(`${arcanaKey(day.arcana)}.day`) }),
-        h('p', { class: 'q-arcana-wish', text: t(`${arcanaKey(day.arcana)}.wish`) }))),
-
     /* Счёт прожитого встал в один ряд с точками: на телефоне он занимал
        правый край шапки и поджимал название аркана до многоточия. */
     h('div', { class: 'q-bar-row' },

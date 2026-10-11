@@ -1351,6 +1351,14 @@ body {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
   margin-bottom: 14px;
 }
+
+/* Аркан дня идёт под опытом и занимает обе колонки. Он переехал сюда из
+   карточки «Архитектора»: это не содержимое раздела, а знак, которым
+   день начинается, — и заодно он занял пустоту, что оставалась здесь на
+   телефоне. Пустой, пока день не загружен, места не держит. */
+.q-arcana-block { grid-column: 1 / -1; margin-top: 6px; }
+.q-arcana-block:empty { display: none; }
+.q-arcana-block .q-head { margin-bottom: 0; }
 .q-idle[hidden] { display: none; }
 
 .q-exp {

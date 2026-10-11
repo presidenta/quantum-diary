@@ -310,12 +310,34 @@ function frame(now) {
     }
 }
 
+/* Вкладка над полем зажигается вместе с ним.
+
+   Поле и кнопка над ним — об одном и том же, и человек должен видеть
+   эту связь раньше, чем нажмёт: навёл на «волновую интерференцию» —
+   золотом налилась кнопка «Архитектор метавселенной».
+
+   Класс свой, .qm-lit, а не .active: .active означает «часть открыта»,
+   её ставит и снимает showPart, и подменять её отсюда значило бы врать
+   о состоянии раздела. */
+const TAB_OF = { wave: 'moments', particle: 'space' };
+
+function litTabs() {
+    const want = new Set();
+    for (const panel of panels) {
+        if (panel.active || panel.hover) want.add(TAB_OF[panel.kind]);
+    }
+    document.querySelectorAll('#quantumTabs .qm-tab').forEach(tab => {
+        tab.classList.toggle('qm-lit', want.has(tab.dataset.part));
+    });
+}
+
 function setActive(kind) {
     for (const panel of panels) {
         panel.active = panel.kind === kind;
         panel.root.setAttribute('aria-pressed', String(panel.active));
         panel.root.classList.toggle('q-exp-on', panel.active);
     }
+    litTabs();
 }
 
 /* Зовётся один раз из app.js. Если поля в разметке нет — молча уходит:
@@ -334,6 +356,16 @@ export function initSlit() {
             // Второе нажатие по тому же полю гасит оба: опыт снова ничей
             setActive(panel.active ? null : panel.kind);
         });
+
+        /* Наведение зажигает кнопку, но опыт не выбирает: это примерка,
+           а не выбор. Палец ведём теми же событиями — pointer накрывает
+           и мышь, и касание одним кодом. */
+        const lit = on => { panel.hover = on; litTabs(); };
+        panel.root.addEventListener('pointerenter', () => lit(true));
+        panel.root.addEventListener('pointerleave', () => lit(false));
+        panel.root.addEventListener('pointercancel', () => lit(false));
+        panel.root.addEventListener('focus', () => lit(true));
+        panel.root.addEventListener('blur', () => lit(false));
     }
 
     wired = true;
