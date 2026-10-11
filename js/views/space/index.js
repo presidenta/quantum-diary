@@ -122,6 +122,12 @@ function showPart(part) {
   moments.hidden = part !== 'moments';
   space.hidden = !isSpace;
 
+  /* Опыт с двумя щелями виден, только пока ничего не выбрано: он и
+     нужен для того, чтобы показать разницу между двумя кнопками до
+     того, как на одну из них нажмут. */
+  const idle = document.getElementById('quantumIdle');
+  if (idle) idle.hidden = part !== null;
+
   document.querySelectorAll('#quantumTabs .qm-tab').forEach(tab => {
     const on = tab.dataset.part === part;
     tab.classList.toggle('active', on);

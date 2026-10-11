@@ -18,6 +18,7 @@ import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
 import { initSpace, syncSpace } from './views/space/index.js';
+import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import { cancelAll as cancelAllReminders } from './core/reminders.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
@@ -158,8 +159,25 @@ function navButton(section, iconSize) {
     badge ? h('span', { class: 'count', text: String(badge) }) : null);
 }
 
+/* Кнопка «Профиль» в нижнем меню — вместо гамбургера в шапке.
+
+   Гамбургер стоял в левом верхнем углу и открывал меню, в котором
+   половина пунктов и так лежит в нижнем ряду: разделы. Остальное —
+   кабинет человека, настройки, выход — и есть профиль, поэтому кнопка
+   названа по тому, что за ней на самом деле.
+
+   Пятой в ряду, а не первой: четыре раздела идут в своём порядке дня,
+   и профиль к ним не относится. На широком экране нижнее меню скрыто
+   целиком, а меню и так стоит слева постоянно — кнопка там не нужна и
+   не появляется. */
+function drawerButton() {
+  return h('button', {
+    type: 'button', dataset: { section: 'profile' }, onclick: openDrawer
+  }, svgIcon(ICONS.profile, 22), h('span', { text: t('nav.profile') }));
+}
+
 function renderNav() {
-  $('bottomNav').replaceChildren(...SECTIONS.map(s => navButton(s, 22)));
+  $('bottomNav').replaceChildren(...SECTIONS.map(s => navButton(s, 22)), drawerButton());
   $('drawerMain').replaceChildren(...SECTIONS.map(s => navButton(s, 19)));
 
   // Служебное прижато вниз за разделителем — приём из того же меню.
@@ -390,6 +408,7 @@ async function boot() {
   initDay();
   initQuantum();
   initSpace();
+  initSlit();
 
   // Ежедневная проверка прав и «рубильник». Пока ACCESS_ENABLED = false,
   // этот блок не делает ничего: ни запросов, ни блокировок.
@@ -406,7 +425,6 @@ async function boot() {
   onChange(render);
 
   // Меню, язык, настройки
-  $('openDrawer').addEventListener('click', openDrawer);
   $('drawerBack').addEventListener('click', closeDrawer);
   $('langBtn').addEventListener('click', () => {
     const open = $('langMenu').hidden;

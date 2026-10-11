@@ -127,9 +127,7 @@
 
   <main class="screen">
     <header class="top">
-      <button type="button" id="openDrawer" class="icon-btn" aria-label="Меню">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
-      </button>
+      <!-- Гамбургер переехал в нижнее меню кнопкой «Профиль»: см. renderNav() -->
       <h1 id="screenTitle"></h1>
       <span id="syncStatus" class="sync" role="status"></span>
     </header>
@@ -179,6 +177,32 @@
                 role="tab" aria-selected="false">Архитектор метавселенной</button>
         <button type="button" class="qm-tab" data-part="space"
                 role="tab" aria-selected="false">Наблюдатель метавселенной</button>
+      </div>
+
+      <!-- Пустой пульт: пока ни одна кнопка не нажата, под ними идёт сам
+           опыт с двумя щелями. Слева, под «Архитектором», частицы ведут
+           себя как волна и дают семь полос; справа, под «Наблюдателем»,
+           за щелями смотрят глаза, и полос остаётся две.
+
+           Поля стоят ровно под своими кнопками и названы так же: человек
+           видит разницу раньше, чем выберет. Нажатие на поле зажигает
+           опыт, второе гаснет; повторное нажатие гасит оба.
+           Рисует js/views/quantum-slit.js. -->
+      <div id="quantumIdle" class="q-idle">
+        <button type="button" class="q-exp" data-exp="wave" aria-pressed="false">
+          <canvas aria-hidden="true"></canvas>
+          <span class="q-exp-cap">
+            <span data-i18n="exp.wave">Волновая интерференция</span>
+            <i class="q-exp-flag" data-i18n="exp.active">активно</i>
+          </span>
+        </button>
+        <button type="button" class="q-exp" data-exp="particle" aria-pressed="false">
+          <canvas aria-hidden="true"></canvas>
+          <span class="q-exp-cap">
+            <span data-i18n="exp.particle">Поведение частиц</span>
+            <i class="q-exp-flag" data-i18n="exp.active">активно</i>
+          </span>
+        </button>
       </div>
 
       <!-- Часть 1: моменты дня. Разметка и логика не менялись.
