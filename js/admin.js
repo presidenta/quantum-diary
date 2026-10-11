@@ -19,6 +19,11 @@ import { getMeta, setMeta } from './db.js';
 import { LANGUAGES, DEFAULT_LANGUAGE, isLanguage, pickLanguage, translate } from './core/i18n.js';
 import { initPasswordEyes } from './password-eye.js';
 import { request } from './core/net.js';
+/* Блок «Записать / Файл / Фото» — тот самый, что в «Настройке
+   Реальностей». Один модуль на все экраны, см. core/media-box.js. */
+import { mediaBox } from './core/media-box.js';
+import { getDoorAudio, saveDoorAudio, deleteDoorAudio } from './views/space/audio.js';
+import { getDoorPhotos, addDoorPhotos, deleteDoorPhotos } from './views/space/photos.js';
 import { initUpdate } from './update.js';
 
 const $ = id => document.getElementById(id);
@@ -248,22 +253,62 @@ async function loadPhrases() {
     }))));
 }
 
+/* ЗВУК И СНИМКИ У ФРАЗЫ.
+
+   Пока фраза не отправлена, у неё нет номера, а файлам уже надо где-то
+   лежать. Поэтому они складываются под черновым ключом, а после
+   сохранения переезжают под номер созданной фразы — тогда их видно,
+   если фразу открыть снова.
+
+   Файлы живут на этом устройстве: в базе под картинку и звук отведено
+   поле на 500 символов, то есть только ссылка, а хранилища файлов на
+   сервере нет. Об этом сказано строкой под самим блоком — обещать
+   человеку больше, чем есть, нельзя. */
+const PHRASE_DRAFT = 'phrase:draft';
+
+const phraseMedia = mediaBox(PHRASE_DRAFT, {
+  note: 'Запись и снимки сохраняются на этом устройстве: места под файлы на сервере пока нет, другим людям они не достанутся.'
+});
+$('phraseMedia').appendChild(phraseMedia);
+
 $('phraseForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target.elements;
   const text = f.text.value.trim();
   if (!text) return;
   await withBusy(async () => {
-    await api('/api/admin/quantum/phrases', {
+    const created = await api('/api/admin/quantum/phrases', {
       method: 'POST',
       body: JSON.stringify({
         slot: f.slot.value, language, text, isCommon: f.isCommon.checked
       })
     });
+
+    // Файлы черновика переводим на созданную фразу и освобождаем черновик
+    if (created && created.id) await moveMedia(PHRASE_DRAFT, `phrase:${created.id}`);
+    await phraseMedia.setKey(PHRASE_DRAFT);
+
     f.text.value = '';
     await loadPhrases();
   });
 });
+
+/* Переезд файлов с одного ключа на другой. Отдельной функции «переименуй»
+   в хранилище нет, да и незачем: перенос бывает ровно один раз, при
+   сохранении черновика. */
+async function moveMedia(from, to) {
+  const zvuk = await getDoorAudio(from);
+  if (zvuk) {
+    await saveDoorAudio(to, zvuk.blob, zvuk.fileName);
+    await deleteDoorAudio(from);
+  }
+
+  const foto = await getDoorPhotos(from);
+  if (foto.length) {
+    await addDoorPhotos(to, foto.map(p => p.blob));
+    await deleteDoorPhotos(from);
+  }
+}
 
 /* Персональный набор фраз переехал вкладкой в квантовый кабинет —
    см. renderAssignBlock выше. Отдельный диалог убран вместе с кнопкой. */

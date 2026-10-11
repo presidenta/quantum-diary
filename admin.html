@@ -92,6 +92,10 @@
                выбран в шапке кабинета. Два разных выбора языка на одном экране
                путали — один про интерфейс, другой про текст фразы. -->
           <label><span data-i18n="adm.text">Текст</span><textarea name="text" required maxlength="600"></textarea></label>
+          <!-- Сюда встаёт блок «Записать / Файл / Фото» — тот самый, что в
+               «Настройке Реальностей». Ставит его js/admin.js, чтобы разметка
+               жила в одном месте и не расходилась с другими экранами. -->
+          <div id="phraseMedia"></div>
           <label class="row-check">
             <input type="checkbox" name="isCommon" checked>
             <span data-i18n="adm.commonNote">Общая — достаётся всем, у кого нет своего набора</span>
