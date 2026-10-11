@@ -78,6 +78,31 @@ const TUNNEL_NEAR = 6;                    // где частица обгоня�
 const TUNNEL_DEPTH = 70;                  // длина трубы
 const TUNNEL_SPEED = 130;                 // единиц в секунду
 
+/* СКОЛЬКО ПЕСЧИНОК.
+
+   Было шесть тысяч. Столько на телефоне не нужно и вредно: труба
+   забивалась белым, глубина пропадала, а каждый кадр перебирал шесть
+   тысяч точек с синусом и косинусом на каждую. Тысяча триста держит ту
+   же плотную стенку — потому что теперь у каждой песчинки есть хвост, и
+   одна черта закрывает столько же места, сколько прежде закрывали пять
+   точек подряд. */
+const TUNNEL_COUNT = 1300;
+
+/* Разброс скоростей.
+
+   Прежде все песчинки шли строго в ногу, одной скоростью на всех. Поток
+   из-за этого читался единым полотном. Теперь у каждой своя скорость в
+   этих пределах: ближние обгоняют дальних, стенка живёт. */
+const TUNNEL_SPEED_MIN = 0.78;            // доли от TUNNEL_SPEED
+const TUNNEL_SPEED_MAX = 1.35;
+
+/* ХВОСТ КОМЕТЫ.
+
+   Длина следа у самого носа трубы, в единицах сцены. В глубине след
+   короче — там песчинка и по экрану идёт медленнее. */
+const TUNNEL_TRAIL = 3.4;
+const TUNNEL_TRAIL_FAR = 0.3;             // во сколько раз короче хвост в конце трубы
+
 /* Труба, а не рой.
 
    Частицы живут тонкой стенкой на одном радиусе, а не заполняют весь
@@ -534,6 +559,13 @@ export class QuantumCorridorScene {
         for (const layer of this.starLayers) layer.mesh.visible = visible;
     }
 
+    // Труба и её хвосты показываются и прячутся вместе: порознь на экране
+    // оставались бы висеть следы без голов
+    setTunnelVisible(visible) {
+        if (this.tunnelMesh) this.tunnelMesh.visible = visible;
+        if (this.tunnelTrailMesh) this.tunnelTrailMesh.visible = visible;
+    }
+
     /* Ход звёзд: только вдоль коридора, шагом по времени кадра.
 
        Шаг считается от clock.getDelta(), поэтому на быстром и на медленном
@@ -604,18 +636,47 @@ export class QuantumCorridorScene {
         this.scene.add(this.doorExplosionMesh);
     }
 
+    /* Новое место для одной песчинки трубы.
+
+       Угол, радиус и скорость раздаются заново каждый раз, когда песчинка
+       уходит на дальний край. Без этого труба за несколько секунд
+       застывала: одни и те же точки ходили по одним и тем же дорожкам. */
+    seedTunnelGrain(i) {
+        this.tunnelAngles[i] = Math.random() * Math.PI * 2;
+        this.tunnelRadii[i] = TUNNEL_R_MIN + Math.random() * (TUNNEL_R_MAX - TUNNEL_R_MIN);
+        this.tunnelSpeeds[i] = TUNNEL_SPEED *
+            (TUNNEL_SPEED_MIN + Math.random() * (TUNNEL_SPEED_MAX - TUNNEL_SPEED_MIN));
+    }
+
     buildQuantumTunnel() {
-        this.tunnelCount = 6000;
+        this.tunnelCount = TUNNEL_COUNT;
         const tGeo = new THREE.BufferGeometry();
         const tPos = new Float32Array(this.tunnelCount * 3);
-        
+
         this.tunnelAngles = new Float32Array(this.tunnelCount);
         this.tunnelRadii = new Float32Array(this.tunnelCount);
+        this.tunnelSpeeds = new Float32Array(this.tunnelCount);
+        this.tunnelZ = new Float32Array(this.tunnelCount);
 
+        /* ГЛУБИНА РАЗДАЁТСЯ СПЛОШЬ, А НЕ КОЛЬЦАМИ.
+
+           Здесь она и раньше была случайной по всей длине. Ломалось
+           дальше — на возврате: отработавшая песчинка ставилась ровно на
+           дальний торец. В один кадр торец пересекает целая горсть, и все
+           они уезжали с одной и той же глубины, одной и той же скоростью.
+           Через пару секунд сплошной поток распадался на отдельные
+           плоскости — кадр за кадром, кольцо за кольцом. Это и была
+           «зебра»: концентрические круги точек с пустотой между ними.
+
+           Лечение в одном знаке: не присваивать дальний торец, а вычесть
+           длину трубы. Тогда у песчинки сохраняется её перелёт за торец —
+           у каждой свой, долями кадра, — и горсть расходится по глубине
+           ровно так же, как шла. Плюс новая скорость при возврате: даже
+           случайно совпавшие соседки тут же разойдутся. */
         for (let i = 0; i < this.tunnelCount; i++) {
-            this.tunnelAngles[i] = Math.random() * Math.PI * 2;
-            this.tunnelRadii[i] = TUNNEL_R_MIN + Math.random() * (TUNNEL_R_MAX - TUNNEL_R_MIN);
-            tPos[i * 3 + 2] = TUNNEL_NEAR - Math.random() * TUNNEL_DEPTH;
+            this.seedTunnelGrain(i);
+            this.tunnelZ[i] = TUNNEL_NEAR - Math.random() * TUNNEL_DEPTH;
+            tPos[i * 3 + 2] = this.tunnelZ[i];
         }
 
         tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3));
@@ -647,6 +708,56 @@ export class QuantumCorridorScene {
         this.tunnelMesh = new THREE.Points(tGeo, this.tunnelMat);
         this.tunnelMesh.visible = false; 
         this.scene.add(this.tunnelMesh);
+
+        this.buildTunnelTrails();
+    }
+
+    /* ХВОСТЫ: КОМЕТА ВМЕСТО ТОЧКИ.
+
+       Почему не затирание кадра полупрозрачной чернотой, как на обычном
+       холсте. Здесь рисует WebGL, а не 2D-контекст: у него нет кадра,
+       который остаётся лежать между вызовами. Буфер отдаётся системе
+       на сборку экрана и после неё считается испорченным — так и написано
+       в спецификации, и на части телефонов он действительно приходит
+       пустым. Держать его живым можно только флагом preserveDrawingBuffer
+       при создании отрисовщика, а он тормозит весь раздел, включая
+       коридор, где никакого следа не нужно.
+
+       Поэтому след нарисован, а не накоплен. У каждой песчинки есть
+       вторая точка — позади, по ходу движения, — и между ними тянется
+       отрезок. Голова белая, хвост чёрный; при сложении света чёрное не
+       добавляет ничего, поэтому отрезок гаснет к хвосту сам собой, без
+       прозрачности и без сортировки по глубине.
+
+       Длина хвоста считается от скорости песчинки и от того, насколько
+       она близко: у носа трубы песчинка проносится через весь кадр, и
+       короткий след там не читался бы вовсе; в глубине она едва ползёт
+       по экрану, и длинный след превратил бы кольцо в сплошную кашу. */
+    buildTunnelTrails() {
+        const geo = new THREE.BufferGeometry();
+        const pos = new Float32Array(this.tunnelCount * 6);   // две точки на песчинку
+        const col = new Float32Array(this.tunnelCount * 6);
+
+        for (let i = 0; i < this.tunnelCount; i++) {
+            // Голова — в полный свет, хвост — в ноль
+            col[i * 6]     = 1; col[i * 6 + 1] = 1; col[i * 6 + 2] = 1;
+            col[i * 6 + 3] = 0; col[i * 6 + 4] = 0; col[i * 6 + 5] = 0;
+        }
+
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+        this.tunnelTrailMat = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.85,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+
+        this.tunnelTrailMesh = new THREE.LineSegments(geo, this.tunnelTrailMat);
+        this.tunnelTrailMesh.visible = false;
+        this.scene.add(this.tunnelTrailMesh);
     }
 
     createInfinitySymbol(colorStr) {
@@ -774,7 +885,7 @@ export class QuantumCorridorScene {
         this.introBurst = 0; 
         this.corridorGroup.visible = true;
         this.setStarsVisible(true);
-        this.tunnelMesh.visible = false;
+        this.setTunnelVisible(false);
         this.scene.background = null;
         this.camera.position.set(0, 1, 5);
         this.camera.rotation.set(0, 0, 0);
@@ -799,6 +910,86 @@ export class QuantumCorridorScene {
         this.animate();
     }
 
+    /* ШАГ ТРУБЫ ЗА КАДР.
+
+       Сюда переехал кусок из animate(): там он стоял прямо в теле цикла
+       отрисовки и разросся так, что ошибку возврата в нём было не
+       разглядеть.
+
+       Изгиб считается отдельно для головы и для хвоста — каждый по своей
+       глубине. Если взять один изгиб на обе точки, хвост встанет
+       касательной к кривой и на повороте начнёт отрываться от стенки;
+       со своим — след ложится вдоль трубы и поворачивает вместе с ней. */
+    tunnelBendAt(z, now, out) {
+        // Ноль у камеры, единица в конце трубы: нос всегда прямой
+        const away = Math.min(1, Math.max(0, (TUNNEL_NEAR - z) / TUNNEL_DEPTH));
+        const sway = away * away * TUNNEL_BEND;
+        out.x = Math.sin(z * TUNNEL_WAVE_X + now * TUNNEL_DRIFT_X) * sway;
+        out.y = Math.cos(z * TUNNEL_WAVE_Y + now * TUNNEL_DRIFT_Y) * sway * 0.7;
+        out.away = away;
+        return out;
+    }
+
+    moveTunnel(delta) {
+        const head = this.tunnelMesh.geometry.attributes.position.array;
+        const trail = this.tunnelTrailMesh
+            ? this.tunnelTrailMesh.geometry.attributes.position.array
+            : null;
+        const now = this.clock.getElapsedTime();
+        const bend = this._tunnelBend || (this._tunnelBend = { x: 0, y: 0, away: 0 });
+
+        for (let i = 0; i < this.tunnelCount; i++) {
+            let z = this.tunnelZ[i] + this.tunnelSpeeds[i] * delta;
+
+            /* ВОЗВРАТ БЕЗ КОЛЕЦ.
+
+               Вычитаем длину трубы, а не присваиваем её торец: перелёт за
+               торец у каждой песчинки свой, и он остаётся при ней. Горсть,
+               пересёкшая нос в один кадр, уходит назад такой же рассыпанной,
+               какой пришла, — сплошной поток не распадается на плоскости.
+
+               while, а не if: при провале кадра шаг может оказаться длиннее
+               трубы, и один вычет оставил бы песчинку впереди камеры. */
+            if (z > TUNNEL_NEAR) {
+                while (z > TUNNEL_NEAR) z -= TUNNEL_DEPTH;
+                this.seedTunnelGrain(i);        // новый угол, радиус и скорость
+            }
+            this.tunnelZ[i] = z;
+
+            const angle = this.tunnelAngles[i];
+            const r = this.tunnelRadii[i];
+
+            this.tunnelBendAt(z, now, bend);
+            const hx = Math.cos(angle) * r + bend.x;
+            const hy = Math.sin(angle) * r + bend.y;
+
+            head[i * 3] = hx;
+            head[i * 3 + 1] = hy;
+            head[i * 3 + 2] = z;
+
+            if (!trail) continue;
+
+            /* Хвост тянется назад по ходу — то есть вглубь трубы. Длина
+               берётся от скорости песчинки и гаснет к дальнему концу. */
+            const len = TUNNEL_TRAIL
+                * (this.tunnelSpeeds[i] / TUNNEL_SPEED)
+                * (TUNNEL_TRAIL_FAR + (1 - TUNNEL_TRAIL_FAR) * (1 - bend.away));
+            const tz = z - len;
+
+            this.tunnelBendAt(tz, now, bend);
+
+            trail[i * 6]     = hx;
+            trail[i * 6 + 1] = hy;
+            trail[i * 6 + 2] = z;
+            trail[i * 6 + 3] = Math.cos(angle) * r + bend.x;
+            trail[i * 6 + 4] = Math.sin(angle) * r + bend.y;
+            trail[i * 6 + 5] = tz;
+        }
+
+        this.tunnelMesh.geometry.attributes.position.needsUpdate = true;
+        if (trail) this.tunnelTrailMesh.geometry.attributes.position.needsUpdate = true;
+    }
+
     animate() {
         if (!this.isRunning) return;
         requestAnimationFrame(() => this.animate());
@@ -808,27 +999,7 @@ export class QuantumCorridorScene {
         if (!this.tunnelMode) {
             this.moveStars(delta);
         } else {
-            const positions = this.tunnelMesh.geometry.attributes.position.array;
-            const now = this.clock.getElapsedTime();
-            for (let i = 0; i < this.tunnelCount; i++) {
-                let z = positions[i * 3 + 2] + TUNNEL_SPEED * delta;
-                if (z > TUNNEL_NEAR) z = TUNNEL_NEAR - TUNNEL_DEPTH;
-                positions[i * 3 + 2] = z;
-
-                const angle = this.tunnelAngles[i];
-                const r = this.tunnelRadii[i];
-
-                // Ноль у камеры, единица в конце трубы: нос всегда прямой
-                const away = Math.min(1, (TUNNEL_NEAR - z) / TUNNEL_DEPTH);
-                const sway = away * away * TUNNEL_BEND;
-
-                const bendX = Math.sin(z * TUNNEL_WAVE_X + now * TUNNEL_DRIFT_X) * sway;
-                const bendY = Math.cos(z * TUNNEL_WAVE_Y + now * TUNNEL_DRIFT_Y) * sway * 0.7;
-
-                positions[i * 3] = Math.cos(angle) * r + bendX;
-                positions[i * 3 + 1] = Math.sin(angle) * r + bendY;
-            }
-            this.tunnelMesh.geometry.attributes.position.needsUpdate = true;
+            this.moveTunnel(delta);
         }
 
         this.renderer.render(this.scene, this.camera);
@@ -1090,7 +1261,7 @@ export class QuantumCorridorScene {
         this.camera.updateProjectionMatrix();
 
         this.corridorGroup.visible = false;
-        this.tunnelMesh.visible = true;
+        this.setTunnelVisible(true);
         this.scene.background = new THREE.Color(0x000000);
         
         this.camera.position.set(0, 0, 0); 

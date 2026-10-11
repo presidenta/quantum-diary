@@ -45,9 +45,26 @@ const STATUS_KEY = {
 /* ---------- Язык ---------- */
 
 // Подписи, вшитые в разметку: меняются целиком при смене языка
+//
+// РАЗДЕЛ «ПРОСТРАНСТВО ВАРИАНТОВ» ОБХОДИМ СТОРОНОЙ.
+//
+// У него свой словарь (js/views/space/config.js) и свои ключи. Этот обход
+// шёл по всему документу, включая поддерево раздела, а здешний t() таких
+// ключей не знает и по правилу возвращает сам ключ. Поэтому после любой
+// смены языка — и после каждого входа, где applyLanguage() зовётся по
+// умолчанию, — на экранах раздела вместо текста проступали METAVERSETITLE,
+// title1, btnStart, btnSettings, setupTitle, doorsCount, btnSave,
+// screen2Instruction. Подписи дверей оставались целыми только потому, что
+// они живут в placeholder, а не в textContent.
+//
+// Поддерево раздела переводит его собственный applyLang(); syncSpace()
+// зовёт его следом за сменой языка, так что ни одна подпись не теряется.
 function applyLanguage() {
   document.documentElement.lang = state.language;
-  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (el.closest('.qm-root')) return;
+    el.textContent = t(el.dataset.i18n);
+  });
   const current = LANGUAGES.find(l => l.code === state.language);
   $('langLabel').textContent = `${current.flag} ${current.label}`;
   renderLangMenu();

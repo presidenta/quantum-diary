@@ -94,8 +94,19 @@ export class QuantumApp {
         return (this.rootEl || document).querySelectorAll(selector);
     }
 
+    /* Перевод с двумя запасными ходами.
+
+       Прежняя строка читала словарь напрямую: CONFIG.translations[this.lang][key].
+       Стоило языку прийти кодом, которого в словаре нет — а украинский в
+       Ежедневнике и в игре встречается и как 'uk', и как 'ua', — и обращение
+       к несуществующему словарю обрывало перевод всего экрана целиком.
+
+       Теперь неизвестный код сводится к русскому, неизвестный ключ ищется в
+       русском словаре, и только если нет и там — на экран идёт сам ключ.
+       Это последняя черта: до неё человек не должен видеть служебных имён. */
     t(key) {
-        return CONFIG.translations[this.lang][key] || key;
+        const dict = CONFIG.translations[this.lang] || CONFIG.translations.ru;
+        return dict[key] || CONFIG.translations.ru[key] || key;
     }
 
     // Экранирование текста пользователя перед вставкой в HTML
