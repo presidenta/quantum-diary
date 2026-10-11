@@ -172,20 +172,19 @@ export const TEMPLATE = [
        «Рекомендуем» не висит постоянно: оно показывается только когда
        выбрано глубокое погружение, и не мозолит глаза всё время. */
     '        <div class="speed-tabs-container">',
-    /* Глубокое погружение стоит первым: это главный путь, и слева его
+    /* Максимальный эффект стоит первым: это главный путь, и слева его
        встречают взглядом раньше. Порядок в разметке, а не в CSS, —
-       пальцем и клавишей обход идёт в том же порядке, что и глазом. */
+       пальцем и клавишей обход идёт в том же порядке, что и глазом.
+       data-speed при этом не трогается: к нему привязан выбор и текст
+       инструкции под кнопками. */
     '            <button type="button" class="speed-tab" data-speed="2">',
-    '                <span class="gold-cut" data-i18n="speedOption2Btn">Глубокое погружение</span>',
-    /* Пометка живёт на самой кнопке, второй строкой под названием и
-       помельче. Проступает, когда кнопка наливается золотом: под
-       курсором, под пальцем, под клавишей — и когда эту скорость
-       выбрали. Место под неё занято всегда, поэтому ряд не подпрыгивает
-       в миг появления. */
-    '                <span class="badge-rec gold-cut" data-i18n="speedBadge">Максимальный эффект</span>',
+    '                <span class="gold-cut" data-i18n="speedOption2Btn">Максимальный эффект</span>',
+    /* Отдельной пометки здесь больше нет: её слова — «Максимальный
+       эффект» — стали названием самой кнопки. Две подписи об одном на
+       одной кнопке были лишними и растили её в высоту на целую строку. */
     '            </button>',
     '            <button type="button" class="speed-tab active" data-speed="1">',
-    '                <span class="gold-cut" data-i18n="speedOption1Btn">Быстрый переход</span>',
+    '                <span class="gold-cut" data-i18n="speedOption1Btn">Мгновенный переход</span>',
     '            </button>',
     '        </div>',
     '        <div id="speed-instruction-text" class="speed-instruction-box"></div>',
@@ -246,7 +245,12 @@ export const TEMPLATE = [
     '        </div>',
     '        <div class="qm-chronicles-head">',
     '            <h3 id="txt-s5-title" class="gold-cut" data-i18n="screen5Title"></h3>',
-    '            <button id="btn-edit-from-s5" class="btn-link-small" data-i18n="btnEditFromS5"></button>',
+    /* Шестерёнка вместо надписи: подпись «Настройки дверей» стояла в
+       строке с заголовком хроник и спорила с ним за внимание. Значок
+       тише, а слова приходят подсказкой под курсором и под пальцем.
+       Текст подсказки ставит applyLang — в разметке его нет, иначе
+       data-i18n затёр бы содержимое кнопки вместо атрибута. */
+    '            <button type="button" id="btn-edit-from-s5" class="qm-gear qm-tip"></button>',
     '        </div>',
     '        <p id="txt-s5-sub" data-i18n="screen5Subtitle"></p>',
     '        <div id="chronicles-list"></div>',

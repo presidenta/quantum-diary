@@ -2415,3 +2415,129 @@
     .qm-root .qm-s3-photo { transition: none; }
     .qm-root .qm-s3-photo:active { transform: none; }
 }
+
+
+/* ---- Намерение двери: чёрная пластина, а не золотой налёт ----------------
+   Здесь показывается то, ради чего человек пришёл: «Выигрыш в лотерею
+   1 000 000». Поле было залито полупрозрачным золотом и читалось бурым
+   пятном — ни фона, ни пластины, а золотая буква на нём теряла контраст.
+
+   Теперь под ним та же чёрная пластина с золотым кантом, что у кнопки
+   «Мгновенный переход» ниже. Экран собирается из одной породы: чёрное
+   поле — чёрное поле, золотое — золотое, и намерение держит на себе
+   главный акцент страницы. */
+.qm-root .chosen-reality-box-clean {
+    border: 2px solid transparent;
+    background: var(--pult-plate-dark);
+    box-shadow: var(--pult-bar-edge);
+    color: var(--gold-bright, #FAEBB8);
+}
+
+/* ---- Кнопки скорости: одна строка и ничего лишнего -----------------------
+   Названия стали короткими — «Максимальный эффект» и «Мгновенный
+   переход», — и вторая строка под ними больше не нужна. Высота упала с
+   шестидесяти пикселей до сорока шести: на телефоне это целая строка
+   текста, отвоёванная у пустоты.
+
+   Кегль считается от ширины экрана и не даёт подписи переломиться:
+   nowrap держит её в одну строку, clamp не даёт уехать ни в мелочь, ни
+   в ширину, которой нет. Нижняя граница 10,5 пикселя — на самом узком
+   телефоне «Максимальный эффект» укладывается в половину ряда. */
+.qm-root .speed-tab {
+    min-height: 46px;
+    padding: 8px 6px;
+    font-size: clamp(10.5px, 3vw, 13px);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* ---- Подсказка у значка: белое окошко под курсором и под пальцем ---------
+   Слова приходят из data-tip, который ставит applyLang. Окошко белое,
+   как системная подсказка, и всплывает слева от значка: справа у него
+   край карточки, и подсказка выезжала бы за экран.
+
+   pointer-events: none — чтобы окошко не перехватывало нажатие у самой
+   кнопки, над которой оно висит. */
+.qm-root .qm-tip { position: relative; }
+
+.qm-root .qm-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    padding: 5px 10px;
+    border-radius: 7px;
+    background: #F7F4EC;
+    color: #1A1410;
+    font-family: var(--qm-font);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .55);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .14s ease, visibility .14s;
+    pointer-events: none;
+}
+
+.qm-root .qm-tip:hover::after,
+.qm-root .qm-tip:focus-visible::after,
+.qm-root .qm-tip:active::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+.qm-root .qm-tip[data-tip=""]::after,
+.qm-root .qm-tip:not([data-tip])::after { content: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .qm-tip::after { transition: none; }
+}
+
+/* ---- Телефон: экран перехода помещается целиком --------------------------
+   На «Настройке реальности» сверху вниз идут подзаголовок, крупный
+   заголовок, намерение, подводка, кнопки, инструкция и капсула. Каждый
+   кусок был набран под широкий экран, и вместе они не помещались:
+   верхние строки уезжали за край, и до них было не достать.
+
+   Здесь урезано всё разом — кегли, отступы и запасы высоты. Ничего не
+   прячется и не сворачивается: экран просто перестаёт быть больше
+   телефона.
+
+   Отступ сверху считается с env(safe-area-inset-top): на телефонах с
+   вырезом первая строка иначе уходит под часы. */
+@media (max-width: 480px) {
+    .qm-root .qm-screen { padding: calc(44px + env(safe-area-inset-top)) 12px 20px; }
+    .qm-root .card-panel { padding: 16px 14px; }
+
+    .qm-root .qm-title-lg { font-size: 21px; }
+    .qm-root .qm-title-md { font-size: 19px; }
+    .qm-root .qm-sub { font-size: 12.5px; line-height: 1.45; margin-bottom: 12px; }
+
+    .qm-root .chosen-reality-box-clean {
+        font-size: 16px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+    }
+
+    .qm-root .qm-speed-title { font-size: 12px; margin-bottom: 8px; }
+    .qm-root .speed-tabs-container { gap: 6px; }
+
+    /* Запас высоты у инструкции нужен был, чтобы ряд не прыгал при смене
+       скорости. На телефоне текст и так длиннее запаса — он только
+       съедал экран на коротком. */
+    .qm-root .speed-instruction-box {
+        min-height: 0;
+        padding: 11px 13px;
+        font-size: 12.5px;
+        margin-bottom: 12px;
+    }
+}
+
+/* Заголовок хроник и значок рядом: выравнивание по baseline ставило
+   32-пиксельную кнопку на линию шрифта и роняло её вниз. По центру —
+   значок стоит вровень с заголовком. */
+.qm-root .qm-chronicles-head { align-items: center; }

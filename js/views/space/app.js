@@ -411,6 +411,19 @@ export class QuantumApp {
             gear.title = this.t('btnSettings');
         }
 
+        /* Шестерёнка в хрониках: слова живут в атрибуте, а не в кнопке.
+           Подсказку рисует CSS по data-tip, поэтому ставить её через
+           data-i18n нельзя — тот пишет в содержимое и выбросил бы значок.
+           title оставлен для тех, кто ведёт мышью и ждёт обычной
+           системной подсказки. */
+        const doorsGear = this.$('btn-edit-from-s5');
+        if (doorsGear) {
+            const label = this.t('btnEditFromS5');
+            doorsGear.setAttribute('data-tip', label);
+            doorsGear.setAttribute('aria-label', label);
+            doorsGear.title = label;
+        }
+
         this.renderChronicles();
         this.updateSnoozeButtonUI();
         this.updateSpeedUI();
