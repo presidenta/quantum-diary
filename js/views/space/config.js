@@ -23,6 +23,37 @@ export const CONFIG = {
         startHour: 6,
         endHour: 21
     },
+    /* СЛОВА СОСТОЯНИЙ ДЛЯ ДНЕВНИКА НАБЛЮДАТЕЛЯ.
+
+       Три ряда: чувство, телесное ощущение и место в теле. Порядок рядов
+       — это и порядок фразы, которая собирается в поле записи: сначала
+       что чувствую, потом что ощущаю телом, потом где.
+
+       Слова лежат в нижнем регистре и ровно в той форме, в какой пойдут
+       в запись: «в животе», а не «живот». Тогда собранная фраза читается
+       человеческой речью, и подставлять предлоги в коде не нужно.
+
+       Выбор человек держит номерами ряда и слова, а не самими словами,
+       поэтому смена языка его не теряет: ряды перерисуются на другом
+       языке, а отмеченным останется то же самое. */
+    diaryTags: {
+        ru: [
+            { label: "Мои эмоции", words: ["радость", "спокойствие", "волнение", "страх", "восторг", "благодарность", "уверенность", "предвкушение", "эйфория", "тишина"] },
+            { label: "Ощущаю физически", words: ["тепло", "жар", "мурашки", "расслабление", "холод", "трепет", "расширение", "сжатие", "лёгкость", "покалывание"] },
+            { label: "В теле сейчас я чувствую", words: ["в ногах", "в руках", "в животе", "в плечах", "в горле", "в голове"] }
+        ],
+        en: [
+            { label: "My emotions", words: ["joy", "calm", "excitement", "fear", "delight", "gratitude", "confidence", "anticipation", "euphoria", "stillness"] },
+            { label: "I feel physically", words: ["warmth", "heat", "goosebumps", "relaxation", "cold", "thrill", "expansion", "contraction", "lightness", "tingling"] },
+            { label: "In my body right now I feel", words: ["in my legs", "in my hands", "in my stomach", "in my shoulders", "in my throat", "in my head"] }
+        ],
+        uk: [
+            { label: "Мої емоції", words: ["радість", "спокій", "хвилювання", "страх", "захват", "вдячність", "впевненість", "передчуття", "ейфорія", "тиша"] },
+            { label: "Відчуваю фізично", words: ["тепло", "жар", "мурашки", "розслаблення", "холод", "трепет", "розширення", "стиснення", "легкість", "поколювання"] },
+            { label: "У тілі зараз я відчуваю", words: ["у ногах", "у руках", "у животі", "у плечах", "у горлі", "у голові"] }
+        ]
+    },
+
     // Словарь мультиязычности
     translations: {
         ru: {
@@ -84,7 +115,8 @@ export const CONFIG = {
             screen4Top: "Прямо сейчас наблюдай: почему и в чём твоя реальность уже изменилась? Обращай внимание абсолютно на всё: свободное место на парковке, зелёный свет светофора, позитивное общение с людьми. Отмечай, как тебе начинает везти в мелочах и по-крупному — всё это подтверждает твоё присутствие в новой реальности.",
             screen4Title: "Дневник Наблюдателя",
             screen4Subtitle: "Зафиксируй: что ты прожил в этот момент? В какой части тела откликнулась твоя новая реальность? Опиши в деталях свои ощущения и эмоции от того, что твой выбор воплотился в жизнь прямо сейчас.",
-            screen4Placeholder: "В теле сейчас я чувствую... [где: в груди, животе, плечах, горле, голове]...\nОщущаю физически: [тепло, жар, мурашки, расслабление, холод, трепет, расширение, сжатие, легкость, покалывание]...\nМои эмоции: [радость, спокойствие, волнение, страх, восторг, благодарность, уверенность, предвкушение, эйфория, тишина]...",
+            screen4Placeholder: "Опиши своими словами — или выбери слова выше, и запись соберётся сама.",
+            diaryTagsHint: "Кликни на слова, которые описывают твоё состояние, — они сами попадут в дневник:",
             screen4Btn: "Активировать в Хрониках Акаши",
             screen5Title: "Активации в Хрониках Акаши",
             screen5Subtitle: "Твоя новая реальность зафиксирована в ткани мироздания. Записи квантовых переходов успешно обновлены.",
@@ -165,7 +197,8 @@ export const CONFIG = {
             screen4Top: "Observe right now: why and in what way has your reality already changed? Notice absolutely everything — a free parking space, a green traffic light, a warm exchange with people. Note how luck starts coming to you in small things and in big ones: all of it confirms your presence in the new reality.",
             screen4Title: "Observer's Diary",
             screen4Subtitle: "Record: what did you experience in this moment? Where in your body did your new reality resonate? Describe in detail your feelings and emotions from the fact that your choice has materialized in life right now.",
-            screen4Placeholder: "In my body right now I feel... [where: chest, stomach, shoulders, throat, head]...\nI feel physically: [warmth, heat, goosebumps, relaxation, cold, thrill, expansion, contraction, lightness, tingling]...\nMy emotions: [joy, calm, excitement, fear, delight, gratitude, confidence, anticipation, euphoria, silence]...",
+            screen4Placeholder: "Write it in your own words — or tap the words above and the entry will assemble itself.",
+            diaryTagsHint: "Tap the words that describe your state — they will go into the diary on their own:",
             screen4Btn: "Activate in Akashic Records",
             screen5Title: "Activations in Akashic Records",
             screen5Subtitle: "Your new reality is fixed in the fabric of the universe. Quantum jump records successfully updated.",
@@ -246,7 +279,8 @@ export const CONFIG = {
             screen4Top: "Прямо зараз спостерігай: чому і в чому твоя реальність уже змінилася? Звертай увагу геть на все: вільне місце на парковці, зелене світло світлофора, тепле спілкування з людьми. Відзначай, як тобі починає щастити в дрібницях і по-крупному — усе це підтверджує твою присутність у новій реальності.",
             screen4Title: "Щоденник Спостерігача",
             screen4Subtitle: "Зафіксуй: що ти прожив у цей момент? В якій частині тіла відгукнулася твоя нова реальність? Опиши в деталях свої відчуття та емоції від того, що твій вибір втілився в житті прямо зараз.",
-            screen4Placeholder: "У тілі зараз я відчуваю... [де: у грудях, животі, плечах, горлі, голові]...\nВідчуваю фізично: [тепло, жар, мурашки, розслаблення, холод, трепет, розширення, стиснення, легкість, поколювання]...\nМої емоції: [радість, спокій, хвилювання, страх, захват, вдячність, впевненість, передчуття, ейфорія, тиша]...",
+            screen4Placeholder: "Опиши своїми словами — або обери слова вище, і запис збереться сам.",
+            diaryTagsHint: "Клікни на слова, які описують твій стан, — вони самі потраплять у щоденник:",
             screen4Btn: "Активувати в Хроніках Акаші",
             screen5Title: "Активації в Хроніках Акаші",
             screen5Subtitle: "Твоя нова реальність зафіксована в тканині світобудови. Записи квантових переходів успішно оновлені.",

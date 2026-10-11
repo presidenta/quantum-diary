@@ -49,6 +49,8 @@ export class QuantumApp {
         this.recordingDoorId = null;     // дверь, которую сейчас записываем
         this.recTimer = null;            // отсчёт секунд во время записи
         this.smileyLocked = false;       // смайлик зажмурился и остался таким
+        this.diaryPicked = new Set();    // отмеченные слова состояний, «ряд:слово»
+        this.diaryText = '';             // кусок записи, собранный из этих слов
         this.history = JSON.parse(localStorage.getItem('quantum_akashi_chronicles') || '[]');
         this.notifications = new NotificationManager();
         this.selectedSpeed = 1; // 1: Быстрый переход, 2: Глубокое погружение
@@ -68,6 +70,7 @@ export class QuantumApp {
         this.safely('частицы заголовка', () => this.initInnerQuantums());
         this.safely('переключатель языков', () => this.initLangSwitcher());
         this.safely('смайлик', () => this.initSmiley());
+        this.safely('длинные вступления', () => this.initFolds());
         this.safely('подписи', () => this.applyLang());
         this.safely('расписание', () => this.checkScheduleAndTimer());
     }
@@ -367,6 +370,136 @@ export class QuantumApp {
         }
     }
 
+    /* ---- Длинное вступление под катом ---------------------------------
+
+       Абзац зажат тремя строками, остальное открывается галочкой под ним.
+       На телефоне такая фраза занимала четверть экрана и отодвигала вниз
+       всё, ради чего человек сюда пришёл.
+
+       Галочка висит не всегда. Если текст и так уместился в три строки —
+       а на широком экране он умещается, — показывать её незачем: это и
+       проверяет measureFolds, сравнивая полную высоту абзаца с видимой.
+
+       Мерить можно только когда экран показан: у спрятанного .hidden
+       высота нулевая, и любое сравнение дало бы «не влезает». Поэтому
+       замер зовут showScreen, applyLang и поворот экрана, а не
+       конструктор. */
+    initFolds() {
+        this.$$('.qm-fold').forEach(fold => {
+            const btn = fold.querySelector('.qm-fold-btn');
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                const open = fold.classList.toggle('qm-open');
+                btn.setAttribute('aria-expanded', String(open));
+            });
+        });
+    }
+
+    measureFolds() {
+        this.$$('.qm-fold').forEach(fold => {
+            const text = fold.querySelector('.qm-fold-text');
+            const btn = fold.querySelector('.qm-fold-btn');
+            if (!text || !btn || !text.offsetHeight) return;
+
+            /* Открытому абзацу галочка нужна всегда: иначе свернуть его
+               обратно будет нечем — в раскрытом виде он по определению
+               «помещается». */
+            const clipped = text.scrollHeight - text.clientHeight > 2;
+            btn.hidden = !clipped && !fold.classList.contains('qm-open');
+        });
+    }
+
+    /* ---- Слова состояний ------------------------------------------------
+
+       Три ряда слов над полем записи: что чувствую, что ощущаю телом и
+       где. Нажатое слово загорается золотом и само встаёт в запись;
+       нажатое второй раз — гаснет и из записи уходит. Квадратиков и
+       галочек нет: выбор виден по самому слову.
+
+       Выбор держится парой номеров «ряд:слово», а не самим словом. Тогда
+       смена языка его не теряет: ряды перерисуются по-другому, а
+       отмеченным останется то же самое.
+
+       В поле записи собранные слова живут одним куском, и этот кусок
+       запомнен дословно в this.diaryText. Новый кусок подменяет старый
+       на месте — поэтому всё, что человек дописал руками вокруг, остаётся
+       нетронутым, и поле остаётся обычным полем для письма, а не выводом
+       машины. Если старого куска в поле уже нет (стёрли вручную), новый
+       дописывается в конец. */
+    tagGroups() {
+        const all = CONFIG.diaryTags || {};
+        return all[this.lang] || all.ru || [];
+    }
+
+    renderDiaryTags() {
+        const box = this.$('s4-tags');
+        if (!box) return;
+
+        const rows = this.tagGroups().map((group, gi) => {
+            const row = document.createElement('div');
+            row.className = 'qm-tag-group';
+
+            const label = document.createElement('span');
+            label.className = 'qm-tag-label';
+            label.textContent = group.label;
+            row.appendChild(label);
+
+            const words = document.createElement('div');
+            words.className = 'qm-tag-row';
+            group.words.forEach((word, wi) => {
+                const key = gi + ':' + wi;
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'qm-tag';
+                chip.textContent = word;
+                chip.setAttribute('aria-pressed', String(this.diaryPicked.has(key)));
+                chip.addEventListener('click', () => {
+                    if (this.diaryPicked.has(key)) this.diaryPicked.delete(key);
+                    else this.diaryPicked.add(key);
+                    chip.setAttribute('aria-pressed', String(this.diaryPicked.has(key)));
+                    this.syncDiaryTags();
+                });
+                words.appendChild(chip);
+            });
+
+            row.appendChild(words);
+            return row;
+        });
+
+        box.replaceChildren(...rows);
+    }
+
+    /* Фраза собирается по рядам и в их порядке:
+       «Мои эмоции: радость, эйфория. Ощущаю физически: мурашки.
+        В теле сейчас я чувствую: в животе.»
+       Пустой ряд пропускается целиком, вместе со своим названием. */
+    composeDiaryText() {
+        return this.tagGroups().map((group, gi) => {
+            const picked = group.words.filter((word, wi) => this.diaryPicked.has(gi + ':' + wi));
+            return picked.length ? group.label + ': ' + picked.join(', ') + '.' : '';
+        }).filter(Boolean).join(' ');
+    }
+
+    syncDiaryTags() {
+        const area = this.$('input-s4-diary');
+        if (!area) return;
+
+        const next = this.composeDiaryText();
+        const prev = this.diaryText;
+        let value = area.value;
+
+        if (prev && value.includes(prev)) {
+            /* Замена функцией, а не строкой: в слове может оказаться
+               доллар, а в строке замены он значил бы подстановку. */
+            value = value.replace(prev, () => next);
+        } else if (next) {
+            value = value.trim() ? value.replace(/\s+$/, '') + '\n' + next : next;
+        }
+
+        area.value = value.replace(/\n{3,}/g, '\n\n').replace(/^\s+/, '');
+        this.diaryText = next;
+    }
+
     applyLang() {
         // Текущий язык на кнопке и отметка в списке
         const current = LANGS.find(item => item.code === this.lang) || LANGS[0];
@@ -388,6 +521,13 @@ export class QuantumApp {
                 el.innerText = this.t(key);
             }
         });
+
+        /* Слова состояний. Ряды перерисовываются на новом языке, а
+           собранный из них кусок в поле записи подменяется с прежнего
+           языка на новый — дословно, на месте, не трогая остального. */
+        this.renderDiaryTags();
+        this.syncDiaryTags();
+        this.measureFolds();
 
         // Динамические элементы.
         // Набранный, но ещё не сохранённый текст дверей переживает смену языка.
@@ -574,7 +714,10 @@ export class QuantumApp {
         this.sandCanvas = document.getElementById('sand-canvas');
         this.sandCtx = this.sandCanvas.getContext('2d');
         this.resizeSandCanvas();
-        this._onResize = () => this.resizeSandCanvas();
+        /* Поворот телефона меняет ширину, а с ней и число строк в
+           свёрнутом вступлении: галочка то нужна, то нет. Замер
+           подвешен к тому же слушателю, чтобы не плодить второй. */
+        this._onResize = () => { this.resizeSandCanvas(); this.measureFolds(); };
         window.addEventListener('resize', this._onResize);
     }
 
@@ -1580,6 +1723,10 @@ export class QuantumApp {
         this.notifications.resetSnooze();
 
         document.getElementById('input-s4-diary').value = '';
+        // Запись ушла в хроники — слова гаснут вместе с ней
+        this.diaryPicked.clear();
+        this.diaryText = '';
+        this.renderDiaryTags();
         this.renderChronicles();
         this.showScreen('screen-5');
     }
@@ -1872,6 +2019,8 @@ export class QuantumApp {
             document.getElementById(screenKey).classList.remove('hidden');
             timer.classList.add('hidden');
             if (langSwitcher) langSwitcher.classList.remove('hidden');
+            // Экран показан — только теперь у абзацев есть высота
+            this.measureFolds();
         } else {
             timer.classList.remove('hidden');
             if (langSwitcher) langSwitcher.classList.add('hidden');

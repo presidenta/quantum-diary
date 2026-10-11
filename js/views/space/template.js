@@ -155,7 +155,22 @@ export const TEMPLATE = [
     /* --- ЭКРАН 3: настройка реальности после выбора двери --------------- */
     '<div id="screen-3" class="qm-screen hidden">',
     '    <div class="card-panel text-center">',
-    '        <p id="txt-s3-sub" class="qm-sub" data-i18n="screen3Subtitle"></p>',
+    /* ДЛИННОЕ ВСТУПЛЕНИЕ СВЁРНУТО ДО ТРЁХ СТРОК.
+
+       На телефоне эта фраза занимала четверть экрана и отодвигала вниз
+       всё, ради чего человек сюда пришёл. Теперь видны три строки, а
+       остальное открывается галочкой. Текст никуда не делся — он просто
+       не берёт место, пока его не позвали.
+
+       Галочка — отдельная кнопка рядом с абзацем, а не внутри него:
+       applyLang пишет перевод в содержимое элемента с data-i18n и
+       выбросил бы значок при первой же смене языка. */
+    '        <div class="qm-fold" id="fold-s3">',
+    '            <p id="txt-s3-sub" class="qm-sub qm-fold-text" data-i18n="screen3Subtitle"></p>',
+    '            <button type="button" class="qm-fold-btn" aria-expanded="false" hidden>',
+    '                <i class="qm-chev" aria-hidden="true"></i>',
+    '            </button>',
+    '        </div>',
     '        <h2 id="txt-s3-title" class="qm-title-lg gold-cut" data-i18n="screen3MainTitle">Настройка реальности</h2>',
     '        <div id="txt-s3-chosen-reality" class="chosen-reality-box-clean"></div>',
 
@@ -219,9 +234,27 @@ export const TEMPLATE = [
     /* --- ЭКРАН 4: Дневник Наблюдателя ---------------------------------- */
     '<div id="screen-4" class="qm-screen hidden">',
     '    <div class="card-panel qm-akasha">',
-    '        <p id="txt-s4-top" class="gold-notice-box" data-i18n="screen4Top"></p>',
+    '        <div class="qm-fold" id="fold-s4">',
+    '            <p id="txt-s4-top" class="gold-notice-box qm-fold-text" data-i18n="screen4Top"></p>',
+    '            <button type="button" class="qm-fold-btn" aria-expanded="false" hidden>',
+    '                <i class="qm-chev" aria-hidden="true"></i>',
+    '            </button>',
+    '        </div>',
     '        <h2 id="txt-s4-title" class="qm-title-md gold-cut" data-i18n="screen4Title">Дневник Наблюдателя</h2>',
     '        <p id="txt-s4-sub" class="qm-sub" data-i18n="screen4Subtitle"></p>',
+    /* СЛОВА СОСТОЯНИЙ.
+
+       Перед полем записи лежат сами слова — эмоции, телесные ощущения и
+       место в теле. Нажатое слово загорается золотом и само встаёт в
+       запись; нажатое второй раз — гаснет и из записи уходит. Квадратиков
+       и галочек здесь нет: выбор виден по самому слову, а не по значку
+       рядом с ним.
+
+       Ряды рисует renderDiaryTags: слова живут в словаре и меняются
+       вместе с языком, а выбор держится по номерам и смену языка
+       переживает. */
+    '        <p class="qm-tags-hint" data-i18n="diaryTagsHint"></p>',
+    '        <div class="qm-tags" id="s4-tags"></div>',
     '        <textarea id="input-s4-diary" rows="7" data-i18n="screen4Placeholder"></textarea>',
 
     /* Гримуар Акаши: кнопка-фолиант, из которой при нажатии вылетает

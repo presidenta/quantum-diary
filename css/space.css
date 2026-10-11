@@ -1478,8 +1478,8 @@
 /* Узкий телефон: надпись мельче, круг меньше — чтобы капсула не ломалась */
 @media (max-width: 400px) {
     .qm-root .qm-act { gap: 7px; padding: 8px 9px 8px 7px; border-radius: 14px; }
-    .qm-root .qm-act-main { font-size: 17px; min-height: 54px; padding: 7px 10px; }
-    .qm-root .qm-act-play { width: 52px; height: 52px; }
+    .qm-root .qm-act-main { font-size: 17px; min-height: 51px; padding: 7px 10px; }
+    .qm-root .qm-act-play { width: 49px; height: 49px; }
     .qm-root .qm-play-glyph { border-width: 10px 0 10px 16px; }
     .qm-root .qm-act-play.qm-play-on .qm-play-glyph { width: 15px; height: 15px; }
 }
@@ -1804,8 +1804,8 @@
 .qm-root .qm-act-face,
 .qm-root .qm-act-play {
     flex: none;
-    width: 66px;
-    height: 66px;
+    width: 63px;
+    height: 63px;
     padding: 0;
     border: 2px solid transparent;
     border-radius: 50%;
@@ -1910,7 +1910,7 @@
 
 /* ---- Панель с надписью --------------------------------------------------- */
 .qm-root .qm-act-main {
-    min-height: 62px;
+    min-height: 59px;
     border: 2px solid transparent;
     border-radius: 12px;
     background:
@@ -1988,8 +1988,8 @@
 @media (max-width: 400px) {
     .qm-root .qm-act { gap: 8px; padding: 7px; border-radius: 15px; }
     .qm-root .qm-act-face,
-    .qm-root .qm-act-play { width: 56px; height: 56px; }
-    .qm-root .qm-act-main { font-size: 15px; min-height: 54px; padding: 7px 10px; }
+    .qm-root .qm-act-play { width: 53px; height: 53px; }
+    .qm-root .qm-act-main { font-size: 15px; min-height: 51px; padding: 7px 10px; }
     .qm-root .qm-play-glyph { width: 19px; height: 21px; }
     .qm-root .qm-act-play.qm-play-on .qm-play-glyph { width: 15px; height: 15px; }
 }
@@ -2608,4 +2608,160 @@
     .qm-root .gold-notice-box { font-size: 13.5px; line-height: 1.6; margin-bottom: 18px; }
     .qm-root #input-s4-diary { font-size: 14px; line-height: 1.6; }
     .qm-root .qm-akasha textarea { min-height: 170px; }
+}
+
+
+/* ===== Длинное вступление под катом =======================================
+
+   Первая фраза на «Настройке реальности» и на «Дневнике Наблюдателя» —
+   длинная, и на телефоне она занимала четверть экрана, отодвигая вниз всё,
+   ради чего человек сюда пришёл. Теперь видны три строки, остальное
+   открывается галочкой под абзацем.
+
+   Текст никуда не делся и ничем не обрезан по смыслу: он просто не берёт
+   место, пока его не позвали. Галочка показывается только когда строк
+   правда больше трёх, — это решает measureFolds замером, а не догадкой о
+   ширине экрана. */
+.qm-root .qm-fold { margin: 0 0 16px; }
+.qm-root .qm-fold .qm-fold-text { margin-bottom: 0; }
+
+.qm-root .qm-fold-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+}
+.qm-root .qm-fold.qm-open .qm-fold-text {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+}
+
+.qm-root .qm-fold-btn {
+    display: block;
+    margin: 7px auto 0;
+    width: 40px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    background: none;
+    line-height: 0;
+    cursor: pointer;
+}
+/* Без этой строки спрятанная кнопка осталась бы видимой: display: block
+   выше перебивает то display: none, которое браузер даёт [hidden] сам. */
+.qm-root .qm-fold-btn[hidden] { display: none; }
+
+/* Галочка — два штриха уголком. Повёрнута вниз у свёрнутого абзаца и
+   вверх у раскрытого, с поворотом на глазах: так видно, что это одно и
+   то же действие в обе стороны. */
+.qm-root .qm-chev {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--qm-gold);
+    border-bottom: 2px solid var(--qm-gold);
+    transform: translateY(-3px) rotate(45deg);
+    opacity: .72;
+    transition: transform .22s ease, opacity .18s ease;
+}
+.qm-root .qm-fold-btn:hover .qm-chev { opacity: 1; }
+.qm-root .qm-fold.qm-open .qm-chev { transform: translateY(1px) rotate(-135deg); }
+
+/* ===== Названию страницы — воздух сверху и снизу ==========================
+
+   Подзаголовок над заголовком и текст под ним стояли вплотную, и экран
+   читался одним сплошным куском. Кегль не тронут: выросли только поля,
+   заголовок отделён, но не стал крупнее. */
+.qm-root #txt-s3-title { margin: 26px 0 22px; }
+.qm-root #txt-s4-title { margin: 26px 0 18px; }
+
+/* ===== Слова состояний в Дневнике ========================================
+
+   Слова лежат рядами над полем записи: что чувствую, что ощущаю телом и
+   где. Квадратиков и галочек нет — видно только сами слова, и выбор тоже
+   виден по самому слову: невыбранное молчит приглушённым, выбранное
+   наливается золотом и светится. Ничего, кроме цвета, при этом не
+   двигается: ряд не перескакивает под пальцем. */
+.qm-root .qm-tags-hint {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--qm-muted);
+    text-align: left;
+}
+.qm-root .qm-tags { margin-bottom: 14px; text-align: left; }
+.qm-root .qm-tag-group { margin-bottom: 11px; }
+
+.qm-root .qm-tag-label {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11px;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    color: var(--qm-faint);
+}
+
+.qm-root .qm-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 3px;
+}
+
+.qm-root .qm-tag {
+    margin: 0;
+    padding: 5px 7px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.3;
+    color: rgba(226, 214, 190, .55);
+    cursor: pointer;
+    transition: color .16s ease, background .16s ease, text-shadow .16s ease;
+}
+.qm-root .qm-tag:hover { color: rgba(255, 234, 184, .88); }
+.qm-root .qm-tag[aria-pressed="true"] {
+    color: #FFE4A3;
+    background: rgba(255, 206, 110, .09);
+    text-shadow: 0 0 10px rgba(255, 206, 110, .55), 0 0 22px rgba(255, 190, 80, .28);
+}
+.qm-root .qm-tag:focus-visible {
+    outline: 1px solid var(--qm-gold-line);
+    outline-offset: 1px;
+}
+
+/* ===== Телефон ============================================================ */
+@media (max-width: 480px) {
+    /* ---- Титульный экран во всю высоту ----------------------------------
+
+       Было так: всё содержимое собиралось в центр одним комом, а нижняя
+       треть экрана оставалась пустой. Теперь свободное место делится
+       поровну на два промежутка — над цветком и под заголовком, — и экран
+       разбирается на три опоры: подпись сверху, цветок с названием
+       посередине, вход снизу.
+
+       Середина выходит чуть ниже геометрической: верхний промежуток
+       начинается не от края, а от подписи «Моя метавселенная», и цветок
+       с заголовком садятся на полвысоты этой подписи ниже центра — ровно
+       так, как и просили. */
+    .qm-root #screen-1 {
+        justify-content: flex-start;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+    .qm-root #screen-1 > :first-child { margin-top: 0; }
+    .qm-root #screen-1 > :last-child { margin-bottom: 0; }
+    .qm-root #screen-1 .metaverse-header { margin-top: auto; }
+    .qm-root #screen-1 .qm-hero-actions { margin-top: auto; }
+
+    .qm-root #txt-s3-title { margin: 22px 0 20px; }
+    .qm-root #txt-s4-title { margin: 22px 0 16px; }
+
+    .qm-root .qm-fold { margin-bottom: 14px; }
+    .qm-root .qm-tags-hint { font-size: 13px; }
+    .qm-root .qm-tag { font-size: 14px; padding: 6px 8px; }
+    .qm-root .qm-tag-label { font-size: 11.5px; }
 }
