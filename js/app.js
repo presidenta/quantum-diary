@@ -16,7 +16,7 @@ import { initUpdate } from './update.js';
 import { initPasswordEyes } from './password-eye.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
-import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
+import { initQuantum, renderQuantum, loadQuantum, quietChanged } from './views/quantum.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
@@ -535,6 +535,10 @@ async function boot() {
   $('quietDialog').addEventListener('close', async () => {
     if ($('quietDialog').returnValue !== 'save') return;
     await saveQuiet(quietFromForm());
+    /* Тихий час вырезает своё время из окон, поэтому девять моментов
+       после его правки другие. Пересобираем день сразу: человек закрыл
+       окно и должен увидеть новые времена, а не прежние. */
+    await quietChanged();
   });
 
   // Свой пароль человек меняет сам; администратор выдаёт только первый

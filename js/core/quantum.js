@@ -187,6 +187,51 @@ export function pickMoments(window, count = PER_WINDOW, gap = MIN_GAP_MINUTES, d
   return cuts.map((cut, i) => window.from + cut + gap * i);
 }
 
+/* Тихий час вырезает из окна свой кусок.
+
+   Раньше он только глушил уже назначенные моменты: время стояло в
+   расписании, но сигнал не приходил. Владелец попросил иначе — чтобы
+   тихий час двигал сами окна, и моменты назначались только туда, где
+   они могут прозвучать.
+
+   Промежуток тишины обычно переходит через полночь (с 23:00 до 6:00),
+   поэтому он раскладывается на один или два отрезка внутри суток. От
+   окна отнимаем каждый из них — остаётся свободное время, иногда
+   двумя кусками (если тишина пришлась на середину окна). */
+function quietParts(quiet) {
+  if (!quiet || quiet.on === false) return [];
+  const start = minutesOf(quiet.from);
+  const end = minutesOf(quiet.until);
+  // Равные границы — «тихо никогда», то же правило, что в напоминаниях
+  if (start === null || end === null || start === end) return [];
+  return start < end ? [[start, end]] : [[start, 1440], [0, end]];
+}
+
+function minutesOf(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/** Что осталось от окна после вычитания тишины. */
+export function freeParts(window, quiet) {
+  let parts = [[window.from, window.to]];
+
+  for (const [qs, qe] of quietParts(quiet)) {
+    const next = [];
+    for (const [from, to] of parts) {
+      if (qe <= from || qs >= to) { next.push([from, to]); continue; }  // не пересекаются
+      if (qs > from) next.push([from, Math.min(qs, to)]);               // кусок до тишины
+      if (qe < to) next.push([Math.max(qe, from), to]);                 // кусок после
+    }
+    parts = next;
+  }
+  return parts.filter(([from, to]) => to > from);
+}
+
 /**
  * День, собранный телефоном: аркан и девять моментов.
  * Форма та же, что у серверного дня, — экран не знает разницы.
@@ -194,13 +239,16 @@ export function pickMoments(window, count = PER_WINDOW, gap = MIN_GAP_MINUTES, d
  * @param {string} dateKey дата вида 2026-10-12
  * @param {string} [person] чей день: с ним у разных людей на одном
  *                          устройстве получатся разные дни
+ * @param {object} [quiet] тихий час {on, from, until}: вырезается из окон,
+ *                         и с его изменением день пересчитывается заново
  */
-export function localDay(dateKey, person = '') {
-  const dice = diceFrom(seedOf(`${dateKey}|${person}`));
+export function localDay(dateKey, person = '', quiet = null) {
+  const tishina = quiet && quiet.on !== false ? `${quiet.from}-${quiet.until}` : '';
+  const dice = diceFrom(seedOf(`${dateKey}|${person}|${tishina}`));
   const arcana = dice(ARCANA_COUNT) + 1;
 
   const moments = Object.entries(WINDOWS).flatMap(([slot, window]) =>
-    pickMoments(window, PER_WINDOW, MIN_GAP_MINUTES, dice).map((at, i) => ({
+    momentsInWindow(window, quiet, dice).map((at, i) => ({
       // Имя момента постоянное: по нему держатся отметки «прожито»
       id: `local-${dateKey}-${slot}-${i + 1}`,
       slot,
@@ -214,4 +262,24 @@ export function localDay(dateKey, person = '') {
 
   // Пометка для экрана и для нас: день посчитан на месте, сервера не было
   return { date: dateKey, arcana, moments, offline: true };
+}
+
+/* Сколько моментов и куда их поставить в окне, изрезанном тишиной.
+
+   Берём самый длинный свободный кусок: три момента в одном куске лучше
+   трёх, растащенных по огрызкам. Если в нём не помещаются все три с
+   положенным разрывом — ставим столько, сколько влезает, вплоть до ни
+   одного. Молчать честнее, чем звонить в тишину. */
+function momentsInWindow(window, quiet, dice) {
+  const parts = freeParts(window, quiet);
+  if (parts.length === 0) return [];
+
+  const [from, to] = parts.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
+  const span = to - from;
+
+  let count = PER_WINDOW;
+  while (count > 0 && span < MIN_GAP_MINUTES * (count - 1)) count--;
+  if (count === 0) return [];
+
+  return pickMoments({ from, to }, count, MIN_GAP_MINUTES, dice);
 }

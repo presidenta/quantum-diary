@@ -18,7 +18,7 @@ import { localMedia, warmUp } from '../core/media.js';
 import { request } from '../core/net.js';
 /* Системный будильник телефона: расписание моментов меняется отсюда,
    отсюда же его и переставляем. */
-import { planReminders } from '../reminder-plan.js';
+import { planReminders, loadQuiet } from '../reminder-plan.js';
 
 let wakeTimer = null;
 let holdTimer = null;
@@ -74,6 +74,27 @@ async function saveQuantumCache() {
   }
 }
 
+/* День, посчитанный на телефоне, с учётом тихого часа.
+
+   Тихий час входит в расчёт нарочно: он не глушит назначенные моменты, а
+   вырезает своё время из окон — значит и времена должны быть другими.
+   Поэтому он же входит в зерно: поменял тишину — день пересобрался. */
+async function svoyDen() {
+  return localDay(todayKey(), await whoAmI(), await loadQuiet().catch(() => null));
+}
+
+/* Человек поменял тихий час — пересобираем день и переставляем будильник.
+
+   Только свой, посчитанный на телефоне: серверный день меняет сервер, и
+   трогать его здесь нельзя — он один на все устройства человека. */
+export async function quietChanged() {
+  if (!state.quantum || !state.quantum.offline) return;
+  state.quantum = await svoyDen();
+  renderQuantum();
+  saveQuantumCache();
+  planReminders().catch(err => console.warn('[напоминания]', err));
+}
+
 /* Кто сейчас в приложении. Нужен только затем, чтобы у двух человек на
    одном телефоне не совпал день, посчитанный без сервера. */
 async function whoAmI() {
@@ -93,7 +114,7 @@ export async function loadQuantum() {
      считаем на месте. Сервер спрашиваем следом, и если он ответил, его
      день заменяет показанный и экран перерисовывается. Ждать нечего:
      то, что видно, верно с самого начала. */
-  state.quantum = (await cachedQuantum()) || localDay(todayKey(), await whoAmI());
+  state.quantum = (await cachedQuantum()) || await svoyDen();
   renderQuantum();
 
   try {
