@@ -14,6 +14,7 @@ import { state } from '../../store.js';
 import { CONFIG } from './config.js';
 import { TEMPLATE } from './template.js';
 import { QuantumApp } from './app.js';
+import { resetSlit } from '../quantum-slit.js';
 
 /* three.js лежит в самом проекте, а не на CDN: иначе на телефоне без сети
    3D-коридор не открывался бы, и service worker не смог бы его закэшировать.
@@ -127,6 +128,11 @@ function showPart(part) {
      того, как на одну из них нажмут. */
   const idle = document.getElementById('quantumIdle');
   if (idle) idle.hidden = part !== null;
+
+  /* Открыли часть — опыт отпускает кнопки. Он подсвечивает ту, что над
+     выбранным полем, и без этого его подсветка осталась бы висеть на
+     соседней кнопке рядом с открытой: золотыми стояли бы обе. */
+  if (part !== null) resetSlit();
 
   document.querySelectorAll('#quantumTabs .qm-tab').forEach(tab => {
     const on = tab.dataset.part === part;

@@ -31,7 +31,7 @@
 const SRC_X = 0.00;             // источник
 const PLATE_X = 0.44;           // преграда с двумя щелями
 const SCREEN_X = 1.00;          // экран, на котором копится картина
-const THICK = 0.045;            // толщина пластин вдоль луча
+const THICK = 0.02;             // толщина пластин вдоль луча
 
 // Пластина по высоте и в глубину — в тех же долях
 const PLATE_Y = 1.0;
@@ -183,7 +183,12 @@ function plate(ctx, g, x, holes, a, shade) {
     }
     ctx.fill('evenodd');
 
-    // Кромка: тонкий светлый кант по контуру листа и по краю прорезей
+    /* Кромка: тонкий светлый кант по контуру листа и по краю прорезей.
+
+       Заодно замыкаются углы: четыре коротких ребра от передней грани к
+       задней. Без них лист распадался на две отдельные пластины — лицо
+       и спину, — между которыми ничего. С рёбрами это одно тело с
+       толщиной, и края сходятся. */
     ctx.strokeStyle = `rgba(${GOLD}, ${0.55 * a})`;
     ctx.lineWidth = 1;
     poly(ctx, face(g, x, -PLATE_Y, PLATE_Y, PLATE_Z0, PLATE_Z1));
@@ -192,6 +197,16 @@ function plate(ctx, g, x, holes, a, shade) {
         poly(ctx, face(g, x, y0, y1, SLIT_Z0, SLIT_Z1));
         ctx.stroke();
     }
+
+    ctx.strokeStyle = `rgba(${GOLD_MID}, ${0.45 * a})`;
+    ctx.beginPath();
+    for (const yy of [-PLATE_Y, PLATE_Y]) {
+        for (const zz of [PLATE_Z0, PLATE_Z1]) {
+            ctx.moveTo(px(g, x, zz), py(g, yy, zz));
+            ctx.lineTo(px(g, back, zz), py(g, yy, zz));
+        }
+    }
+    ctx.stroke();
 }
 
 /* ---------- Частицы ---------- */
@@ -276,15 +291,29 @@ function drawSource(ctx, g, a) {
    поэтому в наклонном ракурсе она ложится эллипсом, как и должна. */
 function drawWaves(ctx, g, time, a) {
     const span = SCREEN_X - PLATE_X;
-    ctx.lineWidth = 1;
+
+    /* Сложение света вместо обычной заливки.
+
+       В этом вся суть левого опыта: два набора дуг идут навстречу, и там,
+       где они пересекаются, свет складывается и вспыхивает ярче. Обычным
+       рисованием верхняя дуга просто закрывала бы нижнюю, и пересечение
+       выглядело бы перекрёстком, а не усилением. С 'lighter' перекрестья
+       сами собой становятся самыми светлыми точками поля — видно, что
+       волны именно складываются.
+
+       Режим возвращается обратно сразу после волн: всё остальное на
+       поле должно рисоваться как обычно. */
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = Math.max(1.2, g.ax * 0.006);
+    ctx.lineCap = 'round';
 
     for (const side of [-1, 1]) {
         const cy = side * SLIT_MID;
-        for (let i = 0; i < 6; i++) {
-            const k = (time * 0.2 + i / 6) % 1;
+        for (let i = 0; i < 9; i++) {
+            const k = (time * 0.2 + i / 9) % 1;
             const rad = k * span * 1.25;
             if (rad < 0.02) continue;
-            ctx.strokeStyle = `rgba(${GOLD}, ${(1 - k) * 0.34 * a})`;
+            ctx.strokeStyle = `rgba(${GOLD}, ${(1 - k * 0.55) * 0.9 * a})`;
             ctx.beginPath();
             for (let j = 0; j <= 18; j++) {
                 const ang = -Math.PI / 2.2 + (Math.PI / 1.1) * (j / 18);
@@ -298,6 +327,8 @@ function drawWaves(ctx, g, time, a) {
             ctx.stroke();
         }
     }
+
+    ctx.globalCompositeOperation = 'source-over';
 }
 
 /* Глаза у щелей: знак того, что за опытом смотрят.
@@ -481,14 +512,44 @@ function frame(now) {
    о состоянии раздела. */
 const TAB_OF = { wave: 'moments', particle: 'space' };
 
+/* Горит ровно одна кнопка — или ни одной.
+
+   Прежде зажжённые собирались в множество, и их легко оказывалось две:
+   одно поле выбрано, на второе навели — золотыми стояли обе. А когда
+   человек открывал часть, выбор поля никто не снимал, и чужая кнопка
+   оставалась золотой рядом с открытой. Обе кнопки золотом — это ложь:
+   выбран всегда один путь.
+
+   Теперь кандидат один. Наведение старше выбора: палец на поле — это
+   то, что человек делает прямо сейчас, и отвечать надо ему. Ушёл палец
+   — свет возвращается к выбранному.
+
+   И ничего не горит, пока поле спрятано: открыта часть — за её кнопку
+   отвечает showPart, а не опыт. */
 function litTabs() {
-    const want = new Set();
-    for (const panel of panels) {
-        if (panel.active || panel.hover) want.add(TAB_OF[panel.kind]);
-    }
+    const box = document.getElementById('quantumIdle');
+    const shown = box && !box.hidden;
+    const chosen = shown
+        ? (panels.find(p => p.hover) || panels.find(p => p.active))
+        : null;
+    const part = chosen ? TAB_OF[chosen.kind] : null;
+
     document.querySelectorAll('#quantumTabs .qm-tab').forEach(tab => {
-        tab.classList.toggle('qm-lit', want.has(tab.dataset.part));
+        tab.classList.toggle('qm-lit', tab.dataset.part === part);
     });
+}
+
+/* Зовётся из showPart, когда человек открыл часть: опыт отпускает
+   кнопки и снимает свой выбор. Иначе, вернувшись назад, человек
+   застал бы поле выбранным, а кнопку над ним — погасшей. */
+export function resetSlit() {
+    for (const panel of panels) {
+        panel.active = false;
+        panel.hover = false;
+        panel.root.setAttribute('aria-pressed', 'false');
+        panel.root.classList.remove('q-exp-on');
+    }
+    litTabs();
 }
 
 function setActive(kind) {
