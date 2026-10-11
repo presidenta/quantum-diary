@@ -8,42 +8,41 @@
 
 <!-- СТРАНИЦА УСТАНОВКИ ПРИЛОЖЕНИЯ.
 
-     Лежит отдельным файлом, а не склеивается в сборке: сборка только
-     подставляет сюда номер выкладки вместо 91.
+     Сборка подставляет сюда номер выкладки вместо 92.
 
      ЧЕГО ЭТА СТРАНИЦА НЕ МОЖЕТ, И ЭТО НЕ ЧИНИТСЯ.
+     Веб-страница не имеет права запускать установку приложения: Android
+     запрещает это всем сайтам без исключения. «Одна кнопка — и
+     приложение стоит», как в магазине, здесь невозможна. Возможное
+     лучшее — два нажатия: скачать и открыть, дальше спрашивает система.
 
-     Веб-страница не имеет права запускать установку приложения. Android
-     запрещает это всем сайтам без исключения, и обойти запрет нечем.
-     Значит «одна кнопка — и приложение стоит», как в магазине, здесь
-     невозможна в принципе. Возможное лучшее — два нажатия подряд:
-     скачать, открыть. Дальше Android сам спрашивает «Установить?».
+     ТРИ ОШИБКИ, ИЗ КОТОРЫХ СОБРАНА ЭТА ВЕРСИЯ (11.10.2026).
 
-     Отсюда всё устройство страницы: она не объясняет Android, она ведёт
-     по двум шагам и в каждый момент показывает ровно один следующий.
+     1. Страница ссылалась на сообщение браузера «Скачан 1 файл» как на
+        главный путь. Но оно живёт минуту-две и пропадает, а состояние
+        «скачано» помнилось вечно. Человек возвращался через час, видел
+        «нажмите «Открыть» вверху экрана» — и никакого сообщения там уже
+        не было. Страница врала. Теперь шаг 2 живёт 10 минут и сам
+        откатывается на шаг 1, а сообщение названо запасным путём, а не
+        главным.
 
-     ГЛАВНАЯ ОШИБКА ПРЕДЫДУЩЕЙ ВЕРСИИ (11.10.2026).
+     2. Своя кнопка «Открыть Загрузки» уходит через intent:// — и в
+        окошке мессенджера он просто не срабатывает, молча. Человек жмёт,
+        не происходит ничего, и винит страницу. Теперь после нажатия
+        включается секундомер: если через полторы секунды страница всё
+        ещё на экране — значит не сработало, и тогда сама появляется
+        строчка, как добраться до файла руками.
 
-     После скачивания браузер сам показывает сверху сообщение «Скачан
-     1 файл» с кнопкой «Открыть» — вот она и есть второй шаг, самая
-     короткая дорога к установке. Страница про эту кнопку молчала, зато
-     показывала две свои («Открыть Загрузки» и «Скачать заново»), и
-     владелец смотрел на набор кнопок, не понимая, какую жать. Теперь
-     шаг второй прямо говорит про сообщение вверху экрана, а своя кнопка
-     осталась одна и только на случай, если сообщение уже пропало.
+     3. Окошко мессенджера распознавалось по имени в строке браузера, а
+        имена эти у всех разные и меняются. Не распознали — человек
+        остался в окне, где установка не работает. Теперь распознавание
+        не решает ничего: кнопка «Открыть в браузере» есть всегда, тихой
+        строкой, и в мессенджере просто поднимается наверх.
 
-     ПРАВИЛО: ОДИН ШАГ — ОДНА КНОПКА — ОДНА СТРОКА.
-     Всё, что не помещается, уходит в свёрнутый раздел «Не
-     устанавливается?». Раскрывать его самим нельзя: от этого страница и
-     превращалась в простыню, которую в момент установки никто не читает.
-
-     ОТДЕЛЬНО ПРО МЕССЕНДЖЕРЫ.
-     Некоторые мессенджеры открывают ссылку в своём окне, которое не даёт
-     скачивать приложения: кнопка нажимается, и не происходит ничего — ни
-     ошибки, ни полоски загрузки. Такое окно страница узнаёт и показывает
-     другую главную кнопку, «Открыть в браузере». Браузер любой: систему
-     просят отдать ссылку тому, который у человека основной, имя не
-     называется нарочно.
+     ПРАВИЛО: ОДИН ШАГ — ОДНА ГЛАВНАЯ КНОПКА.
+     Всё остальное — в свёрнутом разделе «Не устанавливается?».
+     Раскрывать его самим нельзя: от этого страница превращается в
+     простыню, которую в момент установки никто не читает.
 
      МАРОК ТЕЛЕФОНОВ ЗДЕСЬ НЕТ НАМЕРЕННО: у каждого производителя
      настройки называются по-своему, и неверный путь хуже, чем никакого. -->
@@ -60,45 +59,48 @@
   .card { max-width: 380px; width: 100%; text-align: center; }
 
   h1 { font-size: 28px; margin: 0 0 6px; color: #F6C147; font-weight: 700; }
-  .lead { margin: 0 0 28px; font-size: 15px; color: #a89fb2; }
+  .lead { margin: 0 0 26px; font-size: 15px; color: #a89fb2; }
 
   .btn {
-    display: block; width: 100%; padding: 18px; margin: 0 0 14px;
+    display: block; width: 100%; padding: 18px; margin: 0 0 12px;
     border: 0; border-radius: 14px; text-decoration: none;
     font-size: 18px; font-weight: 700; cursor: pointer; font-family: inherit;
     background: linear-gradient(145deg, #F9D976, #EAA82C 40%, #C18825 75%);
     color: #381D02;
   }
-  /* Запасная кнопка: нужна не всем и не всегда, поэтому тихая. */
   .btn.quiet {
     background: transparent; color: #a89fb2;
-    border: 1px solid #3a3444; font-size: 15px; padding: 14px;
+    border: 1px solid #3a3444; font-size: 15px; font-weight: 600; padding: 14px;
   }
 
-  /* Строка под кнопкой — что произойдёт после нажатия. Одна. */
-  .hint { margin: 0 0 24px; font-size: 15px; color: #cfc7d6; line-height: 1.5; }
+  .hint { margin: 0 0 22px; font-size: 15px; color: #cfc7d6; line-height: 1.5; }
   .hint b { color: #F6C147; }
+  .under { margin: 0 0 20px; font-size: 14px; color: #a89fb2; line-height: 1.5; }
+  .under b { color: #ece7de; }
 
   .step2 { display: none; }
-  body.downloaded .step1 { display: none; }
-  body.downloaded .step2 { display: block; }
+  body.step-2 .step1 { display: none; }
+  body.step-2 .step2 { display: block; }
 
   .again {
-    display: inline-block; margin-top: 4px; font-size: 14px;
+    display: inline-block; margin-top: 2px; font-size: 14px;
     color: #8a8296; background: none; border: 0; cursor: pointer;
     text-decoration: underline; font-family: inherit;
   }
 
-  /* В окне мессенджера скачивать бесполезно: главной становится кнопка
-     «Открыть в браузере», всё остальное прячется. */
-  .in-app-only { display: none; }
-  body.in-app .in-app-only { display: block; }
-  body.in-app .android-only { display: none; }
-  .copied { font-size: 13px; color: #8fcf8f; min-height: 16px; margin: 6px 0 0; }
+  /* Появляется само, если кнопка «Открыть Загрузки» не сработала. */
+  .rescue {
+    display: none; margin: 14px 0 0; padding: 12px 14px;
+    border: 1px solid #A8721A; border-radius: 12px;
+    background: rgba(201, 163, 78, .10);
+    font-size: 14px; color: #cfc7d6; line-height: 1.5; text-align: left;
+  }
+  .rescue b { color: #F6C147; }
 
-  /* Разбор поломок. Свёрнут и сам не раскрывается. */
+  .copied { font-size: 13px; color: #8fcf8f; min-height: 16px; margin: 4px 0 0; }
+
   details.help {
-    text-align: left; margin-top: 26px;
+    text-align: left; margin-top: 24px;
     border-top: 1px solid #2a2635; font-size: 14px;
     line-height: 1.55; color: #a89fb2;
   }
@@ -112,8 +114,12 @@
   details.help h3 { font-size: 14px; margin: 16px 0 4px; color: #ece7de; }
   details.help p { margin: 0 0 8px; }
   details.help b { color: #ece7de; }
+  details.help .ua {
+    margin-top: 14px; font-size: 11px; color: #6f6880;
+    word-break: break-all; line-height: 1.4;
+  }
 
-  .rel { margin-top: 18px; font-size: 12px; color: #8a8296; }
+  .rel { margin-top: 16px; font-size: 12px; color: #8a8296; }
 </style>
 </head>
 <body>
@@ -121,34 +127,31 @@
     <h1>Квант</h1>
     <p class="lead">Приложение для Android</p>
 
-    <!-- Мессенджер: скачивание не сработает, поэтому первым делом
-         выводим человека в настоящий браузер. -->
-    <div class="in-app-only">
-      <p class="hint">Эта страница открыта в окошке мессенджера, а оно не
-         даёт скачивать приложения.</p>
-      <button type="button" class="btn" id="openBrowser">Открыть в браузере</button>
-      <button type="button" class="btn quiet" id="copy">Скопировать ссылку</button>
-      <p class="copied" id="copied" role="status"></p>
+    <!-- ШАГ 1 -->
+    <div class="step1">
+      <a class="btn" id="download" href="quantum-diary.apk" download="kvant.apk">Установить приложение</a>
+      <p class="under">Сначала скачается файл — это несколько секунд.</p>
+      <button type="button" class="btn quiet" id="openBrowser">Не скачивается — открыть в браузере</button>
     </div>
 
-    <div class="android-only">
-      <!-- ШАГ 1 -->
-      <div class="step1">
-        <a class="btn" id="download" href="quantum-diary.apk" download="kvant.apk">1. Скачать</a>
-        <p class="hint">Потом появится шаг 2.</p>
+    <!-- ШАГ 2 -->
+    <div class="step2">
+      <p class="hint">Файл скачан. Осталось его открыть —
+         телефон спросит <b>«Установить?»</b>.</p>
+      <button type="button" class="btn" id="openDownloads">Открыть файл</button>
+
+      <div class="rescue" id="rescue">
+        <p style="margin:0 0 8px">Не открылось? Файл лежит в загрузках
+           браузера:</p>
+        <p style="margin:0"><b>⋮</b> вверху экрана → <b>«Загрузки»</b> →
+           <b>kvant.apk</b>. Или потяните шторку сверху — там строка о
+           скачанном файле.</p>
       </div>
 
-      <!-- ШАГ 2. Главное здесь — сообщение браузера вверху экрана: это
-           самый короткий путь, и раньше страница про него молчала. -->
-      <div class="step2">
-        <p class="hint">Файл скачан. Вверху экрана сообщение
-           «Скачан 1 файл» — нажмите в нём <b>«Открыть»</b>,
-           затем <b>«Установить»</b>.</p>
-        <button type="button" class="btn" id="openDownloads">2. Открыть файл</button>
-        <p class="hint">Если сообщение пропало — нажмите эту кнопку
-           и выберите <b>kvant.apk</b>.</p>
-        <button type="button" class="again" id="again">скачать заново</button>
-      </div>
+      <p class="under" style="margin-top:18px">Если установка не
+         запускается — откройте страницу в браузере.</p>
+      <button type="button" class="btn quiet" id="openBrowser2">Открыть в браузере</button>
+      <button type="button" class="again" id="again">скачать заново</button>
     </div>
 
     <details class="help">
@@ -166,96 +169,119 @@
       <p>Соглашайтесь, приложение проверку проходит. «Неизвестный
          разработчик» — так помечают любое приложение не из магазина.</p>
 
-      <h3>Сообщение о загрузке пропало</h3>
-      <p>Нажмите «2. Открыть файл». Или в браузере: три точки →
-         «Загрузки» → kvant.apk.</p>
-
       <h3>Ничего не происходит при нажатии</h3>
-      <p>Страница открыта внутри мессенджера — откройте её в браузере.</p>
+      <p>Страница открыта внутри мессенджера: он не даёт ни скачивать,
+         ни ставить приложения. Нажмите «Открыть в браузере» или
+         скопируйте ссылку и вставьте её в браузер.</p>
+      <button type="button" class="btn quiet" id="copy">Скопировать ссылку</button>
+      <p class="copied" id="copied" role="status"></p>
+
+      <p class="ua" id="ua"></p>
     </details>
 
-    <div class="rel">Выкладка 91</div>
+    <div class="rel">Выкладка 92</div>
   </div>
 
 <script>
 (function () {
   var PAGE = 'https://presidenta.github.io/quantum-diary/app/';
-  var MARK = 'kvant-apk-skachan';
+  var MARK = 'kvant-skachan-kogda';
+  var ZHIVET = 10 * 60 * 1000;   // шаг 2 живёт 10 минут
 
-  /* Узнаём встроенное окно мессенджера. Надёжного признака нет ни
-     одного: смотрим на имена тех, кто чаще попадается, плюс общий
-     признак встроенного окна Android — "; wv". Мессенджеры, которые
-     открывают ссылку настоящим Chrome, сюда не попадают, и правильно:
-     там всё работает. */
-  var ua = navigator.userAgent || '';
-  var inApp = /Telegram|WhatsApp|Viber|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|OKApp|VKAndroidApp/i.test(ua)
-           || /; wv\)/i.test(ua);
+  /* ШАГИ.
 
-  if (inApp) document.body.classList.add('in-app');
-
-  function remember(onStep2) {
-    // Запрет данных сайта — не беда: шаг просто не запомнится
+     Шаг 2 помнится по времени, а не навсегда. Через десять минут
+     человек возвращается уже к шагу 1: скачанный файл за это время
+     либо поставлен, либо потерян, и звать его открывать несуществующее
+     сообщение браузера — враньё. Хранилище обёрнуто в try: в режиме
+     инкогнито обращение к нему падает, и без обёртки падал бы весь
+     скрипт вместе с кнопками. */
+  function zapomnit(kogda) {
     try {
-      if (onStep2) localStorage.setItem(MARK, '1');
+      if (kogda) localStorage.setItem(MARK, String(kogda));
       else localStorage.removeItem(MARK);
     } catch (e) {}
   }
-  function remembered() {
-    // Не прочиталось — считаем, что не скачивал: лишний шаг 1 не вредит
-    try { return localStorage.getItem(MARK) === '1'; } catch (e) { return false; }
+  function svezho() {
+    try {
+      var t = parseInt(localStorage.getItem(MARK), 10);
+      return t > 0 && (Date.now() - t) < ZHIVET;
+    } catch (e) { return false; }
   }
 
-  function toStep(n) {
-    document.body.classList.toggle('downloaded', n === 2);
-    remember(n === 2);
+  function shag(n) {
+    document.body.classList.toggle('step-2', n === 2);
+    zapomnit(n === 2 ? Date.now() : 0);
+    if (n === 1) document.getElementById('rescue').style.display = 'none';
   }
 
-  if (remembered()) toStep(2);
+  if (svezho()) shag(2);
 
   document.getElementById('download').addEventListener('click', function () {
-    // В мессенджере файл не скачается — отправлять человека на шаг 2
-    // нельзя: он пойдёт искать то, чего нет.
-    if (!inApp) toStep(2);
+    shag(2);
   });
 
   document.getElementById('again').addEventListener('click', function () {
-    toStep(1);
+    shag(1);
   });
 
-  /* Открыть системные «Загрузки». Сработает не на каждом телефоне,
-     поэтому рядом словами сказано то же самое. */
+  /* ОТКРЫТЬ ФАЙЛ.
+
+     VIEW_DOWNLOADS — штатное действие Android: открывает системные
+     загрузки. Но из окошка мессенджера intent:// часто не срабатывает,
+     и молча: человек жмёт, и не происходит ничего.
+
+     Поэтому после нажатия засекаем полторы секунды. Если страница всё
+     ещё перед глазами — значит никуда не ушли, и показываем, как
+     добраться до файла руками. Если ушли — вкладка скрывается, и
+     подсказка не мешает. */
   document.getElementById('openDownloads').addEventListener('click', function () {
+    var byl = Date.now();
+
     window.location.href = 'intent:#Intent;'
       + 'action=android.intent.action.VIEW_DOWNLOADS;'
       + 'category=android.intent.category.DEFAULT;end';
+
+    setTimeout(function () {
+      var ushli = document.hidden || (Date.now() - byl) > 2500;
+      if (!ushli) document.getElementById('rescue').style.display = 'block';
+    }, 1500);
   });
 
-  /* Открыть себя в настоящем браузере — в любом. Имя приложения не
-     указано нарочно: с ним ссылка уходила бы в один определённый
-     браузер. Вместо имени стоит категория BROWSABLE — «отдай тому, кто
-     умеет открывать ссылки». browser_fallback_url — страховка, если
-     отдать некому. */
-  document.getElementById('openBrowser').addEventListener('click', function () {
+  /* ОТКРЫТЬ В НАСТОЯЩЕМ БРАУЗЕРЕ — В ЛЮБОМ.
+
+     Кнопка есть всегда, а не только когда мы «узнали» мессенджер:
+     узнавание по строке браузера подводит, имена у всех разные и
+     меняются, а цена ошибки — человек остаётся в окне, где установка не
+     работает.
+
+     Имя браузера в intent не указано нарочно: с ним ссылка уходила бы в
+     один определённый, которого может не быть. Вместо имени —
+     категория BROWSABLE, «отдай тому, кто умеет открывать ссылки».
+     browser_fallback_url возвращает сюда же, если отдать некому. */
+  function vBrauzer() {
     var target = PAGE.replace(/^https:\/\//, '');
     window.location.href = 'intent://' + target
       + '#Intent;scheme=https;action=android.intent.action.VIEW;'
       + 'category=android.intent.category.BROWSABLE;'
       + 'S.browser_fallback_url=' + encodeURIComponent(PAGE) + ';end';
-  });
+  }
+  document.getElementById('openBrowser').addEventListener('click', vBrauzer);
+  document.getElementById('openBrowser2').addEventListener('click', vBrauzer);
 
-  /* Запасной путь, если intent:// запрещён: человек копирует ссылку и
-     открывает её в браузере сам. */
+  /* Запасной путь, если intent:// запрещён совсем: человек копирует
+     ссылку и открывает её в браузере сам. */
   document.getElementById('copy').addEventListener('click', function () {
     var say = document.getElementById('copied');
     function ok() { say.textContent = 'Скопировано — вставьте в браузер'; }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(PAGE).then(ok, fallback);
+      navigator.clipboard.writeText(PAGE).then(ok, zapas);
     } else {
-      fallback();
+      zapas();
     }
 
-    function fallback() {
+    function zapas() {
       var box = document.createElement('textarea');
       box.value = PAGE;
       box.setAttribute('readonly', '');
@@ -268,6 +294,11 @@
       box.remove();
     }
   });
+
+  /* Строка браузера — мелким, внутри свёрнутого раздела. Нужна, когда
+     установка не идёт и надо понять, из какого окна человек смотрит:
+     по снимку экрана это не всегда видно. */
+  document.getElementById('ua').textContent = navigator.userAgent || '';
 })();
 </script>
 </body>
