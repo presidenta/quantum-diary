@@ -78,36 +78,75 @@ async function publishedUpdate() {
     return res.json();
 }
 
+const why = err => (err && err.message ? err.message : String(err || 'неизвестно'));
+
 /**
  * Проверить сайт и, если вышло новое, забрать и применить.
- * Молча переживает отсутствие сети: не вышло — попробуем в другой раз.
  *
- * @returns {Promise<boolean>} досталась ли новая версия
+ * ПОЧЕМУ ВОЗВРАЩАЕТ РАЗБОР, А НЕ «ДА/НЕТ».
+ * Раньше любая беда — нет сети, сайт молчит, пакет не скачался — давала
+ * одно и то же «нет». На телефоне это выглядело как «обновлений не было»
+ * при вышедшем обновлении, и найти причину было нельзя: она пряталась в
+ * консоли, до которой с телефона не добраться. Теперь причина
+ * возвращается наружу и её видно человеку в плашке.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.applyNow] подменить пакет немедленно. Так
+ *        зовёт кнопка «Обновить»: человек нажал её сам и ждёт результата
+ *        сейчас, а не при следующем запуске.
+ * @returns {Promise<{status: string, mine?: number, latest?: number, where?: string, error?: string}>}
+ *          browser — не приложение, обновлять нечего;
+ *          none — новее ничего нет;
+ *          updated — пакет подменён, приложение перезапускается;
+ *          scheduled — скачан, встанет при следующем запуске;
+ *          error — не вышло, где и почему.
  */
-export async function checkForUpdate() {
+export async function checkForUpdate({ applyNow = false } = {}) {
     const updater = plugin();
-    if (!updater) return false;
+    if (!updater) return { status: 'browser' };
 
+    let mine;
     try {
-        const [mine, latest] = await Promise.all([runningRelease(), publishedUpdate()]);
+        mine = await runningRelease();
+    } catch (err) {
+        return { status: 'error', where: 'своя версия', error: why(err) };
+    }
 
-        if (!latest || !latest.url || !Number.isFinite(Number(latest.release))) return false;
-        if (Number(latest.release) <= mine) return false;
+    let latest;
+    try {
+        latest = await publishedUpdate();
+    } catch (err) {
+        return { status: 'error', where: 'сайт', error: why(err), mine };
+    }
 
-        const bundle = await updater.download({
-            version: String(latest.version || `${latest.release}.0.0`),
+    const number = Number(latest && latest.release);
+    if (!latest || !latest.url || !Number.isFinite(number)) {
+        return { status: 'error', where: 'сайт', error: 'непонятный ответ', mine };
+    }
+    if (number <= mine) return { status: 'none', mine, latest: number };
+
+    let bundle;
+    try {
+        bundle = await updater.download({
+            version: String(latest.version || `${number}.0.0`),
             url: latest.url
         });
-
-        if (Date.now() - startedAt < QUIET_START_MS) {
-            await updater.set(bundle);     // подменяем сейчас же
-        } else {
-            await updater.next(bundle);    // применится при следующем запуске
-        }
-        return true;
     } catch (err) {
-        // Нет сети, сайт недоступен, пакет не скачался — не беда
-        console.warn('[обновление] пропускаем:', err && err.message ? err.message : err);
-        return false;
+        return { status: 'error', where: 'загрузка пакета', error: why(err), mine, latest: number };
+    }
+
+    try {
+        /* Человек нажал кнопку — подменяем сейчас же. Откладывать можно
+           только самому себе, при запуске: тогда выдёргивать экран из-под
+           рук было бы грубо. Раньше откладывалось всегда, и человек,
+           который не закрывает приложение, не видел нового никогда. */
+        if (applyNow || Date.now() - startedAt < QUIET_START_MS) {
+            await updater.set(bundle);     // плагин сам перезапустит экран
+            return { status: 'updated', mine, latest: number };
+        }
+        await updater.next(bundle);        // применится при следующем запуске
+        return { status: 'scheduled', mine, latest: number };
+    } catch (err) {
+        return { status: 'error', where: 'подмена пакета', error: why(err), mine, latest: number };
     }
 }

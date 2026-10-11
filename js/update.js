@@ -15,6 +15,9 @@
 
 import { API_BASE } from './config.js';
 import { t, $, h } from './store.js';
+/* Настоящее обновление приложения по воздуху: кнопка обязана звать именно
+   его, иначе внутри приложения она лишь перерисовывает ту же выкладку. */
+import { checkForUpdate as liveUpdate } from './core/live-update.js';
 
 const SEEN = 'planner.updateSeen';   // отпечаток, с которым живёт этот экран
 const SAY = 'planner.updateSay';     // вердикт, который надо показать после перезагрузки
@@ -151,6 +154,39 @@ export async function initUpdate(buttonId = 'updateBtn') {
     button.dataset.busy = '1';
     button.classList.add('spin');
     popup('checking', []);
+
+    /* СНАЧАЛА — НАСТОЯЩЕЕ ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ.
+
+       Здесь была главная ложь этой кнопки. В установленном приложении она
+       чистила запас страниц и перезагружала экран — а экран брался из
+       того же пакета, что и был. Человек жал «обновить», видел «обновлений
+       не было» и оставался на своей выкладке навсегда, хотя на сайте
+       лежало новое. Пакет приложения умела забирать только проверка при
+       запуске, и кнопка её не звала.
+
+       Теперь зовёт — и просит подменить пакет сразу: человек нажал сам и
+       ждёт результата сейчас. Плагин после подмены перезапускает экран,
+       поэтому дальше идти некуда — выходим.
+
+       В браузере всё это молчит (status === 'browser'), и работает прежний
+       путь: сбросить запас и перезагрузить страницу. */
+    const ota = await liveUpdate({ applyNow: true });
+
+    if (ota.status === 'updated') return;              // экран сейчас перезапустится
+
+    if (ota.status === 'scheduled' || ota.status === 'error') {
+      button.classList.remove('spin');
+      delete button.dataset.busy;
+
+      const what = ota.status === 'scheduled'
+        ? [`${t('update.client')} ${ota.latest}`, t('update.onNextStart')]
+        // Причину показываем человеку: до консоли телефона не добраться,
+        // а без причины любая беда выглядит как «ничего не вышло».
+        : [`${t('update.client')} ${ota.mine ?? '—'}`, `${ota.where}: ${ota.error}`];
+
+      popup(ota.status === 'scheduled' ? 'new' : 'failed', what);
+      return;
+    }
 
     const [nowClient, nowServer] = await Promise.all([clientVersion(), serverVersion()]);
     const lines = techLines(nowClient, nowServer);
