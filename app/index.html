@@ -11,7 +11,7 @@
      Лежит в репозитории отдельным файлом, а не склеивается в сборке:
      раньше она писалась прямо в workflow длинным heredoc, и проверить её
      глазами можно было только после выкладки. Сборка берёт этот файл и
-     подставляет номер выкладки вместо 85.
+     подставляет номер выкладки вместо 87.
 
      ГЛАВНАЯ БЕДА, РАДИ КОТОРОЙ ЗДЕСЬ ЕСТЬ КОД.
 
@@ -22,8 +22,16 @@
      ошибки, ни полоски загрузки — тишина. Со стороны выглядит так, будто
      сломался сайт.
 
-     Поэтому страница сама узнаёт встроенный браузер и говорит об этом
-     прямо, предлагая открыть себя в Chrome. -->
+     Поэтому страница сама узнаёт встроенное окно и говорит об этом
+     прямо, предлагая открыть себя в настоящем браузере.
+
+     БРАУЗЕР — ЛЮБОЙ, И ЭТО ВАЖНО.
+     Ни одно место здесь не называет Chrome. Ссылку одинаково открывают
+     и Chrome, и Firefox, и Samsung Internet, и Opera, и Edge: файл
+     отдаётся с типом приложения Android, и скачивает его любой из них.
+     Переход наружу просит систему отдать ссылку браузеру вообще —
+     без имени приложения, — поэтому её подхватит тот браузер, который
+     у человека выбран основным. -->
 
 <style>
   :root { color-scheme: dark; }
@@ -69,12 +77,12 @@
   .warn b { color: #F6C147; display: block; margin-bottom: 4px; }
   body.in-app .warn { display: block; }
 
-  /* Во встроенном браузере скачивать бесполезно: главной становится
-     кнопка «Открыть в Chrome», а скачивание уходит на второй план. */
+  /* В окошке мессенджера скачивать бесполезно: главной становится
+     кнопка «Открыть в браузере», а скачивание уходит на второй план. */
   body.in-app #download { background: transparent; color: #a89fb2;
                           border: 1px solid #3a3444; }
-  #openChrome { display: none; }
-  body.in-app #openChrome { display: block; }
+  #openBrowser { display: none; }
+  body.in-app #openBrowser { display: block; }
 
   .copied { font-size: 13px; color: #8fcf8f; min-height: 18px; margin: 6px 0 0; }
 </style>
@@ -82,16 +90,17 @@
 <body>
   <div class="card">
     <h1>Квант</h1>
-    <p class="lead">Приложение для телефона. Напоминания приходят без
-       интернета, даже когда приложение закрыто.</p>
+    <p class="lead">Приложение для телефона на Android. Напоминания приходят
+       без интернета, даже когда приложение закрыто.</p>
 
     <div class="warn">
-      <b>Откройте эту страницу в Chrome</b>
-      Сейчас она открыта во встроенном браузере мессенджера, а он не даёт
-      устанавливать приложения — кнопка просто не сработает.
+      <b>Откройте эту страницу в браузере</b>
+      Сейчас она открыта в окошке мессенджера, а оно не даёт скачивать
+      приложения — кнопка просто не сработает. Подойдёт любой браузер:
+      Chrome, Firefox, Samsung Internet, Opera — какой у вас стоит.
     </div>
 
-    <button type="button" class="btn btn-gold" id="openChrome">Открыть в Chrome</button>
+    <button type="button" class="btn btn-gold" id="openBrowser">Открыть в браузере</button>
 
     <!-- download просит браузер именно скачать файл, а не пытаться его
          показать. Без него часть браузеров уходит в пустую страницу. -->
@@ -109,7 +118,7 @@
       <li>При первом запуске разрешите уведомления.</li>
     </ol>
 
-    <div class="rel">Выкладка 85</div>
+    <div class="rel">Выкладка 87</div>
   </div>
 
 <script>
@@ -121,7 +130,7 @@
      Надёжного признака нет ни одного, поэтому смотрим на имена тех,
      кто чаще всего попадается, плюс на общий признак встроенного окна
      Android — "; wv" в строке браузера. Ошибиться в эту сторону не
-     страшно: лишнее предупреждение подскажет открыть в Chrome, а кнопка
+     страшно: лишнее предупреждение подскажет открыть в браузере, а кнопка
      скачивания никуда не девается и остаётся рабочей. */
   var ua = navigator.userAgent || '';
   var inApp = /Telegram|WhatsApp|Viber|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|OKApp|VKAndroidApp/i.test(ua)
@@ -129,14 +138,23 @@
 
   if (inApp) document.body.classList.add('in-app');
 
-  /* Открыть себя в Chrome. intent:// — штатный для Android способ
-     попросить систему отдать ссылку другому приложению; если Chrome нет,
-     browser_fallback_url вернёт человека сюда же, и он ничего не
-     потеряет. */
-  document.getElementById('openChrome').addEventListener('click', function () {
+  /* Открыть себя в настоящем браузере — в любом.
+
+     intent:// — штатный для Android способ попросить систему отдать
+     ссылку другому приложению. Имя приложения здесь НЕ указано нарочно:
+     с ним ссылка уходила бы в один определённый браузер, и у человека
+     без него ничего бы не вышло. Вместо имени стоит категория
+     BROWSABLE — «отдай тому, кто умеет открывать ссылки». Система сама
+     отдаст её основному браузеру человека, какой бы он ни был: Chrome,
+     Firefox, Samsung Internet, Opera, Edge.
+
+     browser_fallback_url — страховка: если отдать ссылку некому,
+     человек вернётся сюда же и ничего не потеряет. */
+  document.getElementById('openBrowser').addEventListener('click', function () {
     var target = PAGE.replace(/^https:\/\//, '');
     window.location.href = 'intent://' + target
-      + '#Intent;scheme=https;package=com.android.chrome;'
+      + '#Intent;scheme=https;action=android.intent.action.VIEW;'
+      + 'category=android.intent.category.BROWSABLE;'
       + 'S.browser_fallback_url=' + encodeURIComponent(PAGE) + ';end';
   });
 
@@ -144,7 +162,7 @@
      сам в любом браузере. Работает даже там, где intent:// запрещён. */
   document.getElementById('copy').addEventListener('click', function () {
     var say = document.getElementById('copied');
-    function ok() { say.textContent = 'Ссылка скопирована — вставьте её в Chrome'; }
+    function ok() { say.textContent = 'Ссылка скопирована — вставьте её в браузер'; }
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(PAGE).then(ok, fallback);
