@@ -1,9 +1,14 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 82;
+const RELEASE = 83;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
-  './', 'index.html', 'css/game-tokens.css', 'css/app.css', 'manifest.webmanifest',
+  /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
+     не предлагает поставить себя ярлыком-приложением — установка одна, и
+     это настоящее приложение (см. пояснение в index.html). Строку нельзя
+     было просто оставить: addAll падает целиком, если хоть один файл в
+     списке отдаёт 404, и тогда перестал бы работать весь офлайн. */
+  './', 'index.html', 'css/game-tokens.css', 'css/app.css',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/app.js', 'js/store.js', 'js/db.js', 'js/sync.js', 'js/auth.js', 'js/config.js', 'js/wheel.js', 'js/errors.js', 'js/update.js', 'js/password-eye.js',
   'js/reminder-plan.js',

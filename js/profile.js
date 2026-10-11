@@ -56,35 +56,46 @@ export function paintAvatar(node, avatar, name) {
   }
 }
 
-/* УСТАНОВКА НА ТЕЛЕФОН.
+/* УСТАНОВКА НА ТЕЛЕФОН — ОДНА, И ВЕДЁТ В ОДНО МЕСТО.
 
-   Браузер сам решает, когда предложить установку, и событие приходит один
-   раз. Его нужно поймать и придержать: иначе кнопка «Установить» будет либо
-   всегда, либо никогда — а она должна появляться ровно тогда, когда установка
-   возможна, и исчезать после неё. */
-let installPrompt = null;
+   Здесь стояла установка ярлыка через beforeinstallprompt: браузер сам
+   предлагал «установить», и сайт превращался в ярлык-приложение. Снаружи
+   он неотличим от настоящего приложения — то же имя, тот же значок, своя
+   строка в списке приложений, — но напоминаний он не умеет: ни звука, ни
+   вибрации, ни срабатывания при закрытом приложении.
+
+   Выходило два одинаковых с виду «Кванта», и только один звонит. Понять,
+   какой перед тобой, нельзя ничем.
+
+   Теперь кнопка ведёт на страницу настоящего приложения. Одна установка,
+   один значок, одно место, откуда приходят обновления.
+
+   Адрес прописан целиком, а не относительным путём: страница живёт на
+   сайте, а кнопку видно в том числе когда приложение открыто с другого
+   адреса — относительный путь упёрся бы в пустоту. */
+export const APP_PAGE = 'https://presidenta.github.io/quantum-diary/app/';
 
 export function watchInstall(button) {
   if (!button) return;
-  const show = () => { button.hidden = !installPrompt; };
 
-  window.addEventListener('beforeinstallprompt', event => {
-    event.preventDefault();          // своё окно вместо браузерной полоски
-    installPrompt = event;
-    show();
-  });
-  window.addEventListener('appinstalled', () => { installPrompt = null; show(); });
+  /* В самом приложении кнопка не нужна: оно уже установлено. Спрашиваем
+     Capacitor — он есть только внутри приложения, в браузере его нет. */
+  const inApp = Boolean(window.Capacitor
+    && typeof window.Capacitor.isNativePlatform === 'function'
+    && window.Capacitor.isNativePlatform());
 
-  button.addEventListener('click', async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    await installPrompt.userChoice.catch(() => {});
-    installPrompt = null;            // предложение одноразовое
-    show();
+  button.hidden = inApp;
+  if (inApp) return;
+
+  button.addEventListener('click', () => {
+    window.open(APP_PAGE, '_blank', 'noopener');
   });
-  show();
 }
 
-// Уже стоит как приложение — предлагать установку незачем
+/* Открыт ли сайт отдельным окном, без адресной строки.
+
+   Раньше по этому признаку прятали кнопку установки. Теперь он остаётся
+   признаком ярлыка, оставшегося с прежних времён: новых таких ярлыков уже
+   не появится — манифеста у страницы нет. */
 export const installed = () =>
   window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
