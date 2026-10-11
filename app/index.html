@@ -3,38 +3,170 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Квантовый ежедневник — установка</title>
+<meta name="theme-color" content="#100e16">
+<title>Квант — установка</title>
+
+<!-- СТРАНИЦА УСТАНОВКИ ПРИЛОЖЕНИЯ.
+
+     Лежит в репозитории отдельным файлом, а не склеивается в сборке:
+     раньше она писалась прямо в workflow длинным heredoc, и проверить её
+     глазами можно было только после выкладки. Сборка берёт этот файл и
+     подставляет номер выкладки вместо 85.
+
+     ГЛАВНАЯ БЕДА, РАДИ КОТОРОЙ ЗДЕСЬ ЕСТЬ КОД.
+
+     Ссылку присылают в мессенджере, человек нажимает её прямо там — и
+     страница открывается во встроенном браузере Telegram, Viber,
+     WhatsApp или Instagram. Такие браузеры НЕ ДАЮТ скачивать файлы
+     приложений: кнопка нажимается, и не происходит ровно ничего. Ни
+     ошибки, ни полоски загрузки — тишина. Со стороны выглядит так, будто
+     сломался сайт.
+
+     Поэтому страница сама узнаёт встроенный браузер и говорит об этом
+     прямо, предлагая открыть себя в Chrome. -->
+
 <style>
-  :root { color-scheme: dark }
-  body { margin:0; min-height:100vh; display:flex; align-items:center;
-         justify-content:center; background:#100e16; color:#ece7de;
-         font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-         padding:24px; box-sizing:border-box }
-  .card { max-width:420px; width:100%; text-align:center }
-  h1 { font-size:24px; margin:0 0 8px; color:#F6C147; font-weight:600 }
-  p { line-height:1.6; color:#a89fb2; margin:0 0 20px; font-size:15px }
-  a.btn { display:block; padding:16px; border-radius:14px; text-decoration:none;
-          background:linear-gradient(145deg,#F9D976,#EAA82C 40%,#C18825 75%);
-          color:#381D02; font-weight:700; font-size:17px }
-  ol { text-align:left; color:#a89fb2; font-size:14px; line-height:1.7;
-       padding-left:20px; margin:22px 0 0 }
-  .rel { margin-top:18px; font-size:13px; color:#6f6880 }
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 24px;
+    display: flex; align-items: center; justify-content: center;
+    background: #100e16; color: #ece7de;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  .card { max-width: 420px; width: 100%; text-align: center; }
+  h1 { font-size: 26px; margin: 0 0 8px; color: #F6C147; font-weight: 700; }
+  .lead { line-height: 1.6; color: #a89fb2; margin: 0 0 22px; font-size: 15px; }
+
+  .btn {
+    display: block; width: 100%; padding: 16px; margin-bottom: 10px;
+    border: 0; border-radius: 14px; text-decoration: none;
+    font-size: 17px; font-weight: 700; cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-gold {
+    background: linear-gradient(145deg, #F9D976, #EAA82C 40%, #C18825 75%);
+    color: #381D02;
+  }
+  .btn-plain {
+    background: transparent; color: #ece7de;
+    border: 1px solid #A8721A;
+  }
+
+  ol { text-align: left; color: #a89fb2; font-size: 14px; line-height: 1.7;
+       padding-left: 20px; margin: 22px 0 0; }
+  .rel { margin-top: 18px; font-size: 13px; color: #6f6880; }
+
+  /* Предупреждение про встроенный браузер. Жёлтая рамка, а не красная:
+     это не поломка, а развилка — человек ничего не испортил. */
+  .warn {
+    display: none; text-align: left;
+    border: 1px solid #A8721A; border-radius: 14px;
+    background: rgba(201, 163, 78, .10);
+    padding: 14px 16px; margin-bottom: 18px;
+    font-size: 14px; line-height: 1.6;
+  }
+  .warn b { color: #F6C147; display: block; margin-bottom: 4px; }
+  body.in-app .warn { display: block; }
+
+  /* Во встроенном браузере скачивать бесполезно: главной становится
+     кнопка «Открыть в Chrome», а скачивание уходит на второй план. */
+  body.in-app #download { background: transparent; color: #a89fb2;
+                          border: 1px solid #3a3444; }
+  #openChrome { display: none; }
+  body.in-app #openChrome { display: block; }
+
+  .copied { font-size: 13px; color: #8fcf8f; min-height: 18px; margin: 6px 0 0; }
 </style>
 </head>
 <body>
   <div class="card">
-    <h1>Квантовый ежедневник</h1>
-    <p>Приложение для телефона. Напоминания приходят без интернета,
-       даже когда приложение закрыто.</p>
-    <a class="btn" href="quantum-diary.apk">Скачать и установить</a>
+    <h1>Квант</h1>
+    <p class="lead">Приложение для телефона. Напоминания приходят без
+       интернета, даже когда приложение закрыто.</p>
+
+    <div class="warn">
+      <b>Откройте эту страницу в Chrome</b>
+      Сейчас она открыта во встроенном браузере мессенджера, а он не даёт
+      устанавливать приложения — кнопка просто не сработает.
+    </div>
+
+    <button type="button" class="btn btn-gold" id="openChrome">Открыть в Chrome</button>
+
+    <!-- download просит браузер именно скачать файл, а не пытаться его
+         показать. Без него часть браузеров уходит в пустую страницу. -->
+    <a class="btn btn-gold" id="download" href="quantum-diary.apk"
+       download="kvant.apk">Скачать и установить</a>
+
+    <button type="button" class="btn btn-plain" id="copy">Скопировать ссылку</button>
+    <p class="copied" id="copied" role="status"></p>
+
     <ol>
-      <li>Нажмите кнопку — файл скачается.</li>
+      <li>Нажмите «Скачать и установить» — файл скачается.</li>
       <li>Откройте его из уведомления о загрузке.</li>
       <li>Android спросит разрешение на установку из этого источника —
           разрешите. Это нужно один раз.</li>
       <li>При первом запуске разрешите уведомления.</li>
     </ol>
-    <div class="rel">Выкладка 84</div>
+
+    <div class="rel">Выкладка 85</div>
   </div>
+
+<script>
+(function () {
+  var PAGE = 'https://presidenta.github.io/quantum-diary/app/';
+
+  /* Узнаём встроенный браузер мессенджера.
+
+     Надёжного признака нет ни одного, поэтому смотрим на имена тех,
+     кто чаще всего попадается, плюс на общий признак встроенного окна
+     Android — "; wv" в строке браузера. Ошибиться в эту сторону не
+     страшно: лишнее предупреждение подскажет открыть в Chrome, а кнопка
+     скачивания никуда не девается и остаётся рабочей. */
+  var ua = navigator.userAgent || '';
+  var inApp = /Telegram|WhatsApp|Viber|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|OKApp|VKAndroidApp/i.test(ua)
+           || /; wv\)/i.test(ua);
+
+  if (inApp) document.body.classList.add('in-app');
+
+  /* Открыть себя в Chrome. intent:// — штатный для Android способ
+     попросить систему отдать ссылку другому приложению; если Chrome нет,
+     browser_fallback_url вернёт человека сюда же, и он ничего не
+     потеряет. */
+  document.getElementById('openChrome').addEventListener('click', function () {
+    var target = PAGE.replace(/^https:\/\//, '');
+    window.location.href = 'intent://' + target
+      + '#Intent;scheme=https;package=com.android.chrome;'
+      + 'S.browser_fallback_url=' + encodeURIComponent(PAGE) + ';end';
+  });
+
+  /* Запасной путь на все случаи: человек копирует ссылку и открывает её
+     сам в любом браузере. Работает даже там, где intent:// запрещён. */
+  document.getElementById('copy').addEventListener('click', function () {
+    var say = document.getElementById('copied');
+    function ok() { say.textContent = 'Ссылка скопирована — вставьте её в Chrome'; }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(PAGE).then(ok, fallback);
+    } else {
+      fallback();
+    }
+
+    function fallback() {
+      // Старый способ: невидимое поле, выделение, «копировать»
+      var box = document.createElement('textarea');
+      box.value = PAGE;
+      box.setAttribute('readonly', '');
+      box.style.position = 'fixed';
+      box.style.opacity = '0';
+      document.body.appendChild(box);
+      box.select();
+      try { document.execCommand('copy'); ok(); }
+      catch (e) { say.textContent = PAGE; }
+      document.body.removeChild(box);
+    }
+  });
+})();
+</script>
 </body>
 </html>
