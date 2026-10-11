@@ -11,7 +11,7 @@ import { API_BASE } from '../config.js';
 import { getMeta, setMeta } from '../db.js';
 import {
   HOLD_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot, isOff, liveMoments,
-  livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil
+  livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil, localDay
 } from '../core/quantum.js';
 import { todayKey } from '../core/dates.js';
 import { localMedia, warmUp } from '../core/media.js';
@@ -73,19 +73,35 @@ async function saveQuantumCache() {
   }
 }
 
+/* Кто сейчас в приложении. Нужен только затем, чтобы у двух человек на
+   одном телефоне не совпал день, посчитанный без сервера. */
+async function whoAmI() {
+  try { return String((await getMeta('userId')) || ''); } catch { return ''; }
+}
+
 export async function loadQuantum() {
-  if (!API_BASE) { state.quantum = null; return; }
   try {
+    if (!API_BASE) throw new Error('сервер не задан');
     state.quantum = await api('/api/quantum/today');
     /* Картинки и звуки дня качаем сразу, пока сеть есть: момент наступит в
        зале или в метро, и тянуть файл в ту секунду будет поздно. Ждать этого
        экран не должен — поэтому без await. */
     warmUpToday(state.quantum);
-    saveQuantumCache();
   } catch {
-    // Нет сети или вход не выполнен — показываем день, сохранённый раньше
-    state.quantum = await cachedQuantum();
+    /* СЕРВЕРА НЕТ — ЭКРАН ВСЁ РАВНО ЖИВОЙ.
+
+       Раньше здесь оставался null, и человек видел пустую карточку: ни
+       аркана, ни моментов, ни напоминаний. Причём «нет сервера» — это не
+       только отсутствие сети: это и не выполненный вход, и чужой адрес,
+       которому сервер не отвечает. Приложение, которое обязано работать
+       без сети, молчало из-за сети.
+
+       Теперь берём день, сохранённый раньше, а если и его нет — телефон
+       считает день сам, по тем же правилам (см. localDay). Серверный
+       день главнее: как только сервер ответит, он заменит этот. */
+    state.quantum = (await cachedQuantum()) || localDay(todayKey(), await whoAmI());
   }
+  saveQuantumCache();
   /* Пришёл новый день — пришли и новые времена моментов. Расписание в
      системном будильнике должно идти следом за данными, иначе телефон
      звонил бы по вчерашним временам. Ставится здесь, в одной точке, а не
