@@ -8,40 +8,45 @@
 
 <!-- СТРАНИЦА УСТАНОВКИ ПРИЛОЖЕНИЯ.
 
-     Лежит отдельным файлом, а не склеивается в сборке: раньше она
-     писалась прямо в workflow длинным heredoc, и проверить её глазами
-     можно было только после выкладки. Сборка подставляет сюда номер
-     выкладки вместо 90.
+     Лежит отдельным файлом, а не склеивается в сборке: сборка только
+     подставляет сюда номер выкладки вместо 91.
 
-     ГЛАВНОЕ ПРАВИЛО ЭТОЙ СТРАНИЦЫ: НЕ БОЛЬШЕ ДВУХ СТРОК ТЕКСТА.
+     ЧЕГО ЭТА СТРАНИЦА НЕ МОЖЕТ, И ЭТО НЕ ЧИНИТСЯ.
 
-     11.10.2026 страница разрослась до простыни объяснений — про каждое
-     окно Android, про каждую проверку, — и владелец сказал прямо: «я не
-     могу установить, тут целая простынь текста, сделай нажатие двух-трёх
-     кнопок». Он был прав: человеку в момент установки нужна одна кнопка
-     и одна строка, что делать дальше. Объяснения нужны только тому, у
-     кого сломалось, и только тогда.
+     Веб-страница не имеет права запускать установку приложения. Android
+     запрещает это всем сайтам без исключения, и обойти запрет нечем.
+     Значит «одна кнопка — и приложение стоит», как в магазине, здесь
+     невозможна в принципе. Возможное лучшее — два нажатия подряд:
+     скачать, открыть. Дальше Android сам спрашивает «Установить?».
 
-     Поэтому здесь ровно три состояния, и в каждом — кнопка и строка:
-       1. пришёл          → «Скачать приложение»
-       2. скачал          → «Файл скачан. Откройте его» + «Открыть Загрузки»
-       3. не получилось   → он сам раскрывает «Не устанавливается?»
-     Всё, что не помещается в это правило, идёт внутрь свёрнутого
-     раздела. Раскрывать его самим нельзя: это и была та простыня.
+     Отсюда всё устройство страницы: она не объясняет Android, она ведёт
+     по двум шагам и в каждый момент показывает ровно один следующий.
+
+     ГЛАВНАЯ ОШИБКА ПРЕДЫДУЩЕЙ ВЕРСИИ (11.10.2026).
+
+     После скачивания браузер сам показывает сверху сообщение «Скачан
+     1 файл» с кнопкой «Открыть» — вот она и есть второй шаг, самая
+     короткая дорога к установке. Страница про эту кнопку молчала, зато
+     показывала две свои («Открыть Загрузки» и «Скачать заново»), и
+     владелец смотрел на набор кнопок, не понимая, какую жать. Теперь
+     шаг второй прямо говорит про сообщение вверху экрана, а своя кнопка
+     осталась одна и только на случай, если сообщение уже пропало.
+
+     ПРАВИЛО: ОДИН ШАГ — ОДНА КНОПКА — ОДНА СТРОКА.
+     Всё, что не помещается, уходит в свёрнутый раздел «Не
+     устанавливается?». Раскрывать его самим нельзя: от этого страница и
+     превращалась в простыню, которую в момент установки никто не читает.
 
      ОТДЕЛЬНО ПРО МЕССЕНДЖЕРЫ.
-     Ссылку присылают в мессенджере, человек нажимает её прямо там, и
-     страница открывается во встроенном окне Telegram, Viber, WhatsApp.
-     Такие окна не дают скачивать приложения: кнопка нажимается, и не
-     происходит ничего — ни ошибки, ни полоски загрузки. Поэтому
-     страница узнаёт встроенное окно и показывает другую главную кнопку:
-     «Открыть в браузере». Браузер любой — ни одно место здесь не
-     называет Chrome, систему просят отдать ссылку тому браузеру,
-     который у человека основной.
+     Некоторые мессенджеры открывают ссылку в своём окне, которое не даёт
+     скачивать приложения: кнопка нажимается, и не происходит ничего — ни
+     ошибки, ни полоски загрузки. Такое окно страница узнаёт и показывает
+     другую главную кнопку, «Открыть в браузере». Браузер любой: систему
+     просят отдать ссылку тому, который у человека основной, имя не
+     называется нарочно.
 
      МАРОК ТЕЛЕФОНОВ ЗДЕСЬ НЕТ НАМЕРЕННО: у каждого производителя
-     разделы настроек называются по-своему и переезжают с обновлениями,
-     а неверный путь хуже, чем никакого. -->
+     настройки называются по-своему, и неверный путь хуже, чем никакого. -->
 
 <style>
   :root { color-scheme: dark; }
@@ -55,63 +60,51 @@
   .card { max-width: 380px; width: 100%; text-align: center; }
 
   h1 { font-size: 28px; margin: 0 0 6px; color: #F6C147; font-weight: 700; }
-  .lead { margin: 0 0 24px; font-size: 15px; color: #a89fb2; line-height: 1.5; }
+  .lead { margin: 0 0 28px; font-size: 15px; color: #a89fb2; }
 
   .btn {
-    display: block; width: 100%; padding: 18px; margin-bottom: 12px;
+    display: block; width: 100%; padding: 18px; margin: 0 0 14px;
     border: 0; border-radius: 14px; text-decoration: none;
     font-size: 18px; font-weight: 700; cursor: pointer; font-family: inherit;
-  }
-  .btn-gold {
     background: linear-gradient(145deg, #F9D976, #EAA82C 40%, #C18825 75%);
     color: #381D02;
   }
-  .btn-quiet {
-    background: transparent; color: #8a8296;
-    border: 1px solid #3a3444; font-size: 15px; padding: 13px;
+  /* Запасная кнопка: нужна не всем и не всегда, поэтому тихая. */
+  .btn.quiet {
+    background: transparent; color: #a89fb2;
+    border: 1px solid #3a3444; font-size: 15px; padding: 14px;
   }
 
-  /* Состояние «скачал». Одна строка крупно — и кнопка под ней. */
-  .done { display: none; margin-bottom: 20px; }
-  body.downloaded .done { display: block; }
-  .done h2 { font-size: 20px; margin: 0 0 8px; color: #F6C147; line-height: 1.3; }
-  .done p { margin: 0; font-size: 15px; color: #cfc7d6; line-height: 1.5; }
+  /* Строка под кнопкой — что произойдёт после нажатия. Одна. */
+  .hint { margin: 0 0 24px; font-size: 15px; color: #cfc7d6; line-height: 1.5; }
+  .hint b { color: #F6C147; }
 
-  .look { display: flex; align-items: center; justify-content: center;
-          gap: 10px; margin: 18px 0 0; }
-  .look img { width: 44px; height: 44px; border-radius: 10px; }
-  .look span { font-size: 13px; color: #8a8296; }
+  .step2 { display: none; }
+  body.downloaded .step1 { display: none; }
+  body.downloaded .step2 { display: block; }
 
-  /* До скачивания главная кнопка — золотая. После — она уже не нужна,
-     и становится тихой: второе нажатие по ней и заводило в круг
-     «файл уже скачан, скачать ещё раз?». */
-  body.downloaded #download {
-    background: transparent; color: #8a8296;
-    border: 1px solid #3a3444; font-size: 15px; padding: 13px;
+  .again {
+    display: inline-block; margin-top: 4px; font-size: 14px;
+    color: #8a8296; background: none; border: 0; cursor: pointer;
+    text-decoration: underline; font-family: inherit;
   }
-  body.downloaded #steps { display: none; }
 
-  #steps { margin: 0 0 4px; font-size: 14px; color: #8a8296; line-height: 1.5; }
+  /* В окне мессенджера скачивать бесполезно: главной становится кнопка
+     «Открыть в браузере», всё остальное прячется. */
+  .in-app-only { display: none; }
+  body.in-app .in-app-only { display: block; }
+  body.in-app .android-only { display: none; }
+  .copied { font-size: 13px; color: #8fcf8f; min-height: 16px; margin: 6px 0 0; }
 
-  /* В окне мессенджера скачивание не работает: главной становится
-     кнопка «Открыть в браузере», остальное уходит на второй план. */
-  #openBrowser, #copy, .warn { display: none; }
-  body.in-app #openBrowser, body.in-app #copy, body.in-app .warn { display: block; }
-  body.in-app #download { background: transparent; color: #8a8296;
-                          border: 1px solid #3a3444; font-size: 15px; padding: 13px; }
-  .warn { font-size: 14px; color: #cfc7d6; line-height: 1.5; margin: 0 0 20px; }
-  .copied { font-size: 13px; color: #8fcf8f; min-height: 16px; margin: 2px 0 0; }
-
-  /* Разбор поломок. Свёрнут и сам не раскрывается — см. правило двух
-     строк в шапке файла. */
+  /* Разбор поломок. Свёрнут и сам не раскрывается. */
   details.help {
-    text-align: left; margin-top: 22px;
+    text-align: left; margin-top: 26px;
     border-top: 1px solid #2a2635; font-size: 14px;
     line-height: 1.55; color: #a89fb2;
   }
   details.help > summary {
     padding: 14px 0 0; cursor: pointer; color: #8a8296;
-    font-size: 14px; list-style: none; text-align: center;
+    list-style: none; text-align: center;
   }
   details.help > summary::-webkit-details-marker { display: none; }
   details.help > summary::after { content: ' ▾'; }
@@ -120,7 +113,7 @@
   details.help p { margin: 0 0 8px; }
   details.help b { color: #ece7de; }
 
-  .rel { margin-top: 16px; font-size: 12px; color: #8a8296; }
+  .rel { margin-top: 18px; font-size: 12px; color: #8a8296; }
 </style>
 </head>
 <body>
@@ -128,33 +121,34 @@
     <h1>Квант</h1>
     <p class="lead">Приложение для Android</p>
 
-    <p class="warn">Страница открыта в окошке мессенджера — оно не даёт
-       скачивать приложения. Откройте её в браузере.</p>
+    <!-- Мессенджер: скачивание не сработает, поэтому первым делом
+         выводим человека в настоящий браузер. -->
+    <div class="in-app-only">
+      <p class="hint">Эта страница открыта в окошке мессенджера, а оно не
+         даёт скачивать приложения.</p>
+      <button type="button" class="btn" id="openBrowser">Открыть в браузере</button>
+      <button type="button" class="btn quiet" id="copy">Скопировать ссылку</button>
+      <p class="copied" id="copied" role="status"></p>
+    </div>
 
-    <button type="button" class="btn btn-gold" id="openBrowser">Открыть в браузере</button>
+    <div class="android-only">
+      <!-- ШАГ 1 -->
+      <div class="step1">
+        <a class="btn" id="download" href="quantum-diary.apk" download="kvant.apk">1. Скачать</a>
+        <p class="hint">Потом появится шаг 2.</p>
+      </div>
 
-    <!-- Состояние после нажатия на скачивание: одна строка и одна
-         кнопка. Всё остальное про установку — в свёрнутом разделе. -->
-    <section class="done" id="done" aria-live="polite">
-      <h2>Файл скачан</h2>
-      <p>Откройте его и нажмите «Установить» — значок появится сразу.</p>
-    </section>
-
-    <button type="button" class="btn btn-gold" id="openDownloads" hidden>Открыть «Загрузки»</button>
-
-    <!-- download просит браузер скачать файл, а не показывать его. Без
-         этого часть браузеров уходит в пустую страницу. -->
-    <a class="btn btn-gold" id="download" href="quantum-diary.apk"
-       download="kvant.apk">Скачать приложение</a>
-
-    <p id="steps">Скачать → открыть файл → «Установить»</p>
-
-    <button type="button" class="btn btn-quiet" id="copy">Скопировать ссылку</button>
-    <p class="copied" id="copied" role="status"></p>
-
-    <div class="look" id="look" hidden>
-      <img src="../icons/icon-512.png" alt="" id="lookIcon">
-      <span>этот значок<br>появится на телефоне</span>
+      <!-- ШАГ 2. Главное здесь — сообщение браузера вверху экрана: это
+           самый короткий путь, и раньше страница про него молчала. -->
+      <div class="step2">
+        <p class="hint">Файл скачан. Вверху экрана сообщение
+           «Скачан 1 файл» — нажмите в нём <b>«Открыть»</b>,
+           затем <b>«Установить»</b>.</p>
+        <button type="button" class="btn" id="openDownloads">2. Открыть файл</button>
+        <p class="hint">Если сообщение пропало — нажмите эту кнопку
+           и выберите <b>kvant.apk</b>.</p>
+        <button type="button" class="again" id="again">скачать заново</button>
+      </div>
     </div>
 
     <details class="help">
@@ -172,15 +166,15 @@
       <p>Соглашайтесь, приложение проверку проходит. «Неизвестный
          разработчик» — так помечают любое приложение не из магазина.</p>
 
-      <h3>Не могу найти скачанный файл</h3>
-      <p>Шторка сверху, строка «kvant.apk». Или в браузере: три точки →
-         «Загрузки».</p>
+      <h3>Сообщение о загрузке пропало</h3>
+      <p>Нажмите «2. Открыть файл». Или в браузере: три точки →
+         «Загрузки» → kvant.apk.</p>
 
       <h3>Ничего не происходит при нажатии</h3>
       <p>Страница открыта внутри мессенджера — откройте её в браузере.</p>
     </details>
 
-    <div class="rel">Выкладка 90</div>
+    <div class="rel">Выкладка 91</div>
   </div>
 
 <script>
@@ -189,52 +183,47 @@
   var MARK = 'kvant-apk-skachan';
 
   /* Узнаём встроенное окно мессенджера. Надёжного признака нет ни
-     одного, поэтому смотрим на имена тех, кто чаще попадается, плюс
-     общий признак встроенного окна Android — "; wv". Ошибиться в эту
-     сторону не страшно: кнопка скачивания остаётся на месте. */
+     одного: смотрим на имена тех, кто чаще попадается, плюс общий
+     признак встроенного окна Android — "; wv". Мессенджеры, которые
+     открывают ссылку настоящим Chrome, сюда не попадают, и правильно:
+     там всё работает. */
   var ua = navigator.userAgent || '';
   var inApp = /Telegram|WhatsApp|Viber|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|OKApp|VKAndroidApp/i.test(ua)
            || /; wv\)/i.test(ua);
 
   if (inApp) document.body.classList.add('in-app');
 
-  function remember() {
-    // Запрет данных сайта — не беда: подсказка просто не запомнится
-    try { localStorage.setItem(MARK, '1'); } catch (e) {}
+  function remember(onStep2) {
+    // Запрет данных сайта — не беда: шаг просто не запомнится
+    try {
+      if (onStep2) localStorage.setItem(MARK, '1');
+      else localStorage.removeItem(MARK);
+    } catch (e) {}
   }
   function remembered() {
-    // Не прочиталось — считаем, что не скачивал: лишняя кнопка не вредит
+    // Не прочиталось — считаем, что не скачивал: лишний шаг 1 не вредит
     try { return localStorage.getItem(MARK) === '1'; } catch (e) { return false; }
   }
 
-  /* Скачал — показываем ровно одну строку и одну кнопку. Хранилище
-     обёрнуто в try: в режиме инкогнито обращение к нему падает, и без
-     обёртки падал бы весь скрипт вместе с кнопками. */
-  function showDone() {
-    document.body.classList.add('downloaded');
-    document.getElementById('openDownloads').hidden = false;
-    document.getElementById('look').hidden = false;
-    document.getElementById('download').textContent = 'Скачать заново';
+  function toStep(n) {
+    document.body.classList.toggle('downloaded', n === 2);
+    remember(n === 2);
   }
 
-  if (remembered()) showDone();
+  if (remembered()) toStep(2);
 
   document.getElementById('download').addEventListener('click', function () {
-    // В мессенджере файл не скачается — отправлять человека искать его
-    // в «Загрузках» нельзя.
-    if (inApp) return;
-    remember();
-    showDone();
+    // В мессенджере файл не скачается — отправлять человека на шаг 2
+    // нельзя: он пойдёт искать то, чего нет.
+    if (!inApp) toStep(2);
   });
 
-  /* Значок могли не отдать (нет сети) — тогда убираем картинку, чтобы
-     не висела рамка битого изображения. */
-  document.getElementById('lookIcon').addEventListener('error', function () {
-    document.getElementById('look').hidden = true;
+  document.getElementById('again').addEventListener('click', function () {
+    toStep(1);
   });
 
   /* Открыть системные «Загрузки». Сработает не на каждом телефоне,
-     поэтому в свёрнутом разделе то же самое сказано словами. */
+     поэтому рядом словами сказано то же самое. */
   document.getElementById('openDownloads').addEventListener('click', function () {
     window.location.href = 'intent:#Intent;'
       + 'action=android.intent.action.VIEW_DOWNLOADS;'
@@ -244,8 +233,8 @@
   /* Открыть себя в настоящем браузере — в любом. Имя приложения не
      указано нарочно: с ним ссылка уходила бы в один определённый
      браузер. Вместо имени стоит категория BROWSABLE — «отдай тому, кто
-     умеет открывать ссылки», и система отдаст её основному браузеру
-     человека. browser_fallback_url — страховка, если отдать некому. */
+     умеет открывать ссылки». browser_fallback_url — страховка, если
+     отдать некому. */
   document.getElementById('openBrowser').addEventListener('click', function () {
     var target = PAGE.replace(/^https:\/\//, '');
     window.location.href = 'intent://' + target
