@@ -2302,51 +2302,36 @@
     overflow-wrap: break-word;
 }
 
-/* ---- Пометка «Максимальный эффект» всплывает над кнопкой ------------------
-   Это подсказка к выбору, а не ярлык на кнопке: висеть постоянно ей
-   незачем. Появляется, когда на кнопку навели курсор, дошли до неё
-   клавишей, держат палец — или когда эту скорость уже выбрали. У второй
-   кнопки пометки нет вовсе, там всплывать нечему.
+/* ---- Пометка «Максимальный эффект» на самой кнопке -----------------------
+   Отдельной всплывающей плашки больше нет: она закрывала строку над
+   кнопками и читалась как самостоятельная кнопка. Пометка вернулась на
+   своё место — второй строкой под названием, помельче.
 
-   Вынесена из потока: иначе в миг появления кнопка подрастала бы и ряд
-   дёргался. Своя золотая пластина и перелив по кромке — та же порода,
-   что у кнопок; буква внутри набрана прорезанным золотом, класс висит
-   на вложенном span, потому что пластина принадлежит самой пометке. */
-.qm-root .speed-tab { position: relative; min-height: 56px; }
+   Проступает, когда кнопка наливается золотом: под курсором, под
+   пальцем, под клавишей, и когда эту скорость уже выбрали. Без выбора
+   на телефоне её не увидеть вовсе — наведения там не существует.
+
+   Скрыта прозрачностью, а не display: место под неё занято всегда, и
+   ряд не подпрыгивает в миг появления. У быстрого перехода пометки нет
+   вовсе, там проступать нечему. */
+.qm-root .speed-tab { min-height: 60px; }
 
 .qm-root .badge-rec {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    z-index: 20;
     display: block;
-    padding: 5px 13px;
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background:
-        url(../img/gold/n02.jpg) center/cover no-repeat padding-box,
-        var(--pult-rim) border-box;
-    box-shadow: var(--pult-bar-edge);
-    font-size: 11px;
+    margin-top: 2px;
+    font-size: 10.5px;
     font-weight: 700;
     letter-spacing: .4px;
     text-transform: none;
     white-space: nowrap;
-    pointer-events: none;
     opacity: 0;
-    visibility: hidden;
-    transform: translateX(-50%) translateY(4px);
-    transition: opacity .16s ease, transform .16s ease, visibility .16s;
+    transition: opacity .16s ease;
 }
 
 .qm-root .speed-tab:hover .badge-rec,
 .qm-root .speed-tab:focus-visible .badge-rec,
 .qm-root .speed-tab:active .badge-rec,
-.qm-root .speed-tab.active .badge-rec {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(0);
-}
+.qm-root .speed-tab.active .badge-rec { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
     .qm-root .badge-rec { transition: none; }
@@ -2374,3 +2359,59 @@
 }
 .qm-root .flower-svg circle,
 .qm-root .flower-svg circle:first-of-type { opacity: 1; }
+
+
+/* ---- Снимки двери: маленькие с намёком, большие по нажатию ---------------
+   В покое это три плитки в ряд. Вокруг каждой — тёплый золотой ореол и
+   кант: без него плитка выглядит картинкой, а не кнопкой, и нажать на
+   неё не догадываются. Под курсором ореол разгорается, под пальцем
+   плитка уходит на пиксель вниз — тот же отклик, что у кнопок раздела.
+
+   Раскрытая плитка выходит из ряда и занимает всю ширину карточки. Её
+   высота больше не держится квадратом: снимок показывается в своих
+   пропорциях, как его и загрузили, — чтобы было видно, что именно
+   человек туда положил. Потолок в 70% высоты окна нужен, чтобы
+   вертикальный снимок не вытеснил с экрана всё остальное; страница при
+   этом листается дальше, и под раскрытым снимком можно раскрыть
+   следующий.
+
+   Ряд переносится по словам: раскрытая плитка занимает всю строку,
+   нераскрытые встают под ней. Так можно развернуть хоть все три разом и
+   сравнить их, а не листать по очереди. */
+.qm-root .qm-s3-media { flex-wrap: wrap; }
+
+.qm-root .qm-s3-photo {
+    padding: 0;
+    cursor: pointer;
+    border: 1px solid var(--line-strong, rgba(227, 199, 124, .58));
+    box-shadow: 0 0 0 1px rgba(10, 8, 4, .7),
+                0 0 14px rgba(255, 214, 120, .38);
+    transition: box-shadow .18s ease, transform .1s ease;
+}
+
+.qm-root .qm-s3-photo:hover,
+.qm-root .qm-s3-photo:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(10, 8, 4, .8),
+                0 0 22px rgba(255, 214, 120, .62);
+}
+
+.qm-root .qm-s3-photo:active { transform: translateY(1px); }
+
+.qm-root .qm-s3-photo.qm-s3-open {
+    flex: 1 1 100%;
+    aspect-ratio: auto;
+    border-radius: 12px;
+}
+
+.qm-root .qm-s3-photo.qm-s3-open img {
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .qm-s3-photo { transition: none; }
+    .qm-root .qm-s3-photo:active { transform: none; }
+}

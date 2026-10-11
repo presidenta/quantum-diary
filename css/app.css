@@ -1289,3 +1289,46 @@ body {
 .qm-root .qm-screen { justify-content: flex-start; }
 .qm-root .qm-screen > :first-child { margin-top: auto; }
 .qm-root .qm-screen > :last-child { margin-bottom: auto; }
+
+
+/* ---- Аркан дня: смысл и пожелание рядом с плашкой ------------------------
+   Справа от медальона пустовало поле во всю ширину карточки, а счёт
+   прожитого жался к правому краю и на телефоне поджимал название аркана
+   до многоточия. Теперь место занято смыслом дня, а счёт уехал к точкам.
+
+   Шапка переносится: на широком экране плашка и текст стоят рядом, на
+   телефоне текст уходит под плашку целиком. 240 пикселей — порог, ниже
+   которого строка пожелания рвётся на слоги и читать её невозможно. */
+.q-head { flex-wrap: wrap; align-items: center; }
+.q-arcana-say { flex: 1 1 240px; min-width: 0; }
+.q-arcana-day {
+  margin: 0;
+  font-size: 13.5px; line-height: 1.45;
+  color: var(--gold-bright);
+}
+.q-arcana-wish {
+  margin: 5px 0 0;
+  font-size: 13px; line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* Счёт прожитого встал в один ряд с чётками. Точки держат середину
+   ряда, счёт прижат к правому краю — на телефоне это освобождает всю
+   ширину шапки под название аркана. */
+.q-bar-row {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 20px;
+  border-top: 1px solid var(--pult-line);
+  border-bottom: 1px solid var(--pult-line);
+}
+.q-bar-row .q-bar {
+  flex: 1 1 auto; min-width: 0; flex-wrap: wrap;
+  margin: 0; border-top: 0; border-bottom: 0;
+}
+.q-bar-row .q-lived { flex: none; margin-left: 0; padding: 8px 0; }
+.q-bar-row .q-lived b { font-size: 18px; line-height: 1.1; }
+
+@media (max-width: 560px) {
+  .q-arcana-day { font-size: 13px; }
+  .q-arcana-wish { font-size: 12.5px; }
+}

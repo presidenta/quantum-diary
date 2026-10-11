@@ -1386,14 +1386,42 @@ export class QuantumApp {
         if (this._destroyed || !box.isConnected) return;
         if (!photos.length) return;
 
+        /* Снимок раскрывается по нажатию.
+
+           Маленькую плитку 92 на 92 человек положил в дверь не для того,
+           чтобы гадать, что на ней. Нажал — снимок разворачивается во всю
+           ширину карточки и в своих пропорциях, страница листается дальше.
+           Нажал ещё раз — свернулся обратно.
+
+           Раскрыть можно хоть все три сразу: они встают столбиком одна под
+           другой. Поэтому это не просмотрщик поверх экрана, а обычный
+           поток — сравнивать снимки удобнее, когда они рядом, а не по
+           очереди в чёрном окне.
+
+           Плитка — кнопка, а не див: её видит клавиатура и читает
+           озвучка, и нажатие приходит само, без своего обработчика
+           клавиш. */
         for (const photo of photos) {
-            const cell = document.createElement('div');
+            const cell = document.createElement('button');
+            cell.type = 'button';
             cell.className = 'qm-s3-photo';
+            cell.setAttribute('aria-expanded', 'false');
+            cell.title = this.t('photoZoom');
+            cell.setAttribute('aria-label', this.t('photoZoom'));
 
             const img = document.createElement('img');
             img.src = URL.createObjectURL(photo.blob);
             img.alt = photo.fileName || '';
             cell.appendChild(img);
+
+            cell.addEventListener('click', () => {
+                const open = cell.classList.toggle('qm-s3-open');
+                cell.setAttribute('aria-expanded', String(open));
+                const key = open ? 'photoShrink' : 'photoZoom';
+                cell.title = this.t(key);
+                cell.setAttribute('aria-label', this.t(key));
+            });
+
             box.appendChild(cell);
         }
 

@@ -137,18 +137,28 @@ export function renderQuantum() {
   fill(card,
     h('div', { class: 'q-head' },
       // Аркан — медальон на своей пластине, а не полоса во всю ширину.
-      // Счёт прожитого стоит рядом, на тёмном поле: это не часть медальона.
       h('div', { class: 'q-plate' },
         h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
         h('div', { class: 'q-plate-text' },
           h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
           h('p', { class: 'q-arcana-name', text: t(arcanaKey(day.arcana)) }))),
+
+      /* Справа от плашки — о чём этот аркан и пожелание к нему.
+         Раньше здесь пустовало поле, а рядом с медальоном тесно стоял
+         счёт прожитого; счёт уехал к точкам, а место занял смысл дня.
+         Обе строки берутся по номеру аркана, как и его название. */
+      h('div', { class: 'q-arcana-say' },
+        h('p', { class: 'q-arcana-day', text: t(`${arcanaKey(day.arcana)}.day`) }),
+        h('p', { class: 'q-arcana-wish', text: t(`${arcanaKey(day.arcana)}.wish`) }))),
+
+    /* Счёт прожитого встал в один ряд с точками: на телефоне он занимал
+       правый край шапки и поджимал название аркана до многоточия. */
+    h('div', { class: 'q-bar-row' },
+      h('div', { class: 'q-bar' }, ...liveMoments(day.moments).map(m =>
+        h('i', { class: m.doneAt ? 'done' : '' }))),
       h('div', { class: 'q-lived' },
         h('b', { text: `${lived} / ${planned}` }),
         h('span', { text: t('quantum.livedShort') }))),
-
-    h('div', { class: 'q-bar' }, ...liveMoments(day.moments).map(m =>
-      h('i', { class: m.doneAt ? 'done' : '' }))),
 
     ...groupBySlot(day.moments).map(group => h('div', { class: 'q-group' },
       h('p', { class: 'q-slot', text: t(SLOT_TITLE[group.slot]) }),
