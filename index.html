@@ -190,6 +190,7 @@
            Рисует js/views/quantum-slit.js. -->
       <div id="quantumIdle" class="q-idle">
         <button type="button" class="q-exp" data-exp="wave" aria-pressed="false">
+          <span class="q-exp-cond" data-i18n="exp.noObserver">Без наблюдателя</span>
           <canvas aria-hidden="true"></canvas>
           <span class="q-exp-cap">
             <span data-i18n="exp.wave">Волновая интерференция</span>
@@ -197,12 +198,18 @@
           </span>
         </button>
         <button type="button" class="q-exp" data-exp="particle" aria-pressed="false">
+          <span class="q-exp-cond" data-i18n="exp.observer">С наблюдателем</span>
           <canvas aria-hidden="true"></canvas>
           <span class="q-exp-cap">
             <span data-i18n="exp.particle">Поведение частиц</span>
             <i class="q-exp-flag" data-i18n="exp.active">активно</i>
           </span>
         </button>
+
+        <!-- Общее имя опыта под обоими полями: слева и справа один и тот
+             же опыт, разница только в наблюдателе, и подпись должна быть
+             одна на двоих. -->
+        <p class="q-exp-title" data-i18n="exp.title">Эффект Наблюдателя Бора–Эйнштейна: Изменение Реальности</p>
 
         <!-- Аркан дня: знак, которым начинается день. Стоит здесь, а не
              внутри «Архитектора», потому что это не содержимое раздела, а
