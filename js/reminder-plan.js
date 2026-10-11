@@ -22,25 +22,57 @@
    установкой приложения. */
 
 import { ensureReady, scheduleReminders, cancelKeys, onReminderAction, isNative } from './core/reminders.js';
-import { momentPlan, windowPlan, KEY_WINDOW } from './core/reminder-rules.js';
+import {
+    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW
+} from './core/reminder-rules.js';
 import { state, t } from './store.js';
+import { getMeta, setMeta } from './db.js';
 import { CONFIG } from './views/space/config.js';
 
-/* ТИХИЕ ЧАСЫ.
+/* ТИХИЙ ЧАС.
 
-   Окно возможностей открывается само, через 3 часа 33 минуты после
-   прыжка, и упасть может куда угодно — в том числе на три часа ночи.
-   Звонок с вибрацией в это время человеку не помощь, а вред.
+   Промежуток, когда приложение не беспокоит: не звонит, не вибрирует,
+   не зажигает экран. Границы задаёт человек в профиле — кнопка «Тихий
+   час». Раньше они были зашиты в код, и это было неправильно: время сна
+   у каждого своё, и менять его правкой исходников нельзя.
 
-   Границы взяты не с потолка: dailyWindow с 6 до 21 лежит в config.js
-   раздела с самого начала. Там он описан как рабочее время раздела, но до
-   сих пор ни разу не применялся — ни одна строка кода его не читала.
-   Здесь он наконец работает, и ровно там, где нужнее всего: на звуке.
+   Начальные границы берутся из dailyWindow раздела — с 21 до 6. Эти
+   цифры лежали в config.js с самого начала как рабочее время раздела, и
+   до недавнего они ни разу не применялись. Пусть они и будут тем, что
+   человек увидит в настройке до первой своей правки.
 
-   Моментов дня это НЕ касается. Их время назначает администратор вручную,
-   и если момент поставлен на пять утра, значит так и задумано. */
-const QUIET_FROM = CONFIG.dailyWindow.endHour;      // 21:00 — после этого молчим
-const QUIET_UNTIL = CONFIG.dailyWindow.startHour;   // 06:00 — до этого молчим
+   Хранится настройка на устройстве, рядом с языком: это свойство
+   телефона, а не учётной записи. На планшете человек вправе спать в
+   другое время. */
+const QUIET_KEY = 'quietHours';
+const двеЦифры = n => String(n).padStart(2, '0') + ':00';
+
+export const QUIET_DEFAULT = Object.freeze({
+    on: true,
+    from: двеЦифры(CONFIG.dailyWindow.endHour),     // 21:00
+    until: двеЦифры(CONFIG.dailyWindow.startHour)   // 06:00
+});
+
+/* Проверка настройки живёт в чистых правилах и там же под тестами —
+   здесь только подставляются начальные значения этого приложения. */
+export const normalizeQuiet = raw => normalize(raw, QUIET_DEFAULT);
+
+/** Тихий час, как его задал человек. */
+export async function loadQuiet() {
+    try {
+        return normalizeQuiet(await getMeta(QUIET_KEY));
+    } catch {
+        return { ...QUIET_DEFAULT };
+    }
+}
+
+/** Сохранить тихий час и сразу переставить расписание под него. */
+export async function saveQuiet(value) {
+    const quiet = normalizeQuiet(value);
+    await setMeta(QUIET_KEY, quiet);
+    await planReminders();
+    return quiet;
+}
 
 /* Разрешение и канал спрашиваем один раз за запуск, а не на каждую
    перестановку расписания: ensureReady обращается к системе, и звать её
@@ -74,11 +106,11 @@ export async function planReminders() {
     if (!await readyOnce()) return false; // человек не дал разрешения
 
     const now = new Date();
-    const moments = momentPlan(state.quantum && state.quantum.moments, now);
+    const quiet = await loadQuiet();
+    const moments = momentPlan(state.quantum?.moments, now, quiet);
     const window = windowPlan(lastJumpTime(), now, {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
-        quietFrom: QUIET_FROM,
-        quietUntil: QUIET_UNTIL
+        quiet
     });
 
     /* Сначала снимаем лишнее: прожитые и погашенные моменты, а если окна

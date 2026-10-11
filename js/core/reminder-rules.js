@@ -35,24 +35,93 @@ export function atToday(hhmm, now = new Date()) {
     return at;
 }
 
-/* Тихие часы: с вечера до утра телефон молчит.
+/* Минуты от полуночи. Время приходит строкой «ЧЧ:ММ» — так его отдаёт
+   поле ввода времени и так его удобно хранить. */
+export function minutesOfDay(hhmm) {
+    const parts = String(hhmm).split(':');
+    if (parts.length !== 2) return null;
 
-   Границы приходят снаружи, из настроек раздела (dailyWindow), а не
-   задаются здесь: правило не должно знать конкретных цифр.
+    const h = Number(parts[0]);
+    const m = Number(parts[1]);
+    if (!Number.isInteger(h) || !Number.isInteger(m)) return null;
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
 
-   Промежуток переходит через полночь, поэтому проверка на ИЛИ, а не на
-   «больше и меньше»: 23 часа больше 21, а 3 часа меньше 6 — оба тихие. */
-export function isQuietHour(date, fromHour, untilHour) {
-    const hour = date.getHours();
-    return hour >= fromHour || hour < untilHour;
+    return h * 60 + m;
+}
+
+/* Тихий час: промежуток, когда телефон молчит.
+
+   Границы задаёт человек в профиле и приходят они сюда снаружи — правило
+   не знает ни конкретных цифр, ни того, где они хранятся.
+
+   Промежуток обычно переходит через полночь (с 22:00 до 7:00), и тогда
+   проверка идёт на ИЛИ: 23:30 больше начала, 3:00 меньше конца — тихо и
+   там, и там. Но человек вправе задать и дневной промежуток, скажем с
+   13:00 до 15:00, — тогда работает обычное «между», на И. Поэтому две
+   ветки, а не одна.
+
+   Равные границы — это «тихо никогда», а не «тихо всегда». Так понятнее
+   человеку: случайно выставив одинаковое время, он останется с рабочими
+   напоминаниями, а не с мёртвой тишиной, причину которой потом не
+   найдёт. */
+export function isQuietTime(date, from, until) {
+    const start = minutesOfDay(from);
+    const end = minutesOfDay(until);
+    if (start === null || end === null || start === end) return false;
+
+    const now = date.getHours() * 60 + date.getMinutes();
+    return start > end
+        ? (now >= start || now < end)   // через полночь
+        : (now >= start && now < end);  // внутри одних суток
+}
+
+/* Приводим что угодно к годной настройке тихого часа.
+
+   Читаем мы её из хранилища телефона, а туда могла попасть и чепуха:
+   запись от прежней версии, недописанное сохранение, правка руками.
+   Поэтому каждое поле проверяется по отдельности и негодное заменяется
+   начальным — одно испорченное значение не должно ронять напоминания
+   целиком.
+
+   Начальные значения приходят снаружи: правило не знает, какой час в
+   этом приложении считается тихим по умолчанию. */
+export function normalizeQuiet(raw, fallback) {
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const годное = v => (minutesOfDay(v) === null ? null : v);
+
+    return {
+        on: src.on !== false,
+        from: годное(src.from) || fallback.from,
+        until: годное(src.until) || fallback.until
+    };
+}
+
+/* Попадает ли срок в тихий час.
+
+   Настройка приходит одним объектом {on, from, until} прямо из профиля.
+   Выключена или не задана — тихого часа нет, и звонит всё. */
+function underQuiet(at, quiet) {
+    if (!quiet?.on) return false;
+    return isQuietTime(at, quiet.from, quiet.until);
 }
 
 /* Моменты дня: что поставить, а что снять.
 
    Звонить стоит только о том моменте, который ещё впереди, ещё не прожит
    и не погашен крестиком. Обо всех остальных — снимать, и именно поэтому
-   список снятия перечисляет их поимённо, а не молчит о них. */
-export function momentPlan(moments, now = new Date()) {
+   список снятия перечисляет их поимённо, а не молчит о них.
+
+   ТИХИЙ ЧАС ДЕЙСТВУЕТ И ЗДЕСЬ. Сначала он задумывался только для окна
+   возможностей — его-то время считается само и может упасть на три ночи,
+   а моменты назначает администратор вручную. Но человек просил другого:
+   чтобы в тихий час приложение не беспокоило вовсе. Значит, молчат оба
+   источника, иначе настройка обманывала бы — называлась бы «не
+   беспокоить», а половина напоминаний всё равно звонила бы.
+
+   Попавший в тишину момент именно СНИМАЕТСЯ, а не откладывается на утро:
+   момент живёт сорок минут и к утру давно просрочен. Звонить о нём позже
+   значило бы звать человека к тому, чего уже нет. */
+export function momentPlan(moments, now = new Date(), quiet = null) {
     const ring = [];
     const silence = [];
 
@@ -60,7 +129,8 @@ export function momentPlan(moments, now = new Date()) {
         const key = KEY_MOMENT + moment.id;
         const at = atToday(moment.at, now);
 
-        if (isOff(moment) || moment.doneAt || !at || at.getTime() <= now.getTime()) {
+        if (isOff(moment) || moment.doneAt || !at || at.getTime() <= now.getTime()
+            || underQuiet(at, quiet)) {
             silence.push(key);
             continue;
         }
@@ -74,23 +144,16 @@ export function momentPlan(moments, now = new Date()) {
 
    Возвращаем null, когда ставить нечего, и у каждого «нечего» своя
    причина: прыжка ещё не было, окно уже открылось (звонить поздно) или
-   срок придётся на тихие часы. */
+   срок пришёлся на тихий час. */
 export function windowPlan(lastJump, now = new Date(), options = {}) {
-    const {
-        cooldownMs = 0,
-        quietFrom = null,
-        quietUntil = null
-    } = options;
+    const { cooldownMs = 0, quiet = null } = options;
 
     const last = Number(lastJump);
     if (!Number.isFinite(last) || last <= 0) return null;
 
     const at = new Date(last + cooldownMs);
     if (at.getTime() <= now.getTime()) return null;
-
-    if (quietFrom !== null && quietUntil !== null && isQuietHour(at, quietFrom, quietUntil)) {
-        return null;
-    }
+    if (underQuiet(at, quiet)) return null;
 
     return { key: KEY_WINDOW, at };
 }

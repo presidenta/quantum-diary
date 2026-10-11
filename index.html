@@ -360,6 +360,9 @@
 
     <div class="profile-rows">
       <button type="button" class="btn" id="installApp" hidden data-i18n="profile.install">Установить приложение</button>
+      <!-- Тихий час стоит среди настроек человека, а не в общих настройках
+           приложения: время сна — это про человека, а не про программу. -->
+      <button type="button" class="btn" id="quietHours" data-i18n="quiet.open">Тихий час</button>
       <button type="button" class="btn" id="changePassword" hidden data-i18n="password.change">Сменить пароль</button>
       <button type="button" class="btn" id="profileLogout" data-i18n="auth.logout">Выйти</button>
       <button type="button" class="btn danger" id="deleteData" data-i18n="profile.removeApp">Удалить приложение</button>
@@ -488,6 +491,41 @@
     <label><span data-i18n="password.new">Новый пароль</span><input name="newPassword" type="password" required minlength="8" autocomplete="new-password"></label>
     <label><span data-i18n="password.repeat">Ещё раз</span><input name="repeatPassword" type="password" required minlength="8" autocomplete="new-password"></label>
     <p class="gate-msg" id="passwordMsg" role="alert"></p>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ТИХИЙ ЧАС.
+
+     Промежуток, когда приложение молчит: ни звука, ни вибрации, ни
+     уведомления на экране. Действует на оба источника — и на окно
+     возможностей, и на моменты дня: настройка называется «не беспокоить»,
+     значит беспокоить не должно ничто.
+
+     Время берётся полем type="time": его рисует сам телефон привычным
+     человеку колесом, и ничего своего изобретать не нужно. Минуты
+     доступны наравне с часами — кто-то ложится в 22:30, а не ровно в
+     22:00. -->
+<dialog id="quietDialog">
+  <form method="dialog" class="sheet" id="quietForm">
+    <h2 data-i18n="quiet.title">Тихий час</h2>
+    <p class="muted m0" data-i18n="quiet.hint">В это время приложение не звонит и не вибрирует. Напоминания, попавшие в тихий час, не придут совсем.</p>
+    <label class="quiet-switch">
+      <input type="checkbox" name="on" id="quietOn">
+      <span data-i18n="quiet.on">Не беспокоить</span>
+    </label>
+    <div class="two">
+      <label><span data-i18n="quiet.from">С</span><input name="from" id="quietFrom" type="time" required></label>
+      <label><span data-i18n="quiet.until">До</span><input name="until" id="quietUntil" type="time" required></label>
+    </div>
+    <p class="muted m0" id="quietSummary" role="status"></p>
+    <!-- Видно только в браузере. Там напоминаний не бывает вовсе, и настройка
+         тихого часа без этой строки выглядела бы работающей, хотя влиять ей
+         не на что. Лучше сказать прямо, чем дать человеку ждать звонка. -->
+    <p class="gate-msg" id="quietBrowserNote" hidden data-i18n="quiet.browserNote">Напоминания приходят только в установленном приложении. В браузере эта настройка ни на что не влияет.</p>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
       <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>

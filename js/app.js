@@ -20,8 +20,9 @@ import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
-import { cancelAll as cancelAllReminders } from './core/reminders.js';
-import { initReminders, planReminders } from './reminder-plan.js';
+import { cancelAll as cancelAllReminders, isNative } from './core/reminders.js';
+import { initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet } from './reminder-plan.js';
+import { minutesOfDay } from './core/reminder-rules.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
@@ -333,6 +334,42 @@ function showPasswordError(text) {
   $('passwordDialog').showModal();
 }
 
+/* ---------- Тихий час ---------- */
+
+/** Что сейчас стоит в полях окна. */
+function quietFromForm() {
+  return {
+    on: $('quietOn').checked,
+    from: $('quietFrom').value,
+    until: $('quietUntil').value
+  };
+}
+
+/* Итог человеческими словами, под полями.
+
+   Нужен не для красоты. Промежуток через полночь читается неочевидно: «с
+   21:00 до 6:00» — это девять часов тишины, и в них попадает завтрашнее
+   утро, а не сегодняшнее. Строка сразу показывает, сколько именно часов
+   человек себе выключил, и ошибку видно до сохранения, а не через сутки
+   по пропущенному напоминанию. */
+function showQuietSummary(quiet) {
+  const box = $('quietSummary');
+  const value = normalizeQuiet(quiet);
+
+  if (!value.on) { box.textContent = t('quiet.offNote'); return; }
+
+  const from = minutesOfDay(value.from);
+  const until = minutesOfDay(value.until);
+
+  if (from === until) { box.textContent = t('quiet.sameNote'); return; }
+
+  const длина = from > until ? (24 * 60 - from + until) : (until - from);
+  box.textContent = t('quiet.lasts', {
+    hours: Math.floor(длина / 60),
+    minutes: длина % 60
+  });
+}
+
 let syncStarted = false;
 
 async function start() {
@@ -470,6 +507,34 @@ async function boot() {
     closeDrawer();
     openSettings();
     $('settingsDialog').showModal();
+  });
+
+  /* ТИХИЙ ЧАС.
+
+     Открываем окно, заполнив поля тем, что сохранено. Сохраняем только по
+     кнопке «Сохранить»: «Отмена» и крестик должны оставлять прежнее
+     время, иначе человек, заглянувший посмотреть, молча поменял бы себе
+     настройку. */
+  $('quietHours').addEventListener('click', async () => {
+    const quiet = await loadQuiet();
+    $('quietOn').checked = quiet.on;
+    $('quietFrom').value = quiet.from;
+    $('quietUntil').value = quiet.until;
+    showQuietSummary(quiet);
+    // В браузере напоминаний не бывает — говорим об этом прямо в окне
+    $('quietBrowserNote').hidden = isNative();
+    $('quietDialog').returnValue = '';
+    $('quietDialog').showModal();
+  });
+
+  // Подсказка живая: человек видит итог, ещё не нажав «Сохранить»
+  for (const id of ['quietOn', 'quietFrom', 'quietUntil']) {
+    $(id).addEventListener('change', () => showQuietSummary(quietFromForm()));
+  }
+
+  $('quietDialog').addEventListener('close', async () => {
+    if ($('quietDialog').returnValue !== 'save') return;
+    await saveQuiet(quietFromForm());
   });
 
   // Свой пароль человек меняет сам; администратор выдаёт только первый
