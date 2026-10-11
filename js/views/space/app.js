@@ -14,6 +14,9 @@ import {
 import {
     getDoorPhotos, countDoorPhotos, addDoorPhotos, deleteDoorPhoto, PHOTO_LIMIT
 } from './photos.js';
+/* Системный будильник телефона. Раздел знает время следующего окна —
+   значит, он же и переставляет напоминание, когда это время меняется. */
+import { planReminders } from '../../reminder-plan.js';
 
 /* Языки раздела — те же и в том же порядке, что в Ежедневнике.
    Название языка пишется на нём самом, поэтому переводить его не нужно. */
@@ -1723,6 +1726,11 @@ export class QuantumApp {
         localStorage.setItem('last_quantum_jump_time', Date.now().toString());
         this.notifications.resetSnooze();
 
+        /* Прыжок сдвинул следующее окно на 3 часа 33 минуты вперёд —
+           переставляем системный будильник сразу, не дожидаясь ухода из
+           приложения. Иначе телефон позвонил бы по старому сроку. */
+        planReminders().catch(err => console.warn('[напоминания]', err));
+
         document.getElementById('input-s4-diary').value = '';
         // Запись ушла в хроники — слова гаснут вместе с ней
         this.diaryPicked.clear();
@@ -1905,6 +1913,10 @@ export class QuantumApp {
     handleSnooze() {
         if (this.notifications.snooze()) {
             this.updateSnoozeButtonUI();
+            /* Откладывание сдвинуло время окна на десять минут — значит,
+               сдвинуть надо и системный будильник, иначе он позвонит по
+               прежнему сроку, который человек только что отодвинул. */
+            planReminders().catch(err => console.warn('[напоминания]', err));
             alert(this.t('snoozeAlertOk'));
         } else {
             alert(this.t('snoozeAlertLimit'));
@@ -1987,6 +1999,8 @@ export class QuantumApp {
                     localStorage.setItem('last_quantum_jump_time', Date.now().toString());
                     this.windowTriggered = false;
                     this.hideOpportunityModal();
+                    // Цикл пошёл заново — следующее окно через 3 часа 33 минуты
+                    planReminders().catch(err => console.warn('[напоминания]', err));
                 }
             }
         }, 1000);

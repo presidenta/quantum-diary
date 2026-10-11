@@ -144,6 +144,16 @@ function showPart(part) {
   else unmountSpace();
 }
 
+/* Открыть нужную вкладку «Кванта» снаружи.
+
+   Нужно уведомлениям: человек нажал на напоминание об окне возможностей —
+   открыться должно «Пространство вариантов», а не то, что было открыто в
+   прошлый раз. До сих пор вкладку мог переключить только палец по самой
+   вкладке, и showPart незачем было выпускать наружу. */
+export function openPart(part) {
+  showPart(part);
+}
+
 export function initSpace() {
   if (wired) return;
   const tabs = document.getElementById('quantumTabs');

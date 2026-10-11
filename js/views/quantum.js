@@ -15,6 +15,9 @@ import {
 } from '../core/quantum.js';
 import { todayKey } from '../core/dates.js';
 import { localMedia, warmUp } from '../core/media.js';
+/* Системный будильник телефона: расписание моментов меняется отсюда,
+   отсюда же его и переставляем. */
+import { planReminders } from '../reminder-plan.js';
 
 let wakeTimer = null;
 let holdTimer = null;
@@ -83,6 +86,11 @@ export async function loadQuantum() {
     // Нет сети или вход не выполнен — показываем день, сохранённый раньше
     state.quantum = await cachedQuantum();
   }
+  /* Пришёл новый день — пришли и новые времена моментов. Расписание в
+     системном будильнике должно идти следом за данными, иначе телефон
+     звонил бы по вчерашним временам. Ставится здесь, в одной точке, а не
+     у каждого, кто зовёт loadQuantum. */
+  planReminders().catch(err => console.warn('[напоминания]', err));
 }
 
 function warmUpToday(day) {
@@ -232,6 +240,11 @@ async function toggleOff(moment) {
     renderQuantum();
     changed();
   }
+  /* Крестик гасит момент ЗАРАНЕЕ, до его времени, — значит, в системном
+     будильнике он ещё стоит и позвонит, если его оттуда не убрать.
+     Переставляем расписание в обе стороны: и когда момент погасили, и
+     когда вернули плюсиком обратно. */
+  planReminders().catch(err => console.warn('[напоминания]', err));
 }
 
 /* Живая часть: то, ради чего всё. Утром и вечером — короткий экран с якорем,

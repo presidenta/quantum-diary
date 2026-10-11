@@ -17,10 +17,11 @@ import { initPasswordEyes } from './password-eye.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum } from './views/quantum.js';
-import { initSpace, syncSpace } from './views/space/index.js';
+import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import { cancelAll as cancelAllReminders } from './core/reminders.js';
+import { initReminders, planReminders } from './reminder-plan.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
@@ -358,6 +359,24 @@ async function start() {
     await loadQuantum();     // счётчик моментов нужен сразу, на любом экране
     renderNav();
   }
+
+  /* СИСТЕМНЫЕ НАПОМИНАНИЯ.
+
+     Ставим расписание здесь, а не раньше: моменты дня приходят с сервера,
+     и до loadQuantum ставить было бы нечего. Окну возможностей сервер не
+     нужен, но и торопиться с ним некуда — всё расписание ставится одним
+     заходом.
+
+     В браузере эта строка молчит: системных напоминаний там не бывает, и
+     кодом это не чинится. Работает только в собранном приложении.
+
+     По нажатию на уведомление открываем ту вкладку, о которой оно: окно
+     возможностей живёт в «Пространстве вариантов», моменты — в соседней.
+     Иначе человек попадал бы туда, где был в прошлый раз. */
+  initReminders(key => {
+    go('quantum');
+    openQuantumPart(key === 'quantum-window' ? 'space' : 'moments');
+  });
 
   // Сферы по умолчанию — только если их нет и на сервере: иначе после очистки
   // телефона рядом с вернувшимися сферами появились бы ещё девять

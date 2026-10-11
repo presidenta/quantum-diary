@@ -395,6 +395,17 @@ const DICT = {
     'sync.offline': 'нет сети — сохраню позже',
     'sync.error': 'сервер недоступен — сохраню позже',
 
+    /* НАПОМИНАНИЯ НА ЭКРАНЕ ТЕЛЕФОНА.
+
+       Сама фраза момента сюда не попадает, и это намеренно. Смысл
+       практики в том, что момент нельзя подготовить заранее, — а
+       уведомление с фразой как раз бы его и подготовило. Поэтому зовём,
+       но не рассказываем. */
+    'reminder.moment.title': 'Квантовый момент',
+    'reminder.moment.body': 'Время прожить момент — открой приложение.',
+    'reminder.window.title': 'Окно возможностей открыто',
+    'reminder.window.body': 'Окно открыто {min} мин {sec} сек. Войди в свою новую реальность.',
+
     'common.cancel': 'Отмена',
     'common.save': 'Сохранить',
     'common.close': 'Закрыть',
@@ -781,6 +792,13 @@ const DICT = {
     'sync.offline': 'немає мережі — збережу пізніше',
     'sync.error': 'сервер недоступний — збережу пізніше',
 
+    /* Текст самої фрази моменту сюди не потрапляє — див. пояснення
+       в російському блоці: момент не можна підготувати заздалегідь. */
+    'reminder.moment.title': 'Квантовий момент',
+    'reminder.moment.body': 'Час прожити момент — відкрий застосунок.',
+    'reminder.window.title': 'Вікно можливостей відкрите',
+    'reminder.window.body': 'Вікно відкрите {min} хв {sec} сек. Увійди у свою нову реальність.',
+
     'common.cancel': 'Скасувати',
     'common.save': 'Зберегти',
     'common.close': 'Закрити',
@@ -1166,6 +1184,13 @@ const DICT = {
     'sync.synced': 'saved',
     'sync.offline': 'no network — will save later',
     'sync.error': 'server unavailable — will save later',
+
+    /* Текст самой фразы момента сюда не попадает — объяснение в русском
+       блоке: момент нельзя подготовить заранее. */
+    'reminder.moment.title': 'Quantum moment',
+    'reminder.moment.body': 'Time to live the moment — open the app.',
+    'reminder.window.title': 'The window of opportunity is open',
+    'reminder.window.body': 'The window is open for {min} min {sec} sec. Step into your new reality.',
 
     'common.cancel': 'Cancel',
     'common.save': 'Save',
