@@ -18,6 +18,7 @@ import { t, $, h } from './store.js';
 /* Настоящее обновление приложения по воздуху: кнопка обязана звать именно
    его, иначе внутри приложения она лишь перерисовывает ту же выкладку. */
 import { checkForUpdate as liveUpdate } from './core/live-update.js';
+import { request as liveRequest } from './core/net.js';
 
 const SEEN = 'planner.updateSeen';   // отпечаток, с которым живёт этот экран
 const SAY = 'planner.updateSay';     // вердикт, который надо показать после перезагрузки
@@ -51,7 +52,7 @@ async function serverVersion() {
   const control = new AbortController();
   const timer = setTimeout(() => control.abort(), 7000);
   try {
-    const res = await fetch(`${API_BASE}/api/version`, { ...noStore, signal: control.signal });
+    const res = await liveRequest(`${API_BASE}/api/version`, { ...noStore, signal: control.signal, timeoutMs: 7000 });
     return res.ok ? await res.json() : null;
   } catch {
     return null;

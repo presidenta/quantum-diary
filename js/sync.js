@@ -1,4 +1,5 @@
 import { API_BASE } from './config.js';
+import { request } from './core/net.js';
 import { KINDS, dirtyRecords, putRecords, getMeta, setMeta, loadAll } from './db.js';
 
 /* Синхронизация без опроса по таймеру: при запуске, после правки (с паузой
@@ -34,7 +35,7 @@ export function scheduleSync() {
 }
 
 async function api(path, options = {}) {
-  const res = await fetch(API_BASE + path, {
+  const res = await request(API_BASE + path, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
   });

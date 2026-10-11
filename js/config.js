@@ -1,3 +1,7 @@
+/* Запрос мимо браузерных ограничений: в установленном приложении обычный
+   fetch до сервера не доходит — см. core/net.js. */
+import { request } from './core/net.js';
+
 const PRODUCTION_API = 'https://game.coreviaflow.space/genesisystem';
 
 /* ПОЧЕМУ СМОТРИМ НА ПРОТОКОЛ, А НЕ ТОЛЬКО НА ИМЯ УЗЛА.
@@ -23,16 +27,20 @@ const localDev = !nativeApp
 
 export const API_BASE = localDev ? 'http://localhost:8580' : PRODUCTION_API;
 
-export async function serverAlive(timeoutMs = 3500) {
+export async function serverAlive(timeoutMs = 7000) {
   if (!API_BASE) return false;
-  const control = new AbortController();
-  const timer = setTimeout(() => control.abort(), timeoutMs);
+  /* Спрашиваем тем же способом, каким потом будем работать. Иначе
+     выходит нелепость: приложение решает, что сервер мёртв, браузерной
+     проверкой — и прячет вход, хотя родным запросом сервер прекрасно
+     отвечает. Именно так и было: вход не показывался при живом сервере.
+     Срок увеличен до семи секунд: мобильная сеть бывает медленной, а
+     ценой ошибки здесь становится спрятанный экран входа. */
   try {
-    const res = await fetch(`${API_BASE}/api/version`, { cache: 'no-store', signal: control.signal });
+    const res = await request(`${API_BASE}/api/version`, {
+      cache: 'no-store', timeoutMs
+    });
     return res.ok;
   } catch {
     return false;
-  } finally {
-    clearTimeout(timer);
   }
 }

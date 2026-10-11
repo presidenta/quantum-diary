@@ -18,6 +18,7 @@ import { h, setStyle, svgIcon, ICONS } from './store.js';
 import { getMeta, setMeta } from './db.js';
 import { LANGUAGES, DEFAULT_LANGUAGE, isLanguage, pickLanguage, translate } from './core/i18n.js';
 import { initPasswordEyes } from './password-eye.js';
+import { request } from './core/net.js';
 import { initUpdate } from './update.js';
 
 const $ = id => document.getElementById(id);
@@ -66,7 +67,7 @@ async function api(path, options = {}) {
   // сервер отвечает «пустое тело JSON», а не выполняет запрос
   const headers = { Authorization: `Bearer ${token}`, ...(options.headers || {}) };
   if (options.body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(base + path, { ...options, headers });
+  const res = await request(base + path, { ...options, headers });
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`);
     err.status = res.status;

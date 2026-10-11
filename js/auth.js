@@ -1,10 +1,13 @@
 import { API_BASE } from './config.js';
+/* Запрос мимо браузерных ограничений: без него вход и регистрация
+   в установленном приложении не работают (см. core/net.js). */
+import { request } from './core/net.js';
 import { getMeta, setMeta, clearAll } from './db.js';
 import { sessionChange } from './core/session.js';
 import { forgetMedia } from './core/media.js';
 
 async function api(path, body, token = null) {
-  const res = await fetch(API_BASE + path, {
+  const res = await request(API_BASE + path, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +71,7 @@ export async function hasSession() {
 export async function fetchMe() {
   const token = await getMeta('token');
   if (!token) return null;
-  const res = await fetch(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await request(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
   return res.ok ? res.json() : null;
 }
 

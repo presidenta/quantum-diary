@@ -15,6 +15,7 @@ import {
 } from '../core/quantum.js';
 import { todayKey } from '../core/dates.js';
 import { localMedia, warmUp } from '../core/media.js';
+import { request } from '../core/net.js';
 /* Системный будильник телефона: расписание моментов меняется отсюда,
    отсюда же его и переставляем. */
 import { planReminders } from '../reminder-plan.js';
@@ -27,7 +28,7 @@ let holdCount = 0;
 
 async function api(path, options = {}) {
   const token = await getMeta('token');
-  const res = await fetch(API_BASE + path, {
+  const res = await request(API_BASE + path, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -80,6 +81,21 @@ async function whoAmI() {
 }
 
 export async function loadQuantum() {
+  /* СНАЧАЛА ПОКАЗЫВАЕМ ДЕНЬ, ПОТОМ СПРАШИВАЕМ СЕРВЕР.
+
+     Порядок здесь важнее, чем кажется. Раньше первым шёл запрос к
+     серверу, и пока он шёл — а когда сервер недоступен, это секунды
+     ожидания, — на экране не было ни аркана, ни моментов. Человек видел
+     пустую карточку, а через время в ней что-то появлялось само: «как
+     это код может появляться не сразу?».
+
+     Теперь день есть с первой же отрисовки: берём сохранённый, а нет —
+     считаем на месте. Сервер спрашиваем следом, и если он ответил, его
+     день заменяет показанный и экран перерисовывается. Ждать нечего:
+     то, что видно, верно с самого начала. */
+  state.quantum = (await cachedQuantum()) || localDay(todayKey(), await whoAmI());
+  renderQuantum();
+
   try {
     if (!API_BASE) throw new Error('сервер не задан');
     state.quantum = await api('/api/quantum/today');
@@ -87,19 +103,9 @@ export async function loadQuantum() {
        зале или в метро, и тянуть файл в ту секунду будет поздно. Ждать этого
        экран не должен — поэтому без await. */
     warmUpToday(state.quantum);
+    renderQuantum();
   } catch {
-    /* СЕРВЕРА НЕТ — ЭКРАН ВСЁ РАВНО ЖИВОЙ.
-
-       Раньше здесь оставался null, и человек видел пустую карточку: ни
-       аркана, ни моментов, ни напоминаний. Причём «нет сервера» — это не
-       только отсутствие сети: это и не выполненный вход, и чужой адрес,
-       которому сервер не отвечает. Приложение, которое обязано работать
-       без сети, молчало из-за сети.
-
-       Теперь берём день, сохранённый раньше, а если и его нет — телефон
-       считает день сам, по тем же правилам (см. localDay). Серверный
-       день главнее: как только сервер ответит, он заменит этот. */
-    state.quantum = (await cachedQuantum()) || localDay(todayKey(), await whoAmI());
+    // Сервера нет — остаёмся на том дне, который уже показан
   }
   saveQuantumCache();
   /* Пришёл новый день — пришли и новые времена моментов. Расписание в
@@ -142,6 +148,8 @@ const SLOT_TITLE = { morning: 'quantum.morning', day: 'quantum.day', evening: 'q
 
 export function renderQuantum() {
   const card = $('quantumCard');
+  // Экран могли ещё не построить: загрузка дня идёт раньше отрисовки
+  if (!card) return;
   const day = state.quantum;
 
   if (!day) {
