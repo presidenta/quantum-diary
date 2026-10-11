@@ -27,6 +27,17 @@
      сети (service worker никуда не делся), но вторым приложением больше
      не притворяется. -->
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<!-- ЗНАЧОК НА ДОМАШНЕМ ЭКРАНЕ iPHONE.
+     Ссылки на манифест здесь по-прежнему нет и быть не должно (причина
+     выше). Его подключает только iPhone, сам, из js/ios-home.js. А эти
+     строки понимает один Safari, и Chrome на Android они не трогают:
+     значок для домашнего экрана, имя под ним и тёмная строка
+     состояния, чтобы шапка не белела поверх чёрного фона. -->
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Квант">
 <!-- Токены игры идут ПЕРВЫМИ: app.css ниже по каскаду переопределяет
      ими свои имена (см. :root в app.css) -->
 <link rel="stylesheet" href="css/game-tokens.css">
@@ -34,6 +45,7 @@
 <!-- Вторая вкладка «Кванта». Идёт последней: берёт имена из app.css,
      своих цветов не заводит, все правила живут внутри .qm-root -->
 <link rel="stylesheet" href="css/space.css">
+<script type="module" src="js/ios-home.js"></script>
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
