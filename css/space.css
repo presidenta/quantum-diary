@@ -2611,6 +2611,29 @@
 }
 
 
+/* ===== Экран должен листаться ============================================
+
+   «Дневник Наблюдателя» перестал прокручиваться, и низ страницы стал
+   недоступен. Причина тонкая и стоит того, чтобы записать её целиком.
+
+   Экран — колоночный флекс с overflow-y: auto, карточка внутри него —
+   флекс-элемент. У флекс-элемента по умолчанию flex-shrink: 1, то есть
+   он соглашается стать ниже своего содержимого. Обычно его держит
+   автоматический минимальный размер (min-height: auto), который не даёт
+   сжаться ниже содержимого, — но по спецификации этот минимум равен нулю
+   у всякого элемента, чей overflow отличается от visible.
+
+   У карточки дневника как раз .qm-akasha { overflow: hidden } — она
+   прячет под скруглением золотую пыль и подсветку. Значит, её минимум
+   нулевой: карточка послушно ужималась до высоты экрана, overflow: hidden
+   срезал всё лишнее, и экрану было нечего прокручивать — переполнения
+   ведь не осталось. Остальные экраны при этом листались нормально, и
+   поэтому поломка выглядела случайной.
+
+   Запрет сжатия лечит причину: карточка всегда ровно такой высоты, какой
+   её делает содержимое, экран видит настоящее переполнение и листается. */
+.qm-root .qm-screen > * { flex-shrink: 0; }
+
 /* ===== Длинное вступление под катом =======================================
 
    Первая фраза на «Настройке реальности» и на «Дневнике Наблюдателя» —
@@ -2625,23 +2648,34 @@
 .qm-root .qm-fold { margin: 0 0 16px; }
 .qm-root .qm-fold .qm-fold-text { margin-bottom: 0; }
 
+/* Ровно три строки, не три с половиной.
+
+   Одного -webkit-line-clamp мало: он ограничивает строки, но высоту блока
+   при этом оставляет на усмотрение движка, и лишняя строка проступала
+   из-под обрезки. Поэтому рядом стоит жёсткий потолок высоты, посчитанный
+   из той же межстрочной величины: три строки и ни пикселя больше.
+
+   Межстрочная вынесена в переменную, потому что на телефоне она другая, —
+   иначе потолок считался бы по настольной и срезал бы третью строку. */
 .qm-root .qm-fold-text {
+    --fold-lh: 1.55;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-    line-clamp: 3;
     overflow: hidden;
+    line-height: var(--fold-lh);
+    max-height: calc(var(--fold-lh) * 3em);
 }
 .qm-root .qm-fold.qm-open .qm-fold-text {
     display: block;
     -webkit-line-clamp: unset;
-    line-clamp: unset;
     overflow: visible;
+    max-height: none;
 }
 
 .qm-root .qm-fold-btn {
     display: block;
-    margin: 7px auto 0;
+    margin: 14px auto 0;
     width: 40px;
     height: 22px;
     padding: 0;
@@ -2676,7 +2710,22 @@
    читался одним сплошным куском. Кегль не тронут: выросли только поля,
    заголовок отделён, но не стал крупнее. */
 .qm-root #txt-s3-title { margin: 26px 0 22px; }
-.qm-root #txt-s4-title { margin: 26px 0 18px; }
+/* Дневник — главный экран раздела, и его имя несёт больше веса, чем
+   остальные: на два пункта крупнее своего обычного кегля. */
+.qm-root #txt-s4-title { margin: 26px 0 18px; font-size: 25px; }
+
+/* ===== Золотая черта ======================================================
+
+   Вводная часть дневника кончилась, дальше идёт работа: подсказка и сами
+   слова. Между ними нужна не пустота, а знак — иначе всё читается одним
+   потоком. Черта короткая и по центру, как и на титульном экране: тот же
+   приём, та же мера. */
+.qm-root .qm-rule {
+    width: 54px;
+    height: 1px;
+    background: var(--qm-gold-line);
+    margin: 22px auto;
+}
 
 /* ===== Слова состояний в Дневнике ========================================
 
@@ -2693,32 +2742,45 @@
     text-align: left;
 }
 .qm-root .qm-tags { margin-bottom: 14px; text-align: left; }
-.qm-root .qm-tag-group { margin-bottom: 11px; }
+/* Название ряда и слова идут одной строкой: «МОИ ЭМОЦИИ: радость
+   спокойствие…». Отдельная полоса под названием забирала строку на
+   каждый ряд и растила блок на треть, а смысла в ней не было — название
+   и его слова об одном.
+
+   Перенос делает сам флекс, когда строка кончилась, и выключка по базовой
+   линии держит мелкое название на одной линии со словами, а не по центру
+   их высоты. */
+.qm-root .qm-tag-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 4px;
+    margin-bottom: 7px;
+}
 
 .qm-root .qm-tag-label {
-    display: block;
-    margin-bottom: 3px;
+    flex: none;
     font-size: 11px;
     letter-spacing: .7px;
     text-transform: uppercase;
     color: var(--qm-faint);
 }
+/* Двоеточие ставит стиль, а не словарь: в словаре лежит название ряда,
+   и знак препинания к нему не относится. */
+.qm-root .qm-tag-label::after { content: ':'; }
 
-.qm-root .qm-tag-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 3px;
-}
-
+/* Курсив — знак того, что это не обычный текст, а то, на что нажимают.
+   Он же отличает слова от прямого названия ряда слева от них. */
 .qm-root .qm-tag {
     margin: 0;
-    padding: 5px 7px;
+    padding: 2px 3px;
     border: 0;
-    border-radius: 8px;
+    border-radius: 6px;
     background: none;
     font-family: inherit;
+    font-style: italic;
     font-size: 13.5px;
-    line-height: 1.3;
+    line-height: 1.5;
     color: rgba(226, 214, 190, .55);
     cursor: pointer;
     transition: color .16s ease, background .16s ease, text-shadow .16s ease;
@@ -2758,10 +2820,15 @@
     .qm-root #screen-1 .qm-hero-actions { margin-top: auto; }
 
     .qm-root #txt-s3-title { margin: 22px 0 20px; }
-    .qm-root #txt-s4-title { margin: 22px 0 16px; }
+    .qm-root #txt-s4-title { margin: 22px 0 16px; font-size: 23px; }
 
     .qm-root .qm-fold { margin-bottom: 14px; }
     .qm-root .qm-tags-hint { font-size: 13px; }
-    .qm-root .qm-tag { font-size: 14px; padding: 6px 8px; }
+    /* Поля ужаты, но не до нуля: по слову всё ещё надо попадать пальцем,
+       и высота строки держит зону нажатия, когда отступы малы. */
+    .qm-root .qm-tag { font-size: 14px; padding: 3px 4px; line-height: 1.6; }
     .qm-root .qm-tag-label { font-size: 11.5px; }
+    .qm-root .qm-tag-group { gap: 0 5px; margin-bottom: 8px; }
+    .qm-root .qm-fold-text { --fold-lh: 1.6; }
+    .qm-root .qm-rule { margin: 18px auto; }
 }

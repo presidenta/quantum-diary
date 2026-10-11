@@ -234,14 +234,23 @@ export const TEMPLATE = [
     /* --- ЭКРАН 4: Дневник Наблюдателя ---------------------------------- */
     '<div id="screen-4" class="qm-screen hidden">',
     '    <div class="card-panel qm-akasha">',
-    '        <div class="qm-fold" id="fold-s4">',
-    '            <p id="txt-s4-top" class="gold-notice-box qm-fold-text" data-i18n="screen4Top"></p>',
+    /* Золотая рамка перенесена на обёртку, а сам абзац оставлен без
+       полей. Иначе обрезка по трём строкам даёт неряшливый хвост:
+       -webkit-line-clamp считает строки по содержимому, а overflow режет
+       по внутреннему полю — и четвёртая строка наполовину проступала в
+       нижнем отступе рамки. Абзацу без полей резать нечего. Галочка
+       переехала внутрь рамки: она управляет этим блоком и стоять должна
+       в нём. */
+    '        <div class="qm-fold gold-notice-box" id="fold-s4">',
+    '            <p id="txt-s4-top" class="qm-fold-text" data-i18n="screen4Top"></p>',
     '            <button type="button" class="qm-fold-btn" aria-expanded="false" hidden>',
     '                <i class="qm-chev" aria-hidden="true"></i>',
     '            </button>',
     '        </div>',
     '        <h2 id="txt-s4-title" class="qm-title-md gold-cut" data-i18n="screen4Title">Дневник Наблюдателя</h2>',
     '        <p id="txt-s4-sub" class="qm-sub" data-i18n="screen4Subtitle"></p>',
+    /* Золотая черта: вводная часть кончилась, дальше работа со словами. */
+    '        <div class="qm-rule" aria-hidden="true"></div>',
     /* СЛОВА СОСТОЯНИЙ.
 
        Перед полем записи лежат сами слова — эмоции, телесные ощущения и

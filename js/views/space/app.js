@@ -444,8 +444,10 @@ export class QuantumApp {
             label.textContent = group.label;
             row.appendChild(label);
 
-            const words = document.createElement('div');
-            words.className = 'qm-tag-row';
+            /* Слова идут в той же строке, что и название ряда: отдельная
+               полоса под названием съедала строку на каждый ряд и растила
+               блок на треть. Перенос делает сам флекс, когда строка
+               кончилась. */
             group.words.forEach((word, wi) => {
                 const key = gi + ':' + wi;
                 const chip = document.createElement('button');
@@ -459,10 +461,9 @@ export class QuantumApp {
                     chip.setAttribute('aria-pressed', String(this.diaryPicked.has(key)));
                     this.syncDiaryTags();
                 });
-                words.appendChild(chip);
+                row.appendChild(chip);
             });
 
-            row.appendChild(words);
             return row;
         });
 
