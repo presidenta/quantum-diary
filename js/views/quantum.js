@@ -177,7 +177,7 @@ function momentChip(moment, active) {
   else if (moment === active) mark.push('active');
 
   const chip = h('div', { class: mark.join(' ') },
-    h('span', { class: 'q-time-at', text: moment.at }));
+    h('span', { class: 'q-time-at gold-cut', text: moment.at }));
 
   if (!moment.doneAt) {
     const key = isOff(moment) ? 'quantum.turnOn' : 'quantum.turnOff';
@@ -266,9 +266,9 @@ function practiceScreen(moment, anchorKey) {
   if (moment.durationSec > 0) parts.push(practiceTimer(moment.durationSec));
 
   parts.push(h('button', {
-    type: 'button', class: 'btn primary', text: t('quantum.lived-it'),
+    type: 'button', class: 'btn primary',
     onclick: () => markDone(moment)
-  }));
+  }, h('span', { class: 'gold-cut', text: t('quantum.lived-it') })));
 
   return h('div', { class: 'q-overlay q-practice' }, ...parts);
 }

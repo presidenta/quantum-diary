@@ -136,7 +136,8 @@ function renderNotice() {
   } else {
     box.replaceChildren(
       h('p', { text: t('wheel.startAssess') }),
-      h('button', { type: 'button', class: 'btn primary', text: t('wheel.assessButton'), onclick: openAssess }));
+      h('button', { type: 'button', class: 'btn primary', onclick: openAssess },
+        h('span', { class: 'gold-cut', text: t('wheel.assessButton') })));
   }
 }
 

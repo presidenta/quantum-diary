@@ -47,7 +47,7 @@
       <label><span data-i18n="auth.loginField">Почта или номер кабинета</span><input name="login" type="text" required autocomplete="username" inputmode="email"></label>
       <label><span data-i18n="auth.password">Пароль</span><input name="password" type="password" required autocomplete="current-password"></label>
       <p class="gate-msg" id="loginMsg" role="alert"></p>
-      <button type="submit" class="btn primary" data-i18n="auth.login">Войти</button>
+      <button type="submit" class="btn primary"><span class="gold-cut" data-i18n="auth.login">Войти</span></button>
     </form>
 
     <form id="requestForm" class="gate-form" hidden>
@@ -57,7 +57,7 @@
       <label><span data-i18n="auth.telegram">Telegram</span><input name="telegramId" maxlength="64" placeholder="@имя"></label>
       <p class="muted" data-i18n="auth.closedNote">Заявку рассматривает администратор.</p>
       <p class="gate-msg" id="requestMsg" role="alert"></p>
-      <button type="submit" class="btn primary" data-i18n="auth.request">Отправить заявку</button>
+      <button type="submit" class="btn primary"><span class="gold-cut" data-i18n="auth.request">Отправить заявку</span></button>
     </form>
 
     <!-- Первичная настройка. Показывается, только пока в системе нет ни одного
@@ -75,7 +75,7 @@
       <button type="button" class="btn ghost" id="setupGenerate" data-i18n="auth.generatePassword">Придумать пароль за меня</button>
       <p class="muted" data-i18n="auth.setupHint">Не короче десяти символов. Запишите его: восстановить пароль здесь некому.</p>
       <p class="gate-msg" id="setupMsg" role="alert"></p>
-      <button type="submit" class="btn primary" data-i18n="auth.setupButton">Создать администратора</button>
+      <button type="submit" class="btn primary"><span class="gold-cut" data-i18n="auth.setupButton">Создать администратора</span></button>
     </form>
   </div>
 </section>
@@ -293,7 +293,7 @@
     <label><span data-i18n="money.date">Дата</span><input name="date" type="date" required></label>
     <menu>
       <button value="cancel" formnovalidate class="btn" data-i18n="adm.cancel">Отмена</button>
-      <button value="save" class="btn primary" data-i18n="adm.save">Сохранить</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="adm.save">Сохранить</span></button>
     </menu>
   </form>
 </dialog>
@@ -346,7 +346,7 @@
     <button type="button" id="openAssess" class="btn" data-i18n="assess.open">Оценить сферы 1–10</button>
     <p class="muted" id="accountInfo"></p>
     <!-- Смена пароля и удаление переехали в профиль -->
-    <div class="actions"><button value="close" class="btn primary" data-i18n="settings.done">Готово</button></div>
+    <div class="actions"><button value="close" class="btn primary"><span class="gold-cut" data-i18n="settings.done">Готово</span></button></div>
   </form>
 </dialog>
 
@@ -376,7 +376,7 @@
       <button type="button" id="archiveGoal" class="btn" data-i18n="goal.archive">Завершить</button>
       <button type="button" id="deleteGoal" class="btn danger" data-i18n="goal.delete">Удалить</button>
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
-      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
     </div>
   </form>
 </dialog>
@@ -393,7 +393,7 @@
     <ul id="logEntries" class="entries"></ul>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.close">Закрыть</button>
-      <button value="save" class="btn primary" data-i18n="log.heading">Записать</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="log.heading">Записать</span></button>
     </div>
   </form>
 </dialog>
@@ -405,7 +405,7 @@
     <ul id="assessList" class="edit-list"></ul>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="assess.later">Позже</button>
-      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
     </div>
   </form>
 </dialog>
@@ -417,7 +417,7 @@
     <label><span data-i18n="nav.spheres">Сфера жизни</span><select name="sectorId"></select></label>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
-      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
     </div>
   </form>
 </dialog>
@@ -438,7 +438,7 @@
     </select></label>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
-      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
     </div>
   </form>
 </dialog>
@@ -453,7 +453,7 @@
     <p class="gate-msg" id="passwordMsg" role="alert"></p>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
-      <button value="save" class="btn primary" data-i18n="common.save">Сохранить</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
     </div>
   </form>
 </dialog>

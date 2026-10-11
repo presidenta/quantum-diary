@@ -29,7 +29,7 @@
     <p class="muted">Служебный ключ нужен, только если администраторов не осталось. Он создаётся сервером при первом запуске и виден один раз в журнале контейнера.</p>
     <label><span>Служебный ключ</span><input name="token" type="password" required autocomplete="off"></label>
     <p class="gate-msg" id="tokenMsg" role="alert"></p>
-    <button type="submit" class="btn primary">Войти</button>
+    <button type="submit" class="btn primary"><span class="gold-cut">Войти</span></button>
   </form>
 </section>
 
@@ -96,7 +96,7 @@
             <input type="checkbox" name="isCommon" checked>
             <span data-i18n="adm.commonNote">Общая — достаётся всем, у кого нет своего набора</span>
           </label>
-          <button type="submit" class="btn primary" data-i18n="adm.add">Добавить</button>
+          <button type="submit" class="btn primary"><span class="gold-cut" data-i18n="adm.add">Добавить</span></button>
         </form>
       </div>
 
@@ -130,7 +130,7 @@
     <p class="muted m0" id="passwordFor"></p>
     <div class="actions">
       <button type="button" class="btn" id="copyPassword" data-i18n="adm.copy">Скопировать</button>
-      <button type="button" class="btn primary" id="closePassword" data-i18n="adm.done">Готово</button>
+      <button type="button" class="btn primary" id="closePassword"><span class="gold-cut" data-i18n="adm.done">Готово</span></button>
     </div>
   </div>
 </dialog>
@@ -174,7 +174,7 @@
     </div>
 
     <div class="actions">
-      <button type="button" class="btn primary" id="personClose" data-i18n="adm.done">Готово</button>
+      <button type="button" class="btn primary" id="personClose"><span class="gold-cut" data-i18n="adm.done">Готово</span></button>
     </div>
   </div>
 </dialog>
@@ -194,7 +194,7 @@
 
     <p class="muted m0" data-i18n="adm.quantumHint">Пустое поле — остаётся общее. Звук проигрывается на устройстве, когда наступает момент.</p>
     <div class="actions">
-      <button type="button" class="btn primary" id="closeQuantum" data-i18n="adm.done">Готово</button>
+      <button type="button" class="btn primary" id="closeQuantum"><span class="gold-cut" data-i18n="adm.done">Готово</span></button>
     </div>
   </div>
 </dialog>

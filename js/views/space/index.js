@@ -105,6 +105,8 @@ function applyTabLabels() {
       label = document.createElement('span');
       tab.replaceChildren(label);
     }
+    // Прорезанное золото — одно и то же на чёрной вкладке и на золотой
+    label.classList.add('gold-cut');
     label.textContent = dict[key];
   });
 }

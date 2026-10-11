@@ -168,13 +168,13 @@ function renderPerson(person) {
 
   if (person.status === 'pending') {
     actions.push(h('button', {
-      type: 'button', class: 'btn primary grow', text: 'Одобрить и выдать пароль',
+      type: 'button', class: 'btn primary grow',
       onclick: () => withBusy(async () => {
         const result = await api(`/api/admin/registrations/${person.id}/approve`, { method: 'POST' });
         showPassword(result.password, `${result.displayName} · ${result.email}`);
         await loadPeople();
       })
-    }));
+    }, h('span', { class: 'gold-cut', text: 'Одобрить и выдать пароль' })));
   } else {
     /* На виду — то, ради чего сюда заходят каждый день. Всё остальное под
        шестерёнкой: пять кнопок в ряд, среди них «Заблокировать» красным,
@@ -509,9 +509,9 @@ function quantumBlock(kind, key, label) {
     field('audioUrl', 'adm.audioUrl', 'url'),
     h('div', { class: 'q-block-foot' },
       h('button', {
-        type: 'button', class: 'btn primary', text: t('adm.save'),
+        type: 'button', class: 'btn primary',
         onclick: e => saveBlock(e.target.closest('.q-block'), kind, key)
-      }),
+      }, h('span', { class: 'gold-cut', text: t('adm.save') })),
       h('span', { class: 'q-block-said', role: 'status' })));
 
   return h('details', { class: `q-block ${filled ? 'filled' : ''}`, 'data-key': key },

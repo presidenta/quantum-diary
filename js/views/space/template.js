@@ -53,7 +53,9 @@ export const TEMPLATE = [
     '            <span data-i18n="modalElapsedPrefix">прошло </span><span id="modal-timer-val">0мин 0сек</span>',
     '        </div>',
     '        <p class="modal-warning" data-i18n="modalWarning"></p>',
-    '        <button id="btn-modal-start" class="btn-gold qm-block" data-i18n="modalBtnStart">Войти в суперпозицию</button>',
+    '        <button id="btn-modal-start" class="btn-gold qm-block">',
+    '            <span class="gold-cut" data-i18n="modalBtnStart">Войти в суперпозицию</span>',
+    '        </button>',
 
     /* Отсрочка живёт здесь, а не в хрониках: откладывать есть смысл в тот
        миг, когда окно открылось и человек занят, — а не после перехода,
@@ -92,7 +94,9 @@ export const TEMPLATE = [
     '    <h1 class="qm-hero-title" data-i18n="title1">Пространство вариантов</h1>',
     '    <div class="qm-hero-rule"></div>',
     '    <div class="qm-hero-actions">',
-    '        <button id="btn-start-app" class="btn-gold" data-i18n="btnStart">Войти в суперпозицию</button>',
+    '        <button id="btn-start-app" class="btn-gold">',
+    '            <span class="gold-cut" data-i18n="btnStart">Войти в суперпозицию</span>',
+    '        </button>',
     '        <a href="#" id="btn-open-settings" class="btn-link" data-i18n="btnSettings">Изменить варианты реальностей</a>',
     '    </div>',
     '</div>',
@@ -117,7 +121,9 @@ export const TEMPLATE = [
     '            </select>',
     '        </div>',
     '        <div id="doors-inputs-container" class="inputs-scroll-area"></div>',
-    '        <button id="btn-save-setup" class="btn-gold qm-block" data-i18n="btnSave">Сохранить и войти</button>',
+    '        <button id="btn-save-setup" class="btn-gold qm-block">',
+    '            <span class="gold-cut" data-i18n="btnSave">Сохранить и войти</span>',
+    '        </button>',
     '        <button id="btn-cancel-setup" class="btn-link qm-block" data-i18n="btnCancel">Отмена</button>',
     '    </div>',
     '</div>',
@@ -133,13 +139,21 @@ export const TEMPLATE = [
        половиной составной кнопки ниже. */
     '        <div id="s3-door-media" class="qm-s3-media" hidden></div>',
     '        <p class="qm-speed-title" data-i18n="screen3SpeedTitle"></p>',
+    /* Две скорости стоят рядом, в один ряд на всю ширину: прежде они
+       лежали одна под другой двумя длинными полосами и забивали экран.
+       Подписи оставлены короткими — «Быстрый переход» и «Глубокое
+       погружение»; пояснения в скобках ушли, их место под кнопками
+       занимает сама инструкция.
+
+       «Рекомендуем» не висит постоянно: оно показывается только когда
+       выбрано глубокое погружение, и не мозолит глаза всё время. */
     '        <div class="speed-tabs-container">',
     '            <button type="button" class="speed-tab active" data-speed="1">',
-    '                <span data-i18n="speedOption1Btn">Быстрый переход (в потоке дня)</span>',
+    '                <span class="gold-cut" data-i18n="speedOption1Btn">Быстрый переход</span>',
     '            </button>',
     '            <button type="button" class="speed-tab" data-speed="2">',
-    '                <span data-i18n="speedOption2Btn">Глубокое погружение (есть время)</span>',
-    '                <span class="badge-rec" data-i18n="speedBadge">(Рекомендуем)</span>',
+    '                <span class="gold-cut" data-i18n="speedOption2Btn">Глубокое погружение</span>',
+    '                <span class="badge-rec" data-i18n="speedBadge">Рекомендуем</span>',
     '            </button>',
     '        </div>',
     '        <div id="speed-instruction-text" class="speed-instruction-box"></div>',
@@ -162,7 +176,7 @@ export const TEMPLATE = [
     '                <i class="qm-mouth"></i>',
     '            </span>',
     '            <button type="button" id="btn-s3" class="qm-act-main">',
-    '                <span data-i18n="screen3Btn">Закрой глаза</span>',
+    '                <span class="gold-cut" data-i18n="screen3Btn">Закрой глаза</span>',
     '            </button>',
     '            <button type="button" id="btn-s3-play" class="qm-act-play qm-play-idle">',
     '                <span class="qm-play-glyph"></span>',
@@ -185,7 +199,7 @@ export const TEMPLATE = [
     '            <canvas id="qm-tome-sparks" class="qm-tome-sparks" aria-hidden="true"></canvas>',
     '            <button type="button" id="btn-s4-save" class="qm-tome">',
     '                <span class="qm-tome-edge" aria-hidden="true"></span>',
-    '                <span class="qm-tome-text" id="qm-tome-text" data-i18n="screen4Btn">Активировать в Хрониках Акаши</span>',
+    '                <span class="qm-tome-text gold-cut" id="qm-tome-text" data-i18n="screen4Btn">Активировать в Хрониках Акаши</span>',
     '                <span class="qm-tome-flare" aria-hidden="true"></span>',
     '            </button>',
     '        </div>',

@@ -32,7 +32,8 @@ export function renderMoney() {
       totalBox('money.left', earned - spent, earned - spent < 0 ? 'minus' : 'left')),
 
     h('div', { class: 'money-actions' },
-      h('button', { type: 'button', class: 'btn primary grow', text: t('money.add'), onclick: () => openEntry() }),
+      h('button', { type: 'button', class: 'btn primary grow', onclick: () => openEntry() },
+        h('span', { class: 'gold-cut', text: t('money.add') })),
       micButton()),
 
     rows.length ? categoriesBar(rows) : null,

@@ -1420,6 +1420,10 @@ export class QuantumApp {
             this.later(() => {
                 if (this._destroyed || !label.isConnected) return;
                 label.textContent = this.t('akashaDone');
+                /* «Свершилось» пишется белым по потемневшему фолианту.
+                   Прорезанное золото на этот миг снимается: оно задано
+                   через !important и собственный цвет перебить не даст. */
+                label.classList.remove('gold-cut');
                 label.style.color = '#FFFFFF';
                 label.style.opacity = '1';
             }, 300);
@@ -1431,6 +1435,7 @@ export class QuantumApp {
             if (label) {
                 label.style.opacity = '';
                 label.style.color = '';
+                label.classList.add('gold-cut');   // золото вернулось
                 label.textContent = this.t('screen4Btn');
             }
             if (this._destroyed) return;
