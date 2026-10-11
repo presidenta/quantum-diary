@@ -137,17 +137,19 @@ export function msUntil(timeHHMM, now = new Date()) {
    Серверный день главнее: как только сервер ответил, его день заменяет
    этот. Здешний — на случай, когда ответа нет. */
 
-export const WINDOWS = {
-  morning: { from: 8 * 60, to: 13 * 60 },   // 08:00–13:00 — замыкание контура
-  day: { from: 13 * 60, to: 18 * 60 },      // 13:00–18:00 — хромотерапия
-  evening: { from: 18 * 60, to: 22 * 60 }   // 18:00–22:00 — сброс потенциала
-};
+/* Прежние окна, прибитые к часам. Оставлены как начальное время
+   бодрствования — с восьми утра до десяти вечера, когда тихий час
+   выключен. Сами окна теперь считает dayWindows. */
 export const PER_WINDOW = 3;
 export const MIN_GAP_MINUTES = 20;
 export const ARCANA_COUNT = 22;
 
-const hhmm = minutes =>
-  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+/* Минуты в «ЧЧ:ММ». Сутки замыкаются: окно вечера у совы может
+   перевалить за полночь, и 25:10 там быть не должно. */
+const hhmm = minutes => {
+  const m = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
 
 /* Число из строки — чтобы у каждой даты было своё, но всегда одно и то же.
    Обычный FNV-1a: короткий, без библиотек, и его легко проверить. */
@@ -173,39 +175,27 @@ function diceFrom(seed) {
   };
 }
 
-/* Три времени внутри окна с разрывом не меньше gap.
+/* ОКНА СЧИТАЮТСЯ ОТ ПРОБУЖДЕНИЯ, А НЕ ОТ ЧАСОВ В КОДЕ.
 
-   Способ «набросать и проверить» не годится: при тесном окне он может
-   долго не находить набор. Делим свободные минуты на части — такой набор
-   существует всегда. Тот же приём, что на сервере. */
-export function pickMoments(window, count = PER_WINDOW, gap = MIN_GAP_MINUTES, dice) {
-  if (count <= 0) return [];
-  const free = (window.to - window.from) - gap * (count - 1);
-  if (free < 0) throw new Error('окно короче, чем нужно для такого числа моментов');
+   Сначала три окна были прибиты к часам: утро 08–13, день 13–18, вечер
+   18–22. Для человека, который встаёт в шесть, это неверно: он на ногах
+   два часа, а приложение молчит, — и наоборот, кто ложится за полночь,
+   остаётся без вечера. Владелец сказал прямо: начал день в шесть —
+   первый сигнал в шесть-семь.
 
-  const cuts = Array.from({ length: count }, () => dice(free + 1)).sort((a, b) => a - b);
-  return cuts.map((cut, i) => window.from + cut + gap * i);
-}
+   Поэтому день отмеряется тихим часом: тишина кончилась — день начался,
+   тишина началась — день кончился. Всё, что между, делится на три равные
+   части. Тихий час выключен — остаётся прежнее время бодрствования, с
+   восьми утра до десяти вечера.
 
-/* Тихий час вырезает из окна свой кусок.
+   Отсюда само собой выходит и то, ради чего всё затевалось: в тишину
+   ничего не назначается, потому что её нет в сутках, которые мы делим.
+   Вырезать её отдельно больше не нужно.
 
-   Раньше он только глушил уже назначенные моменты: время стояло в
-   расписании, но сигнал не приходил. Владелец попросил иначе — чтобы
-   тихий час двигал сами окна, и моменты назначались только туда, где
-   они могут прозвучать.
+   Время у каждого своё: тихий час хранится у человека, и в расчёт
+   входит он же. Чужой распорядок на мой день не влияет. */
 
-   Промежуток тишины обычно переходит через полночь (с 23:00 до 6:00),
-   поэтому он раскладывается на один или два отрезка внутри суток. От
-   окна отнимаем каждый из них — остаётся свободное время, иногда
-   двумя кусками (если тишина пришлась на середину окна). */
-function quietParts(quiet) {
-  if (!quiet || quiet.on === false) return [];
-  const start = minutesOf(quiet.from);
-  const end = minutesOf(quiet.until);
-  // Равные границы — «тихо никогда», то же правило, что в напоминаниях
-  if (start === null || end === null || start === end) return [];
-  return start < end ? [[start, end]] : [[start, 1440], [0, end]];
-}
+const DEFAULT_AWAKE = { start: 8 * 60, end: 22 * 60 };
 
 function minutesOf(hhmm) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
@@ -216,20 +206,68 @@ function minutesOf(hhmm) {
   return h * 60 + min;
 }
 
-/** Что осталось от окна после вычитания тишины. */
-export function freeParts(window, quiet) {
-  let parts = [[window.from, window.to]];
+/** Сколько человек на ногах: от конца тишины до её начала. */
+export function awakeSpan(quiet) {
+  if (!quiet || quiet.on === false) return { ...DEFAULT_AWAKE };
 
-  for (const [qs, qe] of quietParts(quiet)) {
-    const next = [];
-    for (const [from, to] of parts) {
-      if (qe <= from || qs >= to) { next.push([from, to]); continue; }  // не пересекаются
-      if (qs > from) next.push([from, Math.min(qs, to)]);               // кусок до тишины
-      if (qe < to) next.push([Math.max(qe, from), to]);                 // кусок после
-    }
-    parts = next;
+  const start = minutesOf(quiet.until);   // проснулся
+  const end = minutesOf(quiet.from);      // лёг
+  // Равные границы — «тихо никогда», то же правило, что в напоминаниях
+  if (start === null || end === null || start === end) return { ...DEFAULT_AWAKE };
+
+  let span = end - start;
+  if (span < 0) span += 1440;             // тишина через полночь — обычный случай
+  return { start, end: start + span };
+}
+
+/* Три окна внутри времени бодрствования. Имена прежние — утро, день,
+   вечер: по ним их знают и экран, и напоминания. */
+export function dayWindows(quiet) {
+  const { start, end } = awakeSpan(quiet);
+  const part = Math.floor((end - start) / 3);
+
+  return {
+    morning: { from: start, to: start + part },
+    day: { from: start + part, to: start + part * 2 },
+    evening: { from: start + part * 2, to: end }
+  };
+}
+
+/* Три времени внутри окна: по одному в каждой трети.
+
+   Сначала все три бросались куда угодно внутри окна. Выходило, что у
+   человека, встающего в шесть, первый сигнал мог прийти к полудню — а
+   он ждёт его утром, как и сказал владелец: начал день в шесть —
+   первый звонок в шесть-семь.
+
+   Поэтому окно делится на столько частей, сколько моментов, и в каждой
+   части бросается своё время. Случайность остаётся — угадать час
+   по-прежнему нельзя, — но моменты не слипаются в одном краю и не
+   оставляют половину дня пустой.
+
+   Разрыв между соседними всё равно проверяется: при коротком окне части
+   малы, и два броска могли бы оказаться рядом. */
+export function pickMoments(window, count = PER_WINDOW, gap = MIN_GAP_MINUTES, dice) {
+  if (count <= 0) return [];
+
+  const span = window.to - window.from;
+  if (span <= 0) return [];
+
+  const part = span / count;
+  const times = [];
+
+  for (let i = 0; i < count; i++) {
+    const from = window.from + part * i;
+    let at = Math.floor(from + dice(Math.max(1, Math.floor(part))));
+
+    // Не ближе gap к предыдущему и не дальше конца окна
+    if (times.length > 0) at = Math.max(at, times[times.length - 1] + gap);
+    at = Math.min(at, window.to);
+
+    times.push(at);
   }
-  return parts.filter(([from, to]) => to > from);
+
+  return times;
 }
 
 /**
@@ -243,12 +281,15 @@ export function freeParts(window, quiet) {
  *                         и с его изменением день пересчитывается заново
  */
 export function localDay(dateKey, person = '', quiet = null) {
-  const tishina = quiet && quiet.on !== false ? `${quiet.from}-${quiet.until}` : '';
-  const dice = diceFrom(seedOf(`${dateKey}|${person}|${tishina}`));
+  /* В зерно идёт не сама запись о тишине, а то, что из неё вышло:
+     границы бодрствования. Иначе «с 9:00 до 9:00» (тихо никогда) дало бы
+     другой день, чем выключенная тишина, — хотя день тот же самый. */
+  const { start, end } = awakeSpan(quiet);
+  const dice = diceFrom(seedOf(`${dateKey}|${person}|${start}-${end}`));
   const arcana = dice(ARCANA_COUNT) + 1;
 
-  const moments = Object.entries(WINDOWS).flatMap(([slot, window]) =>
-    momentsInWindow(window, quiet, dice).map((at, i) => ({
+  const moments = Object.entries(dayWindows(quiet)).flatMap(([slot, window]) =>
+    pickMoments(window, PER_WINDOW, MIN_GAP_MINUTES, dice).map((at, i) => ({
       // Имя момента постоянное: по нему держатся отметки «прожито»
       id: `local-${dateKey}-${slot}-${i + 1}`,
       slot,
@@ -264,22 +305,36 @@ export function localDay(dateKey, person = '', quiet = null) {
   return { date: dateKey, arcana, moments, offline: true };
 }
 
-/* Сколько моментов и куда их поставить в окне, изрезанном тишиной.
+/* Пересчитать времена у готового дня — хоть своего, хоть серверного.
 
-   Берём самый длинный свободный кусок: три момента в одном куске лучше
-   трёх, растащенных по огрызкам. Если в нём не помещаются все три с
-   положенным разрывом — ставим столько, сколько влезает, вплоть до ни
-   одного. Молчать честнее, чем звонить в тишину. */
-function momentsInWindow(window, quiet, dice) {
-  const parts = freeParts(window, quiet);
-  if (parts.length === 0) return [];
+   Серверу про тихий час неизвестно: он раздаёт одно расписание на все
+   устройства и считает его по часам из своего кода. Человек же вправе
+   спать до десяти или вставать в пять, и времена обязаны следовать за
+   ним. Поэтому содержимое дня — аркан, фразы, картинки, отметки
+   «прожито» — остаётся серверным, а времена пересчитываются здесь.
 
-  const [from, to] = parts.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
-  const span = to - from;
+   Моменты не создаются и не удаляются: сколько их пришло в каждой фазе,
+   столько и остаётся, с теми же именами. Меняется только час. */
+export function retime(day, dateKey, person = '', quiet = null) {
+  if (!day || !Array.isArray(day.moments) || day.moments.length === 0) return day;
 
-  let count = PER_WINDOW;
-  while (count > 0 && span < MIN_GAP_MINUTES * (count - 1)) count--;
-  if (count === 0) return [];
+  const { start, end } = awakeSpan(quiet);
+  const dice = diceFrom(seedOf(`${dateKey}|${person}|${start}-${end}`));
+  const windows = dayWindows(quiet);
 
-  return pickMoments({ from, to }, count, MIN_GAP_MINUTES, dice);
+  const moments = [];
+  for (const [slot, window] of Object.entries(windows)) {
+    const svoi = day.moments.filter(m => m.slot === slot);
+    if (svoi.length === 0) continue;
+
+    const times = pickMoments(window, svoi.length, MIN_GAP_MINUTES, dice);
+    svoi.forEach((m, i) => moments.push({ ...m, at: hhmm(times[i] % 1440) }));
+  }
+
+  // Моменты без известной фазы (вдруг сервер добавит новую) не теряем
+  const known = new Set(Object.keys(windows));
+  for (const m of day.moments) if (!known.has(m.slot)) moments.push(m);
+
+  moments.sort((a, b) => a.at.localeCompare(b.at));
+  return { ...day, moments };
 }

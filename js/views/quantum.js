@@ -11,7 +11,7 @@ import { API_BASE } from '../config.js';
 import { getMeta, setMeta } from '../db.js';
 import {
   HOLD_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot, isOff, liveMoments,
-  livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil, localDay
+  livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil, localDay, retime
 } from '../core/quantum.js';
 import { todayKey } from '../core/dates.js';
 import { localMedia, warmUp } from '../core/media.js';
@@ -88,8 +88,14 @@ async function svoyDen() {
    Только свой, посчитанный на телефоне: серверный день меняет сервер, и
    трогать его здесь нельзя — он один на все устройства человека. */
 export async function quietChanged() {
-  if (!state.quantum || !state.quantum.offline) return;
-  state.quantum = await svoyDen();
+  if (!state.quantum) return;
+
+  const quiet = await loadQuiet().catch(() => null);
+  /* Серверному дню меняем только времена, свой пересобираем целиком:
+     содержимое серверного дня принадлежит серверу, а не нам. */
+  state.quantum = state.quantum.offline
+    ? await svoyDen()
+    : retime(state.quantum, todayKey(), await whoAmI(), quiet);
   renderQuantum();
   saveQuantumCache();
   planReminders().catch(err => console.warn('[напоминания]', err));
@@ -119,7 +125,14 @@ export async function loadQuantum() {
 
   try {
     if (!API_BASE) throw new Error('сервер не задан');
-    state.quantum = await api('/api/quantum/today');
+    /* Времена серверного дня пересчитываем под тихий час этого человека.
+       Сервер про его распорядок не знает: он раздаёт одно расписание на
+       все устройства и считает его по своим часам. Содержимое — аркан,
+       фразы, картинки, отметки «прожито» — остаётся серверным, меняется
+       только час (см. retime). */
+    const sday = await api('/api/quantum/today');
+    state.quantum = retime(sday, todayKey(), await whoAmI(), await loadQuiet().catch(() => null));
+
     /* Картинки и звуки дня качаем сразу, пока сеть есть: момент наступит в
        зале или в метро, и тянуть файл в ту секунду будет поздно. Ждать этого
        экран не должен — поэтому без await. */
