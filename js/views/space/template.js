@@ -47,7 +47,7 @@ export const TEMPLATE = [
     '        <div class="modal-clock-icon">',
     '            <div class="glowing-blue-circle"><span class="clock-icon">\u{1F552}</span></div>',
     '        </div>',
-    '        <h2 id="modal-title" class="modal-title" data-i18n="modalTitle">Окно возможностей открыто</h2>',
+    '        <h2 id="modal-title" class="modal-title gold-cut" data-i18n="modalTitle">Окно возможностей открыто</h2>',
     '        <p class="modal-sub" data-i18n="modalSubtitle"></p>',
     '        <div class="modal-timer-box">',
     '            <span data-i18n="modalElapsedPrefix">прошло </span><span id="modal-timer-val">0мин 0сек</span>',
@@ -76,22 +76,48 @@ export const TEMPLATE = [
     '    <div class="metaverse-title-top" data-i18n="metaverseTitle">Моя метавселенная</div>',
     '    <div id="header-metaverse" class="metaverse-header">',
     '        <div class="flower-orbit-container">',
+    /* ЦВЕТОК ЖИЗНИ — ТО ЖЕ ПРОРЕЗАННОЕ ЗОЛОТО, ЧТО И БУКВЫ.
+
+       У букв золото показывается сквозь контур глифа, здесь — сквозь
+       штрих окружности. Приём тот же, разница только в том, чем режут:
+       у текста это background-clip, у рисунка — обводка переливом.
+
+       Перелив повторяет --pult-rim: те же восемь остановок, тот же угол
+       135°. Он задан в userSpaceOnUse на весь квадрат 200×200, а не на
+       каждую окружность по отдельности: иначе каждый лепесток получил
+       бы свой собственный перелив, и рисунок распался бы на восемь
+       несвязанных колец вместо одной отливки.
+
+       Тёмный контур вокруг штриха навешен в CSS теми же пятью тенями,
+       что у плотного контура букв. */
     '            <svg class="flower-svg" viewBox="0 0 200 200" aria-hidden="true">',
-    '                <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35"/>',
-    '                <circle cx="100" cy="100" r="35" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>',
-    '                <circle cx="100" cy="65" r="35" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>',
-    '                <circle cx="100" cy="135" r="35" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>',
-    '                <circle cx="130.3" cy="82.5" r="35" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>',
-    '                <circle cx="69.7" cy="82.5" r="35" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>',
-    '                <circle cx="130.3" cy="117.5" r="35" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>',
-    '                <circle cx="69.7" cy="117.5" r="35" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.7"/>',
+    '                <defs>',
+    '                    <linearGradient id="qm-flower-rim" gradientUnits="userSpaceOnUse" x1="29" y1="29" x2="171" y2="171">',
+    '                        <stop offset="0%" stop-color="#FFFBE8"/>',
+    '                        <stop offset="13%" stop-color="#F3D375"/>',
+    '                        <stop offset="25%" stop-color="#FFFFFF"/>',
+    '                        <stop offset="38%" stop-color="#D9A83F"/>',
+    '                        <stop offset="52%" stop-color="#FFF4C0"/>',
+    '                        <stop offset="66%" stop-color="#C8902C"/>',
+    '                        <stop offset="80%" stop-color="#FFF9DC"/>',
+    '                        <stop offset="100%" stop-color="#AE7D21"/>',
+    '                    </linearGradient>',
+    '                </defs>',
+    '                <circle cx="100" cy="100" r="90" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.6"/>',
+    '                <circle cx="100" cy="100" r="35" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.4"/>',
+    '                <circle cx="100" cy="65" r="35" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.4"/>',
+    '                <circle cx="100" cy="135" r="35" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.4"/>',
+    '                <circle cx="130.3" cy="82.5" r="35" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.4"/>',
+    '                <circle cx="69.7" cy="82.5" r="35" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.4"/>',
+    '                <circle cx="130.3" cy="117.5" r="35" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.4"/>',
+    '                <circle cx="69.7" cy="117.5" r="35" fill="none" stroke="url(#qm-flower-rim)" stroke-width="1.4"/>',
     '            </svg>',
     '            <div class="quantum-particle outer-quantum"></div>',
     '            <div class="quantum-particle inner-quantum" id="iq1"></div>',
     '            <div class="quantum-particle inner-quantum" id="iq2"></div>',
     '        </div>',
     '    </div>',
-    '    <h1 class="qm-hero-title" data-i18n="title1">Пространство вариантов</h1>',
+    '    <h1 class="qm-hero-title gold-cut" data-i18n="title1">Пространство вариантов</h1>',
     '    <div class="qm-hero-rule"></div>',
     '    <div class="qm-hero-actions">',
     '        <button id="btn-start-app" class="btn-gold">',
@@ -105,7 +131,7 @@ export const TEMPLATE = [
     '<div id="screen-setup" class="qm-screen hidden">',
     '    <div class="card-panel">',
     '        <div class="qm-eyebrow" data-i18n="multiverse">Мультивселенная</div>',
-    '        <h2 class="qm-title-md" data-i18n="setupTitle">Настройка Реальностей</h2>',
+    '        <h2 class="qm-title-md gold-cut" data-i18n="setupTitle">Настройка Реальностей</h2>',
     '        <p class="qm-sub" data-i18n="setupSub"></p>',
     /* Подпись тянется на всю свободную ширину, выбор — компактный
        квадратик справа. */
@@ -132,7 +158,7 @@ export const TEMPLATE = [
     '<div id="screen-3" class="qm-screen hidden">',
     '    <div class="card-panel text-center">',
     '        <p id="txt-s3-sub" class="qm-sub" data-i18n="screen3Subtitle"></p>',
-    '        <h2 id="txt-s3-title" class="qm-title-lg" data-i18n="screen3MainTitle">Настройка реальности</h2>',
+    '        <h2 id="txt-s3-title" class="qm-title-lg gold-cut" data-i18n="screen3MainTitle">Настройка реальности</h2>',
     '        <div id="txt-s3-chosen-reality" class="chosen-reality-box-clean"></div>',
 
     /* Содержимое выбранной двери: её снимки. Запись слышна правой
@@ -148,12 +174,20 @@ export const TEMPLATE = [
        «Рекомендуем» не висит постоянно: оно показывается только когда
        выбрано глубокое погружение, и не мозолит глаза всё время. */
     '        <div class="speed-tabs-container">',
-    '            <button type="button" class="speed-tab active" data-speed="1">',
-    '                <span class="gold-cut" data-i18n="speedOption1Btn">Быстрый переход</span>',
-    '            </button>',
+    /* Глубокое погружение стоит первым: это главный путь, и слева его
+       встречают взглядом раньше. Порядок в разметке, а не в CSS, —
+       пальцем и клавишей обход идёт в том же порядке, что и глазом. */
     '            <button type="button" class="speed-tab" data-speed="2">',
     '                <span class="gold-cut" data-i18n="speedOption2Btn">Глубокое погружение</span>',
-    '                <span class="badge-rec" data-i18n="speedBadge">Рекомендуем</span>',
+    /* Пометка всплывает над кнопкой, когда на неё наводят или её
+       выбрали: это подсказка к выбору, а не ярлык. Своя золотая
+       пластина, буква — прорезанное золото, как и везде. */
+    '                <span class="badge-rec">',
+    '                    <span class="gold-cut" data-i18n="speedBadge">Максимальный эффект</span>',
+    '                </span>',
+    '            </button>',
+    '            <button type="button" class="speed-tab active" data-speed="1">',
+    '                <span class="gold-cut" data-i18n="speedOption1Btn">Быстрый переход</span>',
     '            </button>',
     '        </div>',
     '        <div id="speed-instruction-text" class="speed-instruction-box"></div>',
@@ -189,7 +223,7 @@ export const TEMPLATE = [
     '<div id="screen-4" class="qm-screen hidden">',
     '    <div class="card-panel qm-akasha">',
     '        <p id="txt-s4-top" class="gold-notice-box" data-i18n="screen4Top"></p>',
-    '        <h2 id="txt-s4-title" class="qm-title-md" data-i18n="screen4Title">Дневник Наблюдателя</h2>',
+    '        <h2 id="txt-s4-title" class="qm-title-md gold-cut" data-i18n="screen4Title">Дневник Наблюдателя</h2>',
     '        <p id="txt-s4-sub" class="qm-sub" data-i18n="screen4Subtitle"></p>',
     '        <textarea id="input-s4-diary" rows="7" data-i18n="screen4Placeholder"></textarea>',
 
@@ -213,7 +247,7 @@ export const TEMPLATE = [
     '            <div id="s5-cooldown-timer"></div>',
     '        </div>',
     '        <div class="qm-chronicles-head">',
-    '            <h3 id="txt-s5-title" data-i18n="screen5Title"></h3>',
+    '            <h3 id="txt-s5-title" class="gold-cut" data-i18n="screen5Title"></h3>',
     '            <button id="btn-edit-from-s5" class="btn-link-small" data-i18n="btnEditFromS5"></button>',
     '        </div>',
     '        <p id="txt-s5-sub" data-i18n="screen5Subtitle"></p>',
