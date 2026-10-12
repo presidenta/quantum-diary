@@ -408,6 +408,8 @@ const DICT = {
     'reminder.window.title': 'Окно возможностей открыто',
     'reminder.window.body': 'Окно открыто {min} мин {sec} сек. Войди в свою новую реальность.',
 
+    'wheel.noSectors': 'Сферы жизни появятся после первой связи с сервером. Сейчас её нет — приложение работает на устройстве.',
+
     'quiet.open': 'Тихий час',
     'quiet.title': 'Тихий час',
     'quiet.hint': 'В это время приложение не звонит и не вибрирует. Напоминания, попавшие в тихий час, не придут совсем.',
@@ -830,6 +832,8 @@ const DICT = {
     'reminder.window.title': 'Вікно можливостей відкрите',
     'reminder.window.body': 'Вікно відкрите {min} хв {sec} сек. Увійди у свою нову реальність.',
 
+    'wheel.noSectors': 'Сфери життя з’являться після першого зв’язку з сервером. Зараз його немає — застосунок працює на пристрої.',
+
     'quiet.open': 'Тиха година',
     'quiet.title': 'Тиха година',
     'quiet.hint': 'У цей час застосунок не дзвонить і не вібрує. Нагадування, що припали на тиху годину, не прийдуть зовсім.',
@@ -1251,6 +1255,8 @@ const DICT = {
     'reminder.moment.body': 'Time to live the moment — open the app.',
     'reminder.window.title': 'The window of opportunity is open',
     'reminder.window.body': 'The window is open for {min} min {sec} sec. Step into your new reality.',
+
+    'wheel.noSectors': 'Your life spheres will appear once the app reaches the server for the first time. There is no connection right now — the app is running on this device alone.',
 
     'quiet.open': 'Quiet hours',
     'quiet.title': 'Quiet hours',

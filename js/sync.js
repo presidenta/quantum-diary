@@ -49,8 +49,17 @@ async function api(path, options = {}) {
 
 const strip = ({ dirty, ...rest }) => rest;
 
+/**
+ * Синхронизировать сейчас.
+ *
+ * @returns {Promise<boolean>} удалось ли. Это не украшение: по ответу
+ *          видно, выяснили ли мы, что лежит на сервере. Пока не выяснили,
+ *          приложение не вправе создавать сферы по умолчанию — иначе
+ *          получится второй набор к тому, что у учётной записи уже есть
+ *          (см. shouldSeed в core/sectors.js).
+ */
 export function syncNow() {
-  if (!API_BASE) return Promise.resolve();
+  if (!API_BASE) return Promise.resolve(false);
   clearTimeout(timer);
   running ??= run().finally(() => { running = null; });
   return running;
@@ -58,8 +67,8 @@ export function syncNow() {
 
 async function run() {
   const token = await getMeta('token');
-  if (!token) { onStatus('idle'); onAuthLost(); return; }
-  if (!navigator.onLine) { onStatus('offline'); return; }
+  if (!token) { onStatus('idle'); onAuthLost(); return false; }
+  if (!navigator.onLine) { onStatus('offline'); return false; }
   onStatus('syncing');
   try {
     const sent = await dirtyRecords();
@@ -80,7 +89,7 @@ async function run() {
       await setMeta('token', null);
       onStatus('idle');
       onAuthLost();
-      return;
+      return false;
     }
 
     const fresh = await merge(sent, result);
@@ -94,9 +103,13 @@ async function run() {
     // Пока шёл запрос, могли появиться новые правки
     const pending = await dirtyRecords();
     if (KINDS.some(k => pending[k].length)) scheduleSync();
+
+    // Единственный путь, после которого известно, что лежит на сервере
+    return true;
   } catch (err) {
     console.warn('[sync] не удалось:', err.message);
     onStatus(navigator.onLine ? 'error' : 'offline');
+    return false;
   }
 }
 

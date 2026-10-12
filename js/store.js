@@ -8,6 +8,7 @@ import { scheduleSync } from './sync.js';
 import { buildIndex } from './core/calc.js';
 import { todayKey } from './core/dates.js';
 import { translate, DEFAULT_LANGUAGE } from './core/i18n.js';
+import { defaultSectors, DEFAULT_SECTOR_KEYS, DEFAULT_COUNT } from './core/sectors.js';
 
 export const state = {
   data: null,
@@ -43,9 +44,21 @@ export async function reload() {
 }
 
 /* Запись: ставит время правки и метку «ещё не ушло на сервер», кладёт в базу
-   телефона, обновляет состояние и будит синхронизацию. */
-export async function save(kind, records) {
-  const stamped = records.map(r => ({ deletedAt: null, ...r, updatedAt: nowIso(), dirty: 1 }));
+   телефона, обновляет состояние и будит синхронизацию.
+
+   keepStamp оставляет записи её собственное время правки вместо текущего.
+   Нужно это ровно в одном месте — для заготовок сфер по умолчанию (см.
+   seedSectors и SEED_STAMP в core/sectors.js): спор решается по более
+   позднему времени правки, и заготовка с сегодняшним временем перебила бы
+   настоящую сферу человека, затерев её название. Для всего остального
+   время ставится здесь: правка сделана сейчас, и врать об этом нельзя. */
+export async function save(kind, records, { keepStamp = false } = {}) {
+  const stamped = records.map(r => ({
+    deletedAt: null,
+    ...r,
+    updatedAt: keepStamp && r.updatedAt ? r.updatedAt : nowIso(),
+    dirty: 1
+  }));
   await putRecords(kind, stamped);
   const byId = new Map(state.data[kind].map(r => [r.id, r]));
   for (const r of stamped) byId.set(r.id, r);
@@ -59,23 +72,28 @@ export const remove = (kind, record) => save(kind, [{ ...record, deletedAt: nowI
 
 /* ---------- Сферы жизни ---------- */
 
-// Названия по умолчанию — ключи словаря: при смене языка меняются и они,
-// пока человек не переименовал сферу сам
-export const DEFAULT_SECTOR_KEYS = [
-  'sector.health', 'sector.career', 'sector.money', 'sector.family',
-  'sector.people', 'sector.growth', 'sector.joy', 'sector.spirit', 'sector.home'
-];
-export const DEFAULT_COUNT = 8;
+/* Какие сферы бывают по умолчанию и когда их создавать — в чистых
+   правилах core/sectors.js, там же под тестами. Здесь они только
+   перевыставлены наружу, чтобы остальным экранам не пришлось помнить про
+   второй файл. */
+export { DEFAULT_SECTOR_KEYS, DEFAULT_COUNT };
 
 export const activeSectors = () => state.index.sectors.filter(s => s.active);
 export const sectorById = id => state.index.sectors.find(s => s.id === id) || null;
 export const sectorName = s => s && (s.name.trim() || t('common.sectorN', { n: s.slot }));
 
+/* Создать девять сфер по умолчанию.
+ *
+ * Звать можно только когда известно, что у учётной записи сфер нет, —
+ * решает это shouldSeed в core/sectors.js, а проверяет app.js. Прежде
+ * здесь стоял uuid() на каждую сферу, и именно он задваивал сферы: два
+ * устройства, засеявшие их независимо, создавали два разных набора, и
+ * синхронизация складывала их вместо слияния.
+ *
+ * keepStamp обязателен: заготовка помечена началом эпохи и не должна
+ * перебить настоящую сферу человека. */
 export function seedSectors() {
-  return save('sectors', DEFAULT_SECTOR_KEYS.map((key, i) => ({
-    id: uuid(), slot: i + 1, name: t(key), position: i + 1,
-    active: i < DEFAULT_COUNT, paused: false
-  })));
+  return save('sectors', defaultSectors(t), { keepStamp: true });
 }
 
 /* ---------- Мелкие помощники для экранов ---------- */

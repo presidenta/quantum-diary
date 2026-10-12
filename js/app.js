@@ -26,6 +26,7 @@ import {
   loadAlarm, saveAlarm, alarmState
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm } from './core/reminder-rules.js';
+import { shouldSeed } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
@@ -479,14 +480,39 @@ async function start() {
     openQuantumPart(key === 'quantum-window' ? 'space' : 'moments');
   });
 
-  // Сферы по умолчанию — только если их нет и на сервере: иначе после очистки
-  // телефона рядом с вернувшимися сферами появились бы ещё девять
+  /* СФЕРЫ ПО УМОЛЧАНИЮ — ТОЛЬКО КОГДА ИЗВЕСТНО, ЧТО У ЗАПИСИ ИХ НЕТ.
+
+     Прежде здесь стояла проверка «нет сфер — создать», и она и задваивала
+     сферы. Устройство, на котором сфер нет, — это не то же самое, что
+     учётная запись, у которой их нет: так выглядит и свежая установка, и
+     очищенный телефон, и приложение, впервые открытое при недоступном
+     сервере. В каждом из этих случаев девять сфер создавались заново, со
+     своими случайными id, и при следующей синхронизации складывались с
+     теми, что уже лежали на сервере. На экране получалось восемнадцать
+     сфер вместо девяти.
+
+     Теперь решение принимает shouldSeed (core/sectors.js), и ему нужен
+     ответ на вопрос «а что на сервере». Этот ответ даёт только удачная
+     синхронизация: syncNow возвращает true лишь на том единственном пути,
+     где обмен с сервером состоялся.
+
+     Сервер недоступен — не засеваем вовсе. Пустое колесо объясняет себя
+     само (renderNotice в views/wheel.js), и это честнее, чем девять
+     заготовок, которые завтра придётся сводить с настоящими. Потерять мы
+     этим ничего не можем: регистрация закрытая, учётную запись выдаёт
+     сервер, и пользоваться приложением, ни разу до него не добравшись,
+     всё равно нельзя. */
   if (!state.index.sectors.length) {
-    if (!state.serverDown) {
-      await syncNow();
-      await reload();
+    const синхронизировано = state.serverDown ? false : Boolean(await syncNow());
+    if (синхронизировано) await reload();
+
+    if (shouldSeed({
+      signedIn: await hasSession(),
+      accountKnown: синхронизировано,
+      sectorCount: state.index.sectors.length
+    })) {
+      await seedSectors();
     }
-    if (!state.index.sectors.length) await seedSectors();
   }
   render();
 

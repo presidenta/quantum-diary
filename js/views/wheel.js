@@ -127,6 +127,20 @@ function renderSummary(rows, extra) {
 
 function renderNotice() {
   const box = $('notice');
+
+  /* СФЕР НЕТ ВОВСЕ — и это не «пора оценить сферы», а совсем другое.
+
+     Так выглядит устройство, которое ещё ни разу не связалось с сервером:
+     сферы по умолчанию здесь намеренно не создаются, иначе они сложились
+     бы с теми, что лежат у учётной записи (разбор — в app.js, у вызова
+     shouldSeed). Предлагать в этом месте оценку было бы издевательством:
+     оценивать нечего. Говорим, чего ждём. */
+  if (!state.index.sectors.length) {
+    box.hidden = false;
+    box.replaceChildren(h('p', { text: t('wheel.noSectors') }));
+    return;
+  }
+
   const hasAssessment = state.index.assessments.length > 0;
   const hasGoals = state.index.goals.length > 0;
   if (hasAssessment && hasGoals) { box.hidden = true; return; }
