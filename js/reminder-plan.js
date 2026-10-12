@@ -21,9 +21,13 @@
    разбудить себя по часам вкладка не может. Это не чинится кодом, только
    установкой приложения. */
 
-import { ensureReady, scheduleReminders, cancelKeys, onReminderAction, isNative } from './core/reminders.js';
 import {
-    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW
+    ensureReady, scheduleReminders, cancelKeys, onReminderAction, isNative,
+    hasAlarmMode, alarmFullScreen
+} from './core/reminders.js';
+import {
+    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW,
+    normalizeAlarm, ringsAsAlarm
 } from './core/reminder-rules.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
@@ -56,6 +60,62 @@ export const QUIET_DEFAULT = Object.freeze({
 /* Проверка настройки живёт в чистых правилах и там же под тестами —
    здесь только подставляются начальные значения этого приложения. */
 export const normalizeQuiet = raw => normalize(raw, QUIET_DEFAULT);
+
+/* РЕЖИМ БУДИЛЬНИКА.
+
+   Напоминание звонит как будильник: экран включается сам поверх
+   блокировки, звук по громкости будильника, звонит, пока не нажмёшь.
+   Разбор — раздел 9.2 методологии, нативная часть — android-alarm-plugin.
+
+   Хранится рядом с тихим часом и по той же причине: это свойство
+   телефона, а не учётной записи. Будильник уместен на телефоне у
+   кровати и неуместен на планшете, который лежит на столе.
+
+   Начальное значение — выключено. Обычные уведомления работают и
+   проверены на телефоне (раздел 9.1); звонок поверх блокировки человек
+   должен включить сам. */
+const ALARM_KEY = 'alarmMode';
+
+export const ALARM_DEFAULT = Object.freeze({ on: false, moments: false });
+
+/** Режим будильника, как его задал человек. */
+export async function loadAlarm() {
+    try {
+        return normalizeAlarm(await getMeta(ALARM_KEY));
+    } catch {
+        return { ...ALARM_DEFAULT };
+    }
+}
+
+/** Сохранить режим будильника и сразу переставить расписание под него. */
+export async function saveAlarm(value) {
+    const alarm = normalizeAlarm(value);
+    await setMeta(ALARM_KEY, alarm);
+    await planReminders();
+    return alarm;
+}
+
+/* Что рассказать человеку о режиме прямо сейчас.
+ *
+ * Три разных «нет», и их нельзя сваливать в одно:
+ *
+ *   plugin: false   — приложение собрано до появления плагина. Чинится
+ *                     установкой нового файла приложения, не настройкой.
+ *   fullScreen      — разрешение на полноэкранные напоминания не выдано
+ *                     (Android 14 и новее). Звук будет, экран не
+ *                     загорится. Чинится настройкой телефона.
+ *   askable         — есть ли куда вести за этим разрешением: на
+ *                     Android 13 и старше такой настройки нет вовсе.
+ *
+ * Говорить об этом обязательно. Промолчать — значит обещать человеку
+ * будильник и дать ему уведомление. */
+export async function alarmState() {
+    const plugin = hasAlarmMode();
+    if (!plugin) return { plugin: false, fullScreen: false, askable: false };
+
+    const экран = await alarmFullScreen();
+    return { plugin: true, fullScreen: экран.granted, askable: экран.askable };
+}
 
 /** Тихий час, как его задал человек. */
 export async function loadQuiet() {
@@ -107,6 +167,7 @@ export async function planReminders() {
 
     const now = new Date();
     const quiet = await loadQuiet();
+    const alarm = await loadAlarm();
     const moments = momentPlan(state.quantum?.moments, now, quiet);
     const window = windowPlan(lastJumpTime(), now, {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
@@ -139,7 +200,29 @@ export async function planReminders() {
     }
 
     if (!ring.length) return false;
-    return scheduleReminders(ring);
+    return scheduleReminders(ring.map(item => разметитьРежим(item, alarm)));
+}
+
+/* ЧЕМ ЗВОНИТЬ ЭТОМУ НАПОМИНАНИЮ.
+ *
+ * Фасад (js/core/reminders.js) про моменты и окна не знает ничего и
+ * знать не должен — он смотрит только на поле alarm. Решение
+ * принимается здесь, потому что только этот слой видит сразу и
+ * настройку человека, и то, что за напоминание ставится.
+ *
+ * Надписи на кнопках едут вместе с напоминанием. Нативный экран
+ * будильника своего перевода не имеет и иметь не должен: словарь в
+ * приложении один (web/js/core/i18n.js), и человек, переключивший
+ * язык, должен увидеть кнопки на своём — включая те, что рисует Java. */
+function разметитьРежим(item, alarm) {
+    if (!ringsAsAlarm(item.key, alarm)) return item;
+
+    return {
+        ...item,
+        alarm: true,
+        stopLabel: t('alarm.stop'),
+        snoozeLabel: t('alarm.snooze')
+    };
 }
 
 /**

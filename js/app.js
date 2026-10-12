@@ -20,9 +20,12 @@ import { initQuantum, renderQuantum, loadQuantum, quietChanged } from './views/q
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
-import { cancelAll as cancelAllReminders, isNative } from './core/reminders.js';
-import { initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet } from './reminder-plan.js';
-import { minutesOfDay } from './core/reminder-rules.js';
+import { cancelAll as cancelAllReminders, isNative, openAlarmSettings } from './core/reminders.js';
+import {
+  initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
+  loadAlarm, saveAlarm, alarmState
+} from './reminder-plan.js';
+import { minutesOfDay, normalizeAlarm } from './core/reminder-rules.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
@@ -370,6 +373,67 @@ function showQuietSummary(quiet) {
   });
 }
 
+/* ---------- Режим будильника ---------- */
+
+/** Что сейчас стоит в галочках окна. */
+function alarmFromForm() {
+  return {
+    on: $('alarmOn').checked,
+    moments: $('alarmMoments').checked
+  };
+}
+
+/* Итог человеческими словами, под галочками.
+
+   Двух галочек мало, чтобы человек понял, что именно он включил: «режим
+   будильника» звучит как «теперь всё звонит», а это не так. Строка
+   называет вслух, что будет звонить, а что останется плашкой, — и
+   ошибку видно до сохранения, а не ночью. */
+function showAlarmSummary(alarm) {
+  const box = $('alarmSummary');
+  const value = normalizeAlarm(alarm);
+
+  if (!value.on) { box.textContent = t('alarm.offNote'); return; }
+  box.textContent = value.moments ? t('alarm.bothNote') : t('alarm.onNote');
+}
+
+/* Почему будильник может не зазвонить.
+
+   Две разные беды, и чинятся они по-разному, поэтому и говорятся
+   по-разному:
+
+     нет плагина — приложение собрано раньше, чем он появился. Настройкой
+     не чинится, нужен новый файл приложения;
+     нет разрешения на полноэкранные напоминания — чинится настройкой
+     телефона, и туда можно отвести прямо отсюда (Android 14 и новее;
+     на Android 13 и старше такой настройки нет, и кнопки не будет).
+
+   Молчать нельзя ни о той, ни о другой: человек включил бы настройку и
+   ждал звонка, которого не будет. */
+async function showAlarmTrouble() {
+  const поле = $('alarmTrouble');
+  const кнопка = $('alarmAllow');
+  поле.hidden = true;
+  кнопка.hidden = true;
+
+  // В браузере напоминаний не бывает вовсе — об этом говорит своя строка
+  if (!isNative()) return;
+
+  const состояние = await alarmState();
+
+  if (!состояние.plugin) {
+    поле.textContent = t('alarm.noPlugin');
+    поле.hidden = false;
+    return;
+  }
+
+  if (!состояние.fullScreen) {
+    поле.textContent = t('alarm.noFullScreen');
+    поле.hidden = false;
+    кнопка.hidden = !состояние.askable;
+  }
+}
+
 let syncStarted = false;
 
 async function start() {
@@ -539,6 +603,37 @@ async function boot() {
        после его правки другие. Пересобираем день сразу: человек закрыл
        окно и должен увидеть новые времена, а не прежние. */
     await quietChanged();
+  });
+
+  /* РЕЖИМ БУДИЛЬНИКА.
+
+     Тот же порядок, что у тихого часа: открываем окно, заполнив
+     галочки сохранённым, и сохраняем только по кнопке «Сохранить». */
+  $('alarmMode').addEventListener('click', async () => {
+    const alarm = await loadAlarm();
+    $('alarmOn').checked = alarm.on;
+    $('alarmMoments').checked = alarm.moments;
+    showAlarmSummary(alarm);
+    $('alarmBrowserNote').hidden = isNative();
+    await showAlarmTrouble();
+    $('alarmDialog').returnValue = '';
+    $('alarmDialog').showModal();
+  });
+
+  for (const id of ['alarmOn', 'alarmMoments']) {
+    $(id).addEventListener('change', () => showAlarmSummary(alarmFromForm()));
+  }
+
+  /* Отвести за разрешением. Окно не закрываем: человек вернётся из
+     настроек телефона и должен увидеть ту же настройку, а не пустой
+     профиль. Строку о беде перечитываем — разрешение могло появиться. */
+  $('alarmAllow').addEventListener('click', async () => {
+    await openAlarmSettings();
+  });
+
+  $('alarmDialog').addEventListener('close', async () => {
+    if ($('alarmDialog').returnValue !== 'save') return;
+    await saveAlarm(alarmFromForm());
   });
 
   // Свой пароль человек меняет сам; администратор выдаёт только первый

@@ -390,6 +390,10 @@
       <!-- Тихий час стоит среди настроек человека, а не в общих настройках
            приложения: время сна — это про человека, а не про программу. -->
       <button type="button" class="btn" id="quietHours" data-i18n="quiet.open">Тихий час</button>
+      <!-- Режим будильника стоит рядом с тихим часом нарочно: обе настройки
+           про одно и то же — как именно телефон зовёт человека. Одна о том,
+           когда молчать, вторая о том, как звонить. -->
+      <button type="button" class="btn" id="alarmMode" data-i18n="alarm.open">Режим будильника</button>
       <button type="button" class="btn" id="changePassword" hidden data-i18n="password.change">Сменить пароль</button>
       <button type="button" class="btn" id="profileLogout" data-i18n="auth.logout">Выйти</button>
       <button type="button" class="btn danger" id="deleteData" data-i18n="profile.removeApp">Удалить приложение</button>
@@ -553,6 +557,37 @@
          тихого часа без этой строки выглядела бы работающей, хотя влиять ей
          не на что. Лучше сказать прямо, чем дать человеку ждать звонка. -->
     <p class="gate-msg" id="quietBrowserNote" hidden data-i18n="quiet.browserNote">Напоминания приходят только в установленном приложении. В браузере эта настройка ни на что не влияет.</p>
+    <div class="actions">
+      <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
+      <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="alarmDialog">
+  <form method="dialog" class="sheet" id="alarmForm">
+    <h2 data-i18n="alarm.title">Режим будильника</h2>
+    <p class="muted m0" data-i18n="alarm.hint">Напоминание звонит как будильник: экран включается сам поверх блокировки, звук идёт по громкости будильника и звонит, пока не нажмёшь «Выключить».</p>
+    <label class="quiet-switch">
+      <input type="checkbox" name="on" id="alarmOn">
+      <span data-i18n="alarm.on">Звонить как будильник</span>
+    </label>
+    <!-- Вторая галочка отдельно от первой, и это не придирка к удобству.
+         Окно возможностей одно на прыжок — ради него будильник и ставят.
+         А девять будильников в день подряд названы в разделе 9.2
+         методологии пыткой, и включать их за человека нельзя. -->
+    <label class="quiet-switch">
+      <input type="checkbox" name="moments" id="alarmMoments">
+      <span data-i18n="alarm.moments">И о девяти моментах дня</span>
+    </label>
+    <p class="muted m0" data-i18n="alarm.momentsNote">Девять будильников в день — это много. Обычно хватает будильника на окно возможностей, а моменты оставляют плашкой.</p>
+    <p class="muted m0" id="alarmSummary" role="status"></p>
+    <!-- Почему будильник может не сработать: разрешение не выдано или
+         приложение собрано раньше плагина. Молчать об этом нельзя —
+         человек включил бы настройку и ждал звонка, которого не будет. -->
+    <p class="gate-msg" id="alarmTrouble" hidden role="status"></p>
+    <button type="button" class="btn" id="alarmAllow" hidden data-i18n="alarm.allow">Разрешить в настройках телефона</button>
+    <p class="gate-msg" id="alarmBrowserNote" hidden data-i18n="alarm.browserNote">Будильник бывает только в установленном приложении. В браузере эта настройка ни на что не влияет.</p>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
       <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
