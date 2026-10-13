@@ -41,6 +41,13 @@ const ACTION_WITH_SNOOZE = 'qm-reminder';
 const ACTION_FINAL = 'qm-reminder-final';
 
 const SNOOZE_MINUTES = 10;
+
+/* Проверочный звонок: столько ждать до него. Десять секунд — чтобы
+   человек успел убрать палец с экрана и, если хочет, заблокировать
+   телефон: ровно это и надо проверить — поднимется ли окно поверх
+   блокировки. */
+const KEY_TEST = 'alarm-test';
+const TEST_DELAY_MS = 10 * 1000;
 const SNOOZE_LIMIT = 3;
 const KEY_SNOOZE = 'reminder_snooze_';
 
@@ -108,6 +115,43 @@ export async function alarmFullScreen() {
     } catch (err) {
         console.error('[reminders] не удалось спросить про полный экран:', err);
         return { granted: false, askable: false };
+    }
+}
+
+/* ПРОВЕРОЧНЫЙ ЗВОНОК — через десять секунд.
+ *
+ * Нужен потому, что проверить будильник иначе нельзя: ближайший
+ * настоящий момент может быть через час, а в облачной сессии телефона
+ * нет вовсе. Без этой кнопки владелец не может убедиться ни в чём —
+ * загорается ли экран, слышно ли звук, выключает ли кнопка.
+ *
+ * Ключ свой, не из расписания: проверочный звонок не должен ни снимать
+ * настоящее напоминание, ни сниматься вместе с ним при перестановке.
+ * Откладывать его нельзя — snoozeLeft: 0, и кнопки «Отложить» не будет:
+ * это проверка, а не напоминание.
+ *
+ * @returns {Promise<boolean>} поставлен ли звонок
+ */
+export async function testAlarm({ title, body, stopLabel }) {
+    const QA = alarmPlugin();
+    if (!QA) return false;
+
+    try {
+        const ответ = await QA.schedule({
+            alarms: [{
+                key: KEY_TEST,
+                at: Date.now() + TEST_DELAY_MS,
+                title,
+                body,
+                stopLabel: stopLabel || '',
+                snoozeLabel: '',
+                snoozeLeft: 0
+            }]
+        });
+        return Number(ответ && ответ.scheduled) > 0;
+    } catch (err) {
+        console.error('[reminders] проверочный звонок не встал:', err);
+        return false;
     }
 }
 

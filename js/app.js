@@ -20,7 +20,9 @@ import { initQuantum, renderQuantum, loadQuantum, quietChanged } from './views/q
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
-import { cancelAll as cancelAllReminders, isNative, openAlarmSettings } from './core/reminders.js';
+import {
+  cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm
+} from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
   loadAlarm, saveAlarm, alarmState
@@ -415,21 +417,30 @@ async function showAlarmTrouble() {
   const поле = $('alarmTrouble');
   const кнопка = $('alarmAllow');
   поле.hidden = true;
+  поле.className = 'gate-msg';
   кнопка.hidden = true;
+  $('alarmTest').hidden = !isNative();
+  $('alarmTestMsg').textContent = '';
+  $('alarmTestMsg').className = 'gate-msg';
 
   // В браузере напоминаний не бывает вовсе — об этом говорит своя строка
   if (!isNative()) return;
 
   const состояние = await alarmState();
 
+  /* Красным, а не серым: это не примечание, а причина, по которой
+     будильник не зазвонит так, как человек ждёт. Серую строку рядом с
+     включённой галочкой он прочтёт как подсказку и пройдёт мимо. */
   if (!состояние.plugin) {
     поле.textContent = t('alarm.noPlugin');
+    поле.className = 'gate-msg is-error';
     поле.hidden = false;
     return;
   }
 
   if (!состояние.fullScreen) {
     поле.textContent = t('alarm.noFullScreen');
+    поле.className = 'gate-msg is-error';
     поле.hidden = false;
     кнопка.hidden = !состояние.askable;
   }
@@ -652,9 +663,39 @@ async function boot() {
 
   /* Отвести за разрешением. Окно не закрываем: человек вернётся из
      настроек телефона и должен увидеть ту же настройку, а не пустой
-     профиль. Строку о беде перечитываем — разрешение могло появиться. */
+     профиль. */
   $('alarmAllow').addEventListener('click', async () => {
     await openAlarmSettings();
+  });
+
+  /* Человек вернулся из настроек телефона — перечитываем состояние.
+     Иначе красная строка осталась бы висеть над уже выданным
+     разрешением, и выглядело бы это как «не помогло». */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!$('alarmDialog').open) return;
+    showAlarmTrouble().catch(err => console.warn('[будильник]', err.message));
+  });
+
+  /* ПРОВЕРОЧНЫЙ ЗВОНОК.
+
+     Единственный способ проверить будильник, не дожидаясь настоящего
+     момента: ближайший может быть через час. Ставится через десять
+     секунд — успеть заблокировать экран и увидеть, поднимется ли окно
+     поверх блокировки.
+
+     Окно профиля не закрываем: человек смотрит на телефон и ждёт
+     звонка, а не ищет, куда делась настройка. */
+  $('alarmTest').addEventListener('click', async () => {
+    const строка = $('alarmTestMsg');
+    const поставлен = await testAlarm({
+      title: t('alarm.title'),
+      body: t('alarm.testGoing'),
+      stopLabel: t('alarm.stop')
+    });
+
+    строка.textContent = поставлен ? t('alarm.testGoing') : t('alarm.testFailed');
+    строка.className = поставлен ? 'gate-msg is-ok' : 'gate-msg is-error';
   });
 
   $('alarmDialog').addEventListener('close', async () => {

@@ -587,6 +587,11 @@
          человек включил бы настройку и ждал звонка, которого не будет. -->
     <p class="gate-msg" id="alarmTrouble" hidden role="status"></p>
     <button type="button" class="btn" id="alarmAllow" hidden data-i18n="alarm.allow">Разрешить в настройках телефона</button>
+    <!-- Проверить будильник иначе нельзя: ближайший настоящий момент может
+         быть через час. Кнопка ставит звонок через десять секунд — успеть
+         заблокировать экран и увидеть, поднимется ли окно поверх блокировки. -->
+    <button type="button" class="btn" id="alarmTest" data-i18n="alarm.test">Проверить звонок</button>
+    <p class="gate-msg" id="alarmTestMsg" role="status"></p>
     <p class="gate-msg" id="alarmBrowserNote" hidden data-i18n="alarm.browserNote">Будильник бывает только в установленном приложении. В браузере эта настройка ни на что не влияет.</p>
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
