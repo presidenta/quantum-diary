@@ -435,6 +435,27 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    очистит поле вручную. */
 #quietForm label > span::after { content: none; }
 
+/* ВРЕМЯ СЛЕДУЮЩЕГО ЗВОНКА — строка под галочкой, к которой она относится.
+
+   Отступ слева ровно под подписью галочки (22 пикселя квадратика плюс
+   12 зазора): так видно глазом, что поле относится к галочке выше, а не
+   к следующей. Без этого две галочки и два поля читаются как четыре
+   независимые настройки.
+
+   Поле не required намеренно: пустое время — законное состояние, оно
+   значит «работает обычное расписание». */
+.alarm-at {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin-left: 34px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.alarm-at input { flex-grow: 1; max-width: 160px; }
+#alarmForm label > span::after { content: none; }
+
 /* День */
 .day-head { display: flex; align-items: center; gap: 10px; }
 .day-head .who { flex-grow: 1; }

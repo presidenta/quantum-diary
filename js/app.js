@@ -27,7 +27,7 @@ import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
   loadAlarm, saveAlarm, alarmState
 } from './reminder-plan.js';
-import { minutesOfDay, normalizeAlarm } from './core/reminder-rules.js';
+import { minutesOfDay, normalizeAlarm, isWindowKey } from './core/reminder-rules.js';
 import { shouldSeed } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
@@ -382,7 +382,9 @@ function showQuietSummary(quiet) {
 function alarmFromForm() {
   return {
     on: $('alarmOn').checked,
-    moments: $('alarmMoments').checked
+    moments: $('alarmMoments').checked,
+    windowAt: $('alarmWindowAt').value,
+    momentsAt: $('alarmMomentsAt').value
   };
 }
 
@@ -397,7 +399,22 @@ function showAlarmSummary(alarm) {
   const value = normalizeAlarm(alarm);
 
   if (!value.on) { box.textContent = t('alarm.offNote'); return; }
-  box.textContent = value.moments ? t('alarm.bothNote') : t('alarm.onNote');
+
+  /* Сначала что звонит, потом когда. Второе важнее: «режим будильника»
+     звучит как «теперь всё звонит», а назначенный час человек через час
+     уже не помнит — строка называет его вслух. Пустое время тоже
+     называется: тишина в этом месте читалась бы как поломка. */
+  const части = [value.moments ? t('alarm.bothNote') : t('alarm.onNote')];
+
+  if (value.windowAt) части.push(t('alarm.atNote', { window: value.windowAt }));
+  if (value.moments && value.momentsAt) {
+    части.push(t('alarm.atNoteMoments', { moments: value.momentsAt }));
+  }
+  if (!value.windowAt && !(value.moments && value.momentsAt)) {
+    части.push(t('alarm.atEmpty'));
+  }
+
+  box.textContent = части.join(' ');
 }
 
 /* Почему будильник может не зазвонить.
@@ -488,7 +505,9 @@ async function start() {
      Иначе человек попадал бы туда, где был в прошлый раз. */
   initReminders(key => {
     go('quantum');
-    openQuantumPart(key === 'quantum-window' ? 'space' : 'moments');
+    // Про окно это напоминание или про момент — решает ключ: назначенное
+    // человеком время приходит со своим, и сравнение со строкой его не ловило
+    openQuantumPart(isWindowKey(key) ? 'space' : 'moments');
   });
 
   /* СФЕРЫ ПО УМОЛЧАНИЮ — ТОЛЬКО КОГДА ИЗВЕСТНО, ЧТО У ЗАПИСИ ИХ НЕТ.
@@ -650,6 +669,8 @@ async function boot() {
     const alarm = await loadAlarm();
     $('alarmOn').checked = alarm.on;
     $('alarmMoments').checked = alarm.moments;
+    $('alarmWindowAt').value = alarm.windowAt;
+    $('alarmMomentsAt').value = alarm.momentsAt;
     showAlarmSummary(alarm);
     $('alarmBrowserNote').hidden = isNative();
     await showAlarmTrouble();
@@ -657,7 +678,7 @@ async function boot() {
     $('alarmDialog').showModal();
   });
 
-  for (const id of ['alarmOn', 'alarmMoments']) {
+  for (const id of ['alarmOn', 'alarmMoments', 'alarmWindowAt', 'alarmMomentsAt']) {
     $(id).addEventListener('change', () => showAlarmSummary(alarmFromForm()));
   }
 

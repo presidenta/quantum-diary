@@ -572,6 +572,13 @@
       <input type="checkbox" name="on" id="alarmOn">
       <span data-i18n="alarm.on">Звонить как будильник</span>
     </label>
+    <!-- Время следующего звонка про окно возможностей. Пусто — работает
+         обычное расписание: окно считается само, через 3 часа 33 минуты
+         после прыжка. -->
+    <label class="alarm-at">
+      <span data-i18n="alarm.at">Звонить в</span>
+      <input name="windowAt" id="alarmWindowAt" type="time">
+    </label>
     <!-- Вторая галочка отдельно от первой, и это не придирка к удобству.
          Окно возможностей одно на прыжок — ради него будильник и ставят.
          А девять будильников в день подряд названы в разделе 9.2
@@ -579,6 +586,11 @@
     <label class="quiet-switch">
       <input type="checkbox" name="moments" id="alarmMoments">
       <span data-i18n="alarm.moments">И о девяти моментах дня</span>
+    </label>
+    <!-- Своё время для моментов дня. Пусто — приходят по расписанию с сервера. -->
+    <label class="alarm-at">
+      <span data-i18n="alarm.at">Звонить в</span>
+      <input name="momentsAt" id="alarmMomentsAt" type="time">
     </label>
     <p class="muted m0" data-i18n="alarm.momentsNote">Девять будильников в день — это много. Обычно хватает будильника на окно возможностей, а моменты оставляют плашкой.</p>
     <p class="muted m0" id="alarmSummary" role="status"></p>

@@ -16,6 +16,17 @@ import { isOff } from './quantum.js';
 export const KEY_WINDOW = 'quantum-window';
 export const KEY_MOMENT = 'moment-';
 
+/* ВРЕМЯ СЛЕДУЮЩЕГО ЗВОНКА — две отдельные настройки, по одной под каждой
+   галочкой в профиле. Человек ставит час, когда хочет, чтобы его окликнули:
+   перемена, обед, перерыв. Ключи свои, не из расписания, — иначе этот
+   звонок снимал бы настоящее напоминание или снимался вместе с ним. */
+export const KEY_NEXT_WINDOW = 'alarm-next-window';
+export const KEY_NEXT_MOMENTS = 'alarm-next-moments';
+
+/* Про окно возможностей это напоминание или про момент дня.
+   Нужно экрану: по нажатию на уведомление открывается своя вкладка. */
+export const isWindowKey = key => key === KEY_WINDOW || key === KEY_NEXT_WINDOW;
+
 /* Время «ЧЧ:ММ» сегодняшнего дня как момент времени.
 
    Моменты приходят с сервера строкой без даты: день всегда сегодняшний.
@@ -162,13 +173,70 @@ export function momentPlan(moments, now = new Date(), quiet = null) {
    выше (js/reminder-plan.js и js/core/reminders.js). */
 export function normalizeAlarm(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
+    // Негодное время — пустая строка, то есть «времени не задано».
+    // Испорченное поле не должно ни ронять настройку, ни звонить невесть когда
+    const время = v => (minutesOfDay(v) === null ? '' : v);
+
     return {
         // Строгое сравнение с true: в хранилище могла попасть строка,
         // число или недописанная запись, и «похоже на правду» здесь не
         // годится — цена ошибки ночной звонок
         on: src.on === true,
-        moments: src.moments === true
+        moments: src.moments === true,
+        windowAt: время(src.windowAt),
+        momentsAt: время(src.momentsAt)
     };
+}
+
+/* Ближайшее наступление времени «ЧЧ:ММ».
+ *
+ * Сегодня, если этот час ещё впереди, иначе завтра. Именно «следующий
+ * звонок» человек и задаёт: поставив 13:00 в два часа дня, он имеет в
+ * виду завтрашний обед, а не мгновенный звонок и не тишину.
+ *
+ * Непонятное время — null, а не полночь: молчание лучше звонка в три
+ * ночи из-за испорченного поля (то же правило, что у atToday). */
+export function atNext(hhmm, now = new Date()) {
+    const минуты = minutesOfDay(hhmm);
+    if (минуты === null) return null;
+
+    const at = new Date(now);
+    at.setHours(Math.floor(минуты / 60), минуты % 60, 0, 0);
+    if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
+    return at;
+}
+
+/* ЧТО ПОСТАВИТЬ И ЧТО СНЯТЬ ПО ЗАДАННОМУ ВРЕМЕНИ.
+ *
+ * Поле пустое — ключ попадает в снятие, а не просто пропускается. Это не
+ * мелочь: человек стёр время, а поставленный вчера будильник живёт в
+ * системе сам по себе и прозвонит, если его не снять. То же правило, что
+ * у моментов дня.
+ *
+ * Время работает только при включённой галочке, под которой стоит: своё
+ * у окна возможностей, своё у девяти моментов дня. Галочка выключена —
+ * этот источник не звонит будильником вовсе, и время от него не должно
+ * звонить тоже.
+ *
+ * ТИХИЙ ЧАС ЗДЕСЬ НЕ ДЕЙСТВУЕТ, и это сознательно. Тихий час защищает от
+ * того, что приложение назначило само. А этот час человек назвал сам, и
+ * промолчать в ответ было бы хуже: он ждёт звонка и не узнает, почему его
+ * не было. */
+export function nextRingPlan(alarm, now = new Date()) {
+    const настройка = normalizeAlarm(alarm);
+    const ring = [];
+    const silence = [];
+
+    const положить = (key, hhmm, разрешено) => {
+        const at = разрешено ? atNext(hhmm, now) : null;
+        if (at) ring.push({ key, at });
+        else silence.push(key);
+    };
+
+    положить(KEY_NEXT_WINDOW, настройка.windowAt, настройка.on);
+    положить(KEY_NEXT_MOMENTS, настройка.momentsAt, настройка.on && настройка.moments);
+
+    return { ring, silence };
 }
 
 /* Звонит ли это напоминание будильником.
@@ -179,7 +247,8 @@ export function ringsAsAlarm(key, alarm) {
     const настройка = normalizeAlarm(alarm);
     if (!настройка.on) return false;
 
-    if (key === KEY_WINDOW) return true;
+    if (isWindowKey(key)) return true;
+    if (key === KEY_NEXT_MOMENTS) return настройка.moments;
     if (String(key).startsWith(KEY_MOMENT)) return настройка.moments;
 
     // Незнакомый ключ — плашкой. Будильник по ошибке хуже плашки по ошибке

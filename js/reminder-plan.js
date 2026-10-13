@@ -27,7 +27,7 @@ import {
 } from './core/reminders.js';
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW,
-    normalizeAlarm, ringsAsAlarm
+    normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey
 } from './core/reminder-rules.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
@@ -174,10 +174,17 @@ export async function planReminders() {
         quiet
     });
 
+    /* ВРЕМЯ, НАЗНАЧЕННОЕ ЧЕЛОВЕКОМ.
+       Своё у окна возможностей, своё у девяти моментов дня — поля в окне
+       «Режим будильника». Пусто — список постановки пуст, а ключ попадает
+       в снятие: стёртое время должно уйти и из системы. */
+    const следующие = nextRingPlan(alarm, now);
+
     /* Сначала снимаем лишнее: прожитые и погашенные моменты, а если окна
        больше нет — и его. Фасад снимает только те ключи, которые ему
        передали на постановку, и про остальные знать не может. */
-    const silence = window ? moments.silence : moments.silence.concat(KEY_WINDOW);
+    const silence = (window ? moments.silence : moments.silence.concat(KEY_WINDOW))
+        .concat(следующие.silence);
     if (silence.length) await cancelKeys(silence);
 
     const totalSec = Math.floor(CONFIG.timing.opportunityWindowMs / 1000);
@@ -197,6 +204,26 @@ export async function planReminders() {
                 sec: totalSec % 60
             })
         });
+    }
+
+    /* Назначенное время — отдельные напоминания со своими ключами. Про
+       окно оно или про момент дня, видно по ключу: по нажатию откроется
+       та вкладка, куда человека позвали. */
+    for (const item of следующие.ring) {
+        ring.push(isWindowKey(item.key)
+            ? {
+                ...item,
+                title: t('reminder.window.title'),
+                body: t('reminder.window.body', {
+                    min: Math.floor(totalSec / 60),
+                    sec: totalSec % 60
+                })
+            }
+            : {
+                ...item,
+                title: t('reminder.moment.title'),
+                body: t('reminder.moment.body')
+            });
     }
 
     if (!ring.length) return false;
