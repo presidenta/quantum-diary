@@ -26,7 +26,7 @@ import {
     hasAlarmMode, alarmFullScreen
 } from './core/reminders.js';
 import {
-    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW,
+    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey
 } from './core/reminder-rules.js';
 import { state, t } from './store.js';
@@ -189,10 +189,18 @@ export async function planReminders() {
 
     const totalSec = Math.floor(CONFIG.timing.opportunityWindowMs / 1000);
 
+    /* Название действия этого момента — оно и станет надписью на главной
+       кнопке экрана будильника. Берём у самого момента: это то, ради чего
+       человека позвали, и слово «Открыть» вместо него ничего не говорит. */
+    const поКлючу = new Map(
+        (state.quantum?.moments || []).map(m => [KEY_MOMENT + m.id, m]));
+
     const ring = moments.ring.map(item => ({
         ...item,
         title: t('reminder.moment.title'),
-        body: t('reminder.moment.body')
+        body: t('reminder.moment.body'),
+        openLabel: поКлючу.get(item.key)?.title || t('alarm.openMoment'),
+        openTarget: 'moments'
     }));
 
     if (window) {
@@ -202,7 +210,9 @@ export async function planReminders() {
             body: t('reminder.window.body', {
                 min: Math.floor(totalSec / 60),
                 sec: totalSec % 60
-            })
+            }),
+            openLabel: t('alarm.openWindow'),
+            openTarget: 'space'
         });
     }
 
@@ -217,12 +227,16 @@ export async function planReminders() {
                 body: t('reminder.window.body', {
                     min: Math.floor(totalSec / 60),
                     sec: totalSec % 60
-                })
+                }),
+                openLabel: t('alarm.openWindow'),
+                openTarget: 'space'
             }
             : {
                 ...item,
                 title: t('reminder.moment.title'),
-                body: t('reminder.moment.body')
+                body: t('reminder.moment.body'),
+                openLabel: t('alarm.openMoment'),
+                openTarget: 'moments'
             });
     }
 

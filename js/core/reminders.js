@@ -155,6 +155,32 @@ export async function testAlarm({ title, body, stopLabel }) {
     }
 }
 
+/* КУДА ВЕСТИ, ЕСЛИ ПРИШЛИ ПО ЗВОНКУ.
+ *
+ * Экран будильника запускает приложение и оставляет плагину признак,
+ * куда человека вести. Спрашивать надо при запуске И при возвращении на
+ * экран: приложение могло быть уже открыто, и тогда страница не
+ * перезагружается.
+ *
+ * Плагин отвечает один раз и сразу забывает цель. Иначе один звонок
+ * уводил бы человека на тот же экран при каждом следующем открытии
+ * приложения.
+ *
+ * @returns {Promise<string>} «space», «moments» или пустая строка
+ */
+export async function takeAlarmTarget() {
+    const QA = alarmPlugin();
+    if (!QA) return '';
+
+    try {
+        const ответ = await QA.takeOpenTarget();
+        return (ответ && ответ.target) || '';
+    } catch (err) {
+        console.error('[reminders] не удалось спросить цель звонка:', err);
+        return '';
+    }
+}
+
 /**
  * Отвести человека в системные настройки за этим разрешением.
  * @returns {Promise<boolean>} открылись ли настройки
@@ -322,6 +348,12 @@ async function поставитьБудильники(items) {
            словарь один, в web/js/core/i18n.js. */
         stopLabel: item.stopLabel || '',
         snoozeLabel: item.snoozeLabel || '',
+        /* Надпись главной кнопки и куда она ведёт. Человек, разбуженный
+           звонком, одним нажатием попадает в действие, а не на
+           заблокированный экран. Цель — та же строка, которой приложение
+           открывает вкладку: «space» или «moments». */
+        openLabel: item.openLabel || '',
+        openTarget: item.openTarget || '',
         snoozeLeft: snoozeLeft(item.key)
     }));
 

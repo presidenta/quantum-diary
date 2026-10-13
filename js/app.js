@@ -21,13 +21,14 @@ import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space
 import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
-  cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm
+  cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
+  takeAlarmTarget
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
   loadAlarm, saveAlarm, alarmState
 } from './reminder-plan.js';
-import { minutesOfDay, normalizeAlarm, isWindowKey } from './core/reminder-rules.js';
+import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
 import { shouldSeed } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
@@ -406,15 +407,30 @@ function showAlarmSummary(alarm) {
      называется: тишина в этом месте читалась бы как поломка. */
   const части = [value.moments ? t('alarm.bothNote') : t('alarm.onNote')];
 
-  if (value.windowAt) части.push(t('alarm.atNote', { window: value.windowAt }));
+  if (value.windowAt) части.push(когдаЗвонок('alarm.atWindow', value.windowAt));
   if (value.moments && value.momentsAt) {
-    части.push(t('alarm.atNoteMoments', { moments: value.momentsAt }));
+    части.push(когдаЗвонок('alarm.atMoments', value.momentsAt));
   }
   if (!value.windowAt && !(value.moments && value.momentsAt)) {
     части.push(t('alarm.atEmpty'));
   }
 
   box.textContent = части.join(' ');
+}
+
+/* СЕГОДНЯ ИЛИ ЗАВТРА — и это главное, что здесь надо сказать.
+
+   Час, который уже прошёл, переносится на завтра: это верное поведение,
+   но прежде оно было молчаливым. Человек ставил 12:15, когда на часах
+   12:16, нажимал «Сохранить» — и ждал звонка, которого в этот день уже
+   не будет. Выглядело как поломка будильника. Теперь строка называет
+   день вслух, и ошибку видно сразу, до закрытия окна. */
+function когдаЗвонок(ключ, hhmm) {
+  const at = atNext(hhmm);
+  if (!at) return '';
+
+  const завтра = at.getDate() !== new Date().getDate();
+  return t(`${ключ}${завтра ? 'Tomorrow' : 'Today'}`, { time: hhmm });
 }
 
 /* Почему будильник может не зазвонить.
@@ -463,6 +479,19 @@ async function showAlarmTrouble() {
   }
 }
 
+/* Куда вести, если человек пришёл по звонку будильника.
+ *
+ * Плагин отвечает один раз и сразу забывает цель — иначе один звонок
+ * уводил бы человека на тот же экран при каждом следующем открытии
+ * приложения. Пустой ответ — обычное дело: значит пришли сами. */
+async function открытьПоЗвонку() {
+  const цель = await takeAlarmTarget();
+  if (!цель) return;
+
+  go('quantum');
+  openQuantumPart(цель === 'space' ? 'space' : 'moments');
+}
+
 let syncStarted = false;
 
 async function start() {
@@ -508,6 +537,23 @@ async function start() {
     // Про окно это напоминание или про момент — решает ключ: назначенное
     // человеком время приходит со своим, и сравнение со строкой его не ловило
     openQuantumPart(isWindowKey(key) ? 'space' : 'moments');
+  });
+
+  /* ПРИШЛИ ПО ЗВОНКУ — ОТКРЫВАЕМ ТО, РАДИ ЧЕГО ПОЗВАЛИ.
+
+     Экран будильника запускает приложение и оставляет плагину признак,
+     куда вести. Это не то же самое, что нажатие на обычную плашку выше:
+     там приложение уже работало и сработал обработчик уведомления, а
+     здесь оно могло быть закрыто вовсе — и узнать о звонке больше
+     неоткуда.
+
+     Спрашиваем и при запуске, и при возвращении на экран: если
+     приложение было уже открыто, страница не перезагружается, и запуск
+     второй раз не случится. */
+  await открытьПоЗвонку();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    открытьПоЗвонку().catch(err => console.warn('[будильник]', err.message));
   });
 
   /* СФЕРЫ ПО УМОЛЧАНИЮ — ТОЛЬКО КОГДА ИЗВЕСТНО, ЧТО У ЗАПИСИ ИХ НЕТ.
