@@ -515,6 +515,24 @@ export async function snooze(key, title, body) {
  *
  * @param {(key: string) => void} onOpen что делать при открытии
  */
+/* Что сейчас стоит в системе: ключи со сроками.
+
+   Нужно человеку, а не коду. Будильник, который промолчал, следов не
+   оставляет, и отличить «не поставился» от «телефон снял» нельзя ничем
+   другим. */
+export async function pendingAlarms() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.pending !== 'function') return [];
+
+    try {
+        const ответ = await QA.pending();
+        return Array.isArray(ответ && ответ.alarms) ? ответ.alarms : [];
+    } catch (err) {
+        console.error('[reminders] не удалось прочитать поставленные:', err);
+        return [];
+    }
+}
+
 export async function onReminderAction(onOpen) {
     const LN = plugin();
     if (!LN) return;

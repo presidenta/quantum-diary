@@ -445,6 +445,9 @@ const DICT = {
     'alarm.testGoing': 'Звонок через десять секунд. Можно заблокировать экран — так видно, поднимется ли окно поверх блокировки.',
     'alarm.testFailed': 'Поставить проверочный звонок не удалось. Смотрите строку выше — скорее всего, дело в разрешении.',
     'alarm.allow': 'Разрешить в настройках телефона',
+    'alarm.pendingNone': 'Сейчас в телефоне не стоит ни одного звонка.',
+    'alarm.pendingNext': 'Поставлено звонков: {n}. Ближайший — {at}.',
+    'alarm.pendingStale': 'Поставлено звонков: {n}, но все сроки уже прошли.',
     'alarm.stop': 'Выключить',
     'alarm.snooze': 'Отложить на 10 минут',
 
@@ -880,6 +883,9 @@ const DICT = {
     'alarm.testGoing': 'Дзвінок за десять секунд. Можна заблокувати екран — так видно, чи підніметься вікно поверх блокування.',
     'alarm.testFailed': 'Поставити перевірковий дзвінок не вдалося. Дивіться рядок вище — найімовірніше, річ у дозволі.',
     'alarm.allow': 'Дозволити в настройках телефона',
+    'alarm.pendingNone': 'Зараз у телефоні не стоїть жодного дзвінка.',
+    'alarm.pendingNext': 'Поставлено дзвінків: {n}. Найближчий — {at}.',
+    'alarm.pendingStale': 'Поставлено дзвінків: {n}, але всі терміни минули.',
     'alarm.stop': 'Вимкнути',
     'alarm.snooze': 'Відкласти на 10 хвилин',
 
@@ -1315,6 +1321,9 @@ const DICT = {
     'alarm.testGoing': 'It will ring in ten seconds. Lock the screen if you like — that is how you see whether the window comes up over the lock screen.',
     'alarm.testFailed': 'The test ring could not be scheduled. See the line above — it is most likely the permission.',
     'alarm.allow': 'Allow in phone settings',
+    'alarm.pendingNone': 'No alarms are set on the phone right now.',
+    'alarm.pendingNext': 'Alarms set: {n}. The next one is {at}.',
+    'alarm.pendingStale': 'Alarms set: {n}, but all of them are past due.',
     'alarm.stop': 'Dismiss',
     'alarm.snooze': 'Snooze for 10 minutes',
 

@@ -22,7 +22,7 @@ import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
-  takeAlarmTarget
+  takeAlarmTarget, pendingAlarms
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -433,6 +433,41 @@ function когдаЗвонок(ключ, hhmm) {
   return t(`${ключ}${завтра ? 'Tomorrow' : 'Today'}`, { time: hhmm });
 }
 
+/* ЧТО СЕЙЧАС СТОИТ В СИСТЕМЕ.
+
+   Будильник, который промолчал, следов не оставляет: встал он вообще,
+   был снят телефоном или прозвонил в тишину — со стороны неотличимо.
+   Из-за этого правки шли вслепую: чинили код там, где виновата могла
+   быть экономия батареи.
+
+   Поэтому спрашиваем у телефона напрямую и говорим словами. Это не
+   отладка для разработчика: это единственный способ человеку увидеть
+   разницу между «приложение не поставило» и «телефон снял», а она
+   решает, куда идти — в код или в настройки телефона. */
+async function showAlarmPending() {
+  const поле = $('alarmPending');
+  поле.textContent = '';
+  if (!isNative()) return;
+
+  const список = await pendingAlarms();
+  if (!список.length) {
+    поле.textContent = t('alarm.pendingNone');
+    return;
+  }
+
+  const час = at => new Intl.DateTimeFormat('ru', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+  }).format(new Date(at));
+
+  const ближайший = список
+    .filter(x => Number(x.at) > Date.now())
+    .sort((a, b) => a.at - b.at)[0];
+
+  поле.textContent = ближайший
+    ? t('alarm.pendingNext', { at: час(ближайший.at), n: список.length })
+    : t('alarm.pendingStale', { n: список.length });
+}
+
 /* Почему будильник может не зазвонить.
 
    Две разные беды, и чинятся они по-разному, поэтому и говорятся
@@ -720,6 +755,7 @@ async function boot() {
     showAlarmSummary(alarm);
     $('alarmBrowserNote').hidden = isNative();
     await showAlarmTrouble();
+    await showAlarmPending();
     $('alarmDialog').returnValue = '';
     $('alarmDialog').showModal();
   });
