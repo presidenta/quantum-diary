@@ -270,35 +270,32 @@ export function pickMoments(window, count = PER_WINDOW, gap = MIN_GAP_MINUTES, d
   return times;
 }
 
-/* РУЧНОЙ ЗВОНОК СДВИГАЕТ ВСЕ ПОСЛЕДУЮЩИЕ.
+/* РУЧНОЙ ЗВОНОК ЗАДАЁТ НАЧАЛО ДНЯ.
 
    Человек сам назвал час, когда хочет, чтобы его окликнули. С этого часа
-   день для него начинается заново: прежние времена, расставленные
-   случайно, после него уже не к месту — он только что получил
-   напоминание и следующее ждёт не через пять минут, а через положенный
-   промежуток.
+   день для него и начинается: все моменты выстраиваются после звонка, а
+   не вокруг него.
 
-   Поэтому моменты, попадающие после назначенного часа, раскладываются
-   от него и до конца бодрствования. Те, что уже прошли, не трогаем: они
-   либо прожиты, либо упущены, и переписывать прошлое нельзя.
+   Сначала двигались только те, что позже назначенного часа. Для звонка в
+   девять утра это означало, что утренние моменты в шесть и в семь
+   остались стоять как стояли, — а владелец ждал, что отсчёт пойдёт от
+   звонка. Он прав: назначая час, человек говорит «мой день начнётся
+   здесь», а не «подвиньте то, что после».
+
+   Промежутки между моментами прежние, и случайность внутри них тоже:
+   угадать час по-прежнему нельзя. Меняется только точка отсчёта.
 
    Ручного часа нет — всё остаётся как было: моменты расходятся по дню
-   сами, случайно, и это обычный порядок. */
-function peredvinut(moments, anchorMinutes, endOfDay, dice) {
-  const prosh = moments.filter(m => toMinutes(m.at) < anchorMinutes);
-  const vperedi = moments.filter(m => toMinutes(m.at) >= anchorMinutes);
-  if (vperedi.length === 0) return moments;
+   сами, от пробуждения до отбоя. */
+function otSchityvaya(moments, anchorMinutes, endOfDay, dice) {
+  if (moments.length === 0) return moments;
 
-  /* Считаем от названного часа, а не от текущего: человек задал именно
-     его. Первый момент после ручного звонка отстоит на тот же
-     минимальный промежуток, что и все прочие. */
-  const times = pickMoments(
-    { from: anchorMinutes + MIN_GAP_MINUTES, to: Math.max(endOfDay, anchorMinutes + MIN_GAP_MINUTES * vperedi.length) },
-    vperedi.length, MIN_GAP_MINUTES, dice
-  );
+  const начало = anchorMinutes + MIN_GAP_MINUTES;
+  // Окно не короче, чем нужно всем моментам: иначе они слиплись бы в кучу
+  const конец = Math.max(endOfDay, начало + MIN_GAP_MINUTES * (moments.length - 1));
 
-  const sdvinutye = vperedi.map((m, i) => ({ ...m, at: hhmm(times[i] % 1440) }));
-  return prosh.concat(sdvinutye).sort((a, b) => a.at.localeCompare(b.at));
+  const times = pickMoments({ from: начало, to: конец }, moments.length, MIN_GAP_MINUTES, dice);
+  return moments.map((m, i) => ({ ...m, at: hhmm(times[i] % 1440) }));
 }
 
 /**
@@ -334,10 +331,12 @@ export function localDay(dateKey, person = '', quiet = null, anchorAt = '') {
     }))
   );
 
+  /* Проверяем число, а не null: toMinutes на пустой строке отдаёт NaN,
+     и сравнение с null пропускало пустой час дальше. */
   const ручной = toMinutes(anchorAt);
-  const готовые = ручной === null
-    ? moments
-    : peredvinut(moments, ручной, end, dice);
+  const готовые = Number.isFinite(ручной)
+    ? otSchityvaya(moments, ручной, end, dice)
+    : moments;
 
   // Пометка для экрана и для нас: день посчитан на месте, сервера не было
   return { date: dateKey, arcana, moments: готовые, offline: true };
@@ -378,6 +377,6 @@ export function retime(day, dateKey, person = '', quiet = null, anchorAt = '') {
   const ручной = toMinutes(anchorAt);
   return {
     ...day,
-    moments: ручной === null ? moments : peredvinut(moments, ручной, end, dice)
+    moments: Number.isFinite(ручной) ? otSchityvaya(moments, ручной, end, dice) : moments
   };
 }
