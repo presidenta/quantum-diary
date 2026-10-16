@@ -23,7 +23,7 @@ import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
   takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings,
-  forgetAlarmTrace, openAppSettings, openAutostart
+  forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -674,20 +674,75 @@ async function showAlarmTrouble() {
   }
 }
 
-/* Куда вести, если человек пришёл по звонку будильника.
+/* ОКНО «РЕЖИМ БУДИЛЬНИКА».
+
+   Открываем его, заполнив поля сохранённым, а сохраняем только по кнопке
+   «Сохранить» — тот же порядок, что у тихого часа.
+
+   Вынесено из обработчика кнопки в профиле, потому что открывать его
+   теперь умеют двое: сама кнопка и плашка стража в шторке («Настроить
+   время»). Второму нажимать чужую кнопку было бы обходом: её обработчик
+   может измениться, а окно должно открываться одинаково с обеих сторон. */
+async function openAlarmDialog() {
+  // Окно уже открыто (плашку нажали дважды) — повторный showModal бросил бы
+  // InvalidStateError и оборвал бы остальной вызов
+  if ($('alarmDialog').open) return;
+
+  const alarm = await loadAlarm();
+  $('alarmOn').checked = alarm.on;
+  $('alarmGuard').checked = alarm.guardOn;
+  $('alarmWindowMode').value = alarm.windowMode;
+  $('alarmMomentsMode').value = alarm.momentsMode;
+  $('alarmWindowAt').value = alarm.windowAt;
+  $('alarmMomentsAt').value = alarm.momentsAt;
+
+  /* Тихий час называется здесь же, хотя настраивается рядом. Это одна
+     модель на два окна: тихий час глушит, режим активности звонит. */
+  const тихо = await loadQuiet();
+  $('alarmQuietNote').textContent = тихо.on
+    ? t('alarm.quietNote', { from: тихо.from, until: тихо.until })
+    : t('alarm.quietOff');
+
+  showAlarmStates(alarm);
+  $('alarmBrowserNote').hidden = isNative();
+  await showAlarmTrouble();
+  await showAlarmPending();
+  $('alarmDialog').returnValue = '';
+  // За время ожиданий выше окно могли открыть вторым нажатием
+  if (!$('alarmDialog').open) $('alarmDialog').showModal();
+}
+
+/* Куда вести, если человека позвали снаружи: звонок будильника или кнопка
+ * на плашке стража в шторке.
  *
  * Плагин отвечает один раз и сразу забывает цель — иначе один звонок
  * уводил бы человека на тот же экран при каждом следующем открытии
- * приложения. Пустой ответ — обычное дело: значит пришли сами. */
+ * приложения. Пустой ответ — обычное дело: значит пришли сами.
+ *
+ *   alarm — «Настроить время» на плашке: окно «Режим будильника», где
+ *           задаются часы обоих направлений. Раздел под окном не трогаем:
+ *           закрыв его, человек вернётся туда, где был.
+ *   home  — «Главный кабинет» и нажатие на саму плашку: раздел «Квант» с
+ *           вкладкой «Моменты». Там расписание, из которого плашка берёт
+ *           время Архитектора, — цифры на плашке и на экране сверяются
+ *           глазом.
+ *   space — окно возможностей (звонок Наблюдателя).
+ *   всё остальное — вкладка «Моменты», как и раньше. */
 async function открытьПоЗвонку() {
   const цель = await takeAlarmTarget();
   if (!цель) return;
+
+  if (цель === 'alarm') {
+    await openAlarmDialog();
+    return;
+  }
 
   go('quantum');
   openQuantumPart(цель === 'space' ? 'space' : 'moments');
 }
 
 let syncStarted = false;
+let targetListening = false;
 
 async function start() {
   await reload();
@@ -750,6 +805,18 @@ async function start() {
     if (document.visibilityState !== 'visible') return;
     открытьПоЗвонку().catch(err => console.warn('[будильник]', err.message));
   });
+
+  /* КНОПКА НА ПЛАШКЕ ПРИ ОТКРЫТОМ ПРИЛОЖЕНИИ.
+     visibilitychange молчит, когда шторку открыли поверх приложения: страница
+     не скрывалась. Тогда о цели сообщает сам плагин (см. onOpenTarget).
+     Подписка одна на всю жизнь страницы: start() зовётся заново после
+     повторного входа, а второй обработчик открыл бы окно дважды. */
+  if (!targetListening) {
+    targetListening = true;
+    onOpenTarget(() => {
+      открытьПоЗвонку().catch(err => console.warn('[будильник]', err.message));
+    });
+  }
 
   /* СФЕРЫ ПО УМОЛЧАНИЮ — ТОЛЬКО КОГДА ИЗВЕСТНО, ЧТО У ЗАПИСИ ИХ НЕТ.
 
@@ -926,29 +993,7 @@ async function boot() {
 
      Тот же порядок, что у тихого часа: открываем окно, заполнив
      галочки сохранённым, и сохраняем только по кнопке «Сохранить». */
-  $('alarmMode').addEventListener('click', async () => {
-    const alarm = await loadAlarm();
-    $('alarmOn').checked = alarm.on;
-    $('alarmGuard').checked = alarm.guardOn;
-    $('alarmWindowMode').value = alarm.windowMode;
-    $('alarmMomentsMode').value = alarm.momentsMode;
-    $('alarmWindowAt').value = alarm.windowAt;
-    $('alarmMomentsAt').value = alarm.momentsAt;
-
-    /* Тихий час называется здесь же, хотя настраивается рядом. Это одна
-       модель на два окна: тихий час глушит, режим активности звонит. */
-    const тихо = await loadQuiet();
-    $('alarmQuietNote').textContent = тихо.on
-      ? t('alarm.quietNote', { from: тихо.from, until: тихо.until })
-      : t('alarm.quietOff');
-
-    showAlarmStates(alarm);
-    $('alarmBrowserNote').hidden = isNative();
-    await showAlarmTrouble();
-    await showAlarmPending();
-    $('alarmDialog').returnValue = '';
-    $('alarmDialog').showModal();
-  });
+  $('alarmMode').addEventListener('click', openAlarmDialog);
 
   /* ВРЕМЕННО: окно «Логи». Убрать вместе с кнопкой #alarmLogs и самим
      окном в index.html, когда звонки подтвердятся (METHODOLOGY, 9.7). */

@@ -27,7 +27,8 @@ import {
 } from './core/reminders.js';
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
-    normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf
+    normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf,
+    guardFrames, guardText
 } from './core/reminder-rules.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
@@ -196,11 +197,28 @@ export async function planReminders() {
        Нативная часть сама решает, есть ли что звонить, и сама уходит, когда
        звонить нечем: здесь передаётся только настройка человека и подписи
        на его языке. Ставится ДО расписания — постановка звонков следом
-       запускает стража сама. */
+       запускает стража сама.
+
+       Вместе с настройкой едет и содержимое плашки: кадры текста на весь
+       остаток дня (см. guardFrames) и подписи двух кнопок. Текст
+       собирается здесь, на языке человека, а страж лишь выбирает кадр по
+       часам — так времена на плашке не могут разойтись с главным экраном,
+       и обновляется она, даже когда приложение закрыто. */
+    const кадры = guardFrames(state.quantum?.moments, lastJumpTime(), now, {
+        cooldownMs: CONFIG.timing.jumpCooldownMs,
+        windowMs: CONFIG.timing.opportunityWindowMs,
+        // Выключенное направление времени не имеет — на плашке прочерк
+        architectOn: alarm.momentsMode !== 'off',
+        observerOn: alarm.windowMode !== 'off'
+    }).map(кадр => ({ from: кадр.from, text: guardText(кадр, t) }));
+
     await setGuard({
         on: alarm.on && alarm.guardOn,
         title: t('guard.title'),
-        text: t('guard.text')
+        text: t('guard.text'),
+        frames: кадры,
+        settingsLabel: t('guard.settings'),
+        homeLabel: t('guard.home')
     });
 
     /* Направление выключено совсем — в план оно не попадает, а его ключи

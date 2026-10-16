@@ -192,7 +192,11 @@ export async function testAlarm({
  * уводил бы человека на тот же экран при каждом следующем открытии
  * приложения.
  *
- * @returns {Promise<string>} «space», «moments» или пустая строка
+ * Цели две пары. «space» и «moments» оставляет экран будильника: какую
+ * вкладку «Кванта» открыть. «alarm» и «home» оставляют кнопки плашки
+ * стража: окно «Режим будильника» и главный кабинет.
+ *
+ * @returns {Promise<string>} «space», «moments», «alarm», «home» или пустая строка
  */
 export async function takeAlarmTarget() {
     const QA = alarmPlugin();
@@ -204,6 +208,40 @@ export async function takeAlarmTarget() {
     } catch (err) {
         console.error('[reminders] не удалось спросить цель звонка:', err);
         return '';
+    }
+}
+
+/* ПРИЛОЖЕНИЕ УЖЕ БЫЛО ОТКРЫТО, А ЦЕЛЬ ПОЯВИЛАСЬ.
+ *
+ * takeAlarmTarget спрашивают при запуске и при возвращении на экран
+ * (visibilitychange). Этого хватает, когда приложение закрыто или свёрнуто.
+ * Но человек может открыть шторку поверх открытого приложения и нажать
+ * кнопку на плашке стража: приложение при этом остаётся на экране, страница
+ * не скрывалась, visibilitychange не приходит — и кнопка молча ничего не
+ * делала бы.
+ *
+ * Поэтому нативная часть сама сообщает событием openTarget, что цель
+ * лежит и её пора забрать. Событие — только оклик: саму цель по-прежнему
+ * отдаёт takeAlarmTarget, и отдаёт один раз, так что двойной оклик (событие
+ * и visibilitychange вместе) ничего не откроет дважды.
+ *
+ * @param {() => void} onTarget что сделать по окрику — обычно спросить цель
+ * @returns {Promise<boolean>} удалось ли подписаться
+ */
+export async function onOpenTarget(onTarget) {
+    const QA = alarmPlugin();
+    // Сборка без события (старая) addListener не знает — тогда остаётся
+    // visibilitychange, и кнопка работает со свёрнутым приложением
+    if (!QA || typeof QA.addListener !== 'function') return false;
+
+    try {
+        await QA.addListener('openTarget', () => {
+            if (typeof onTarget === 'function') onTarget();
+        });
+        return true;
+    } catch (err) {
+        console.error('[reminders] не удалось подписаться на цель:', err);
+        return false;
     }
 }
 
@@ -749,13 +787,25 @@ export async function openAppSettings() {
    Страж держит приложение живым, пока есть что звонить. Подписи его
    уведомления едут отсюда, а не живут в Java: нативная часть словаря не
    имеет и иметь не должна. Сборка без стража (старая) метода не знает —
-   тогда это тихо ничего не делает. */
-export async function setGuard({ on, title, text }) {
+   тогда это тихо ничего не делает.
+
+   Кроме подписей, едет само содержимое плашки: frames — кадры текста по
+   часам дня ({from, text}, см. guardFrames в reminder-rules.js), а
+   settingsLabel и homeLabel — надписи на двух её кнопках. Нет кадров —
+   страж покажет запасной text. */
+export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel }) {
     const QA = alarmPlugin();
     if (!QA || typeof QA.setGuard !== 'function') return false;
 
     try {
-        await QA.setGuard({ on: !!on, title: title || '', text: text || '' });
+        await QA.setGuard({
+            on: !!on,
+            title: title || '',
+            text: text || '',
+            frames: Array.isArray(frames) ? frames : [],
+            settingsLabel: settingsLabel || '',
+            homeLabel: homeLabel || ''
+        });
         return true;
     } catch (err) {
         console.error('[reminders] страж не настроился:', err);
