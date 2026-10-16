@@ -20,6 +20,7 @@ import { request } from '../core/net.js';
    отсюда же его и переставляем. */
 import { planReminders, loadQuiet, loadAlarm } from '../reminder-plan.js';
 import { anchorHour } from '../core/reminder-rules.js';
+import { DAY_RULE } from '../core/quantum.js';
 
 let wakeTimer = null;
 let holdTimer = null;
@@ -59,7 +60,12 @@ const QUANTUM_CACHE = 'quantum_day';
 async function cachedQuantum() {
   try {
     const saved = await getMeta(QUANTUM_CACHE);
-    if (saved && saved.savedOn === todayKey() && saved.day) return saved.day;
+    /* Кэш другого правила считается отсутствующим: день посчитан по
+       алгоритму, которого больше нет (DAY_RULE в core/quantum.js). Без
+       этой проверки правка времён не доезжала бы до человека до полуночи. */
+    if (saved && saved.savedOn === todayKey() && saved.rule === DAY_RULE && saved.day) {
+      return saved.day;
+    }
   } catch {
     // Хранилище недоступно — ведём себя так, будто кэша нет
   }
@@ -69,7 +75,7 @@ async function cachedQuantum() {
 async function saveQuantumCache() {
   if (!state.quantum) return;
   try {
-    await setMeta(QUANTUM_CACHE, { savedOn: todayKey(), day: state.quantum });
+    await setMeta(QUANTUM_CACHE, { savedOn: todayKey(), rule: DAY_RULE, day: state.quantum });
   } catch {
     // Не сохранилось — не беда, в следующий раз получим день с сервера
   }
