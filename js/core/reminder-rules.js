@@ -214,6 +214,13 @@ export function normalizeAlarm(raw) {
         windowOn: src.windowOn !== false,
         momentsOn: src.momentsOn !== false,
 
+        /* СТРАЖ — держит приложение живым, пока есть что звонить
+           (android-alarm-plugin, AlarmGuardService). Включён по умолчанию:
+           без него на телефоне владельца звонки не доходили вовсе, потому
+           что в момент звонка процесса приложения уже не было. Выключает
+           только явное false — то же правило, что у крестиков. */
+        guardOn: src.guardOn !== false,
+
         windowAt: время(src.windowAt),
         momentsAt: время(src.momentsAt)
     };

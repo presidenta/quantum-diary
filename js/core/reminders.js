@@ -156,15 +156,17 @@ export async function alarmFullScreen() {
  *
  * @returns {Promise<boolean>} поставлен ли звонок
  */
-export async function testAlarm({ title, body, stopLabel }) {
+export async function testAlarm({
+    title, body, stopLabel, delayMs = TEST_DELAY_MS, key = KEY_TEST
+}) {
     const QA = alarmPlugin();
     if (!QA) return false;
 
     try {
         const ответ = await QA.schedule({
             alarms: [{
-                key: KEY_TEST,
-                at: Date.now() + TEST_DELAY_MS,
+                key,
+                at: Date.now() + delayMs,
                 title,
                 body,
                 stopLabel: stopLabel || '',
@@ -637,7 +639,8 @@ export async function snooze(key, title, body) {
 export async function pendingAlarms() {
     const пусто = {
         alarms: [], systemNext: 0, batteryUnrestricted: true,
-        missed: 0, missedAt: 0, fired: 0, firedAt: 0, step: '', stepAt: 0
+        missed: 0, missedAt: 0, fired: 0, firedAt: 0, step: '', stepAt: 0,
+        maker: '', model: '', sdk: 0, guardOn: true, guardAt: 0, autostartKnown: false
     };
 
     const QA = alarmPlugin();
@@ -677,7 +680,17 @@ export async function pendingAlarms() {
                чинятся они в разных местах. Строка шага отвечает и на
                это. */
             step: (ответ && ответ.step) || '',
-            stepAt: Number(ответ && ответ.stepAt) || 0
+            stepAt: Number(ответ && ответ.stepAt) || 0,
+
+            /* Какой это телефон и жив ли страж. Оболочки производителей
+               останавливают закрытые приложения по-разному, и без этих
+               строк приходится гадать, на чьём телефоне чинишь. */
+            maker: (ответ && ответ.maker) || '',
+            model: (ответ && ответ.model) || '',
+            sdk: Number(ответ && ответ.sdk) || 0,
+            guardOn: (ответ && ответ.guardOn) !== false,
+            guardAt: Number(ответ && ответ.guardAt) || 0,
+            autostartKnown: !!(ответ && ответ.autostartKnown)
         };
     } catch (err) {
         console.error('[reminders] не удалось прочитать поставленные:', err);
@@ -721,6 +734,43 @@ export async function openAppSettings() {
     } catch (err) {
         console.error('[reminders] настройки приложения не открылись:', err);
         return false;
+    }
+}
+
+/* СТРАЖ: включить или выключить.
+
+   Страж держит приложение живым, пока есть что звонить. Подписи его
+   уведомления едут отсюда, а не живут в Java: нативная часть словаря не
+   имеет и иметь не должна. Сборка без стража (старая) метода не знает —
+   тогда это тихо ничего не делает. */
+export async function setGuard({ on, title, text }) {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.setGuard !== 'function') return false;
+
+    try {
+        await QA.setGuard({ on: !!on, title: title || '', text: text || '' });
+        return true;
+    } catch (err) {
+        console.error('[reminders] страж не настроился:', err);
+        return false;
+    }
+}
+
+/* Открыть «Автозапуск» — раздел, которого нет в самом Android: его
+   заводят производители оболочек, и у каждого он свой. Плагин ведёт по
+   известным адресам, а не нашёл — в настройки приложения.
+
+   @returns {Promise<string>} «autostart», «app» или пустая строка */
+export async function openAutostart() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.openAutostartSettings !== 'function') return '';
+
+    try {
+        const ответ = await QA.openAutostartSettings();
+        return (ответ && ответ.opened) || '';
+    } catch (err) {
+        console.error('[reminders] «Автозапуск» не открылся:', err);
+        return '';
     }
 }
 

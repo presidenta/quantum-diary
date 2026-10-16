@@ -23,7 +23,7 @@ import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
   takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings,
-  forgetAlarmTrace, openAppSettings
+  forgetAlarmTrace, openAppSettings, openAutostart
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -402,6 +402,7 @@ function выставитьКрестик(id, включён) {
 function alarmFromForm() {
   return {
     on: $('alarmOn').checked,
+    guardOn: $('alarmGuard').checked,
     windowOn: разделВключён('alarmWindowOff'),
     momentsOn: разделВключён('alarmMomentsOff'),
     windowAt: $('alarmWindowAt').value,
@@ -522,10 +523,13 @@ async function showAlarmPending() {
   $('alarmTrace').hidden = true;
   $('alarmTraceFix').hidden = true;
   $('alarmStep').hidden = true;
+  $('alarmDevice').hidden = true;
+  $('alarmAutostart').hidden = true;
+  $('alarmAutostartNote').hidden = true;
   if (!isNative()) return;
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
-    step, stepAt } = await pendingAlarms();
+    step, stepAt, maker, model, sdk, guardOn, guardAt, autostartKnown } = await pendingAlarms();
 
   const час = at => new Intl.DateTimeFormat('ru', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -573,19 +577,32 @@ async function showAlarmPending() {
   const след = $('alarmTrace');
   const кнопкаСледа = $('alarmTraceFix');
 
-  if (missed > 0) {
-    след.textContent = t('alarm.traceMissed', { n: missed, at: час(missedAt) });
-    след.className = 'gate-msg is-error';
+  /* ОБА СЧЁТЧИКА СРАЗУ. Прежде при пропуске показывался только он, и
+     сработавшие звонки оставались невидимы: нельзя было понять, молчит
+     всё или только часть. Красной строка остаётся, пока есть пропуски. */
+  const части = [];
+  if (fired > 0) части.push(t('alarm.traceFired', { n: fired, at: час(firedAt) }));
+  if (missed > 0) части.push(t('alarm.traceMissed', { n: missed, at: час(missedAt) }));
+
+  if (части.length) {
+    след.textContent = части.join(' ');
+    след.className = missed > 0 ? 'gate-msg is-error' : 'gate-msg is-ok';
     след.hidden = false;
-    кнопкаСледа.hidden = false;
-  } else if (fired > 0) {
-    след.textContent = t('alarm.traceFired', { n: fired, at: час(firedAt) });
-    след.className = 'gate-msg is-ok';
-    след.hidden = false;
+    кнопкаСледа.hidden = missed === 0;
   } else if (alarms.length) {
     след.textContent = t('alarm.traceNone');
     след.className = 'gate-msg';
     след.hidden = false;
+  }
+
+  /* «АВТОЗАПУСК» — только когда звонок промолчал и производитель
+     известен: у чужих телефонов такого раздела нет, и кнопка вела бы в
+     пустоту. Говорится прямо, что именно нажать и что включить. */
+  if (missed > 0 && autostartKnown) {
+    $('alarmAutostartNote').textContent = t('alarm.autostartNote', { maker });
+    $('alarmAutostartNote').className = 'gate-msg';
+    $('alarmAutostartNote').hidden = false;
+    $('alarmAutostart').hidden = false;
   }
 
   /* ДОКУДА ДОШЛО СРАБАТЫВАНИЕ.
@@ -597,6 +614,23 @@ async function showAlarmPending() {
   if (step) {
     $('alarmStep').textContent = t('alarm.step', { step, at: час(stepAt) });
     $('alarmStep').hidden = false;
+  }
+
+  /* КАКОЙ ЭТО ТЕЛЕФОН И ЖИВ ЛИ СТРАЖ.
+
+     Отметка стража, а не флаг «запущен»: убитый процесс флага не снимет, а
+     отметка протухнет сама, и строка честно скажет «не запущен». Проверка
+     раз в десять минут, поэтому свежей считается отметка не старше
+     двадцати пяти. */
+  if (maker || model) {
+    const свежа = guardAt && Date.now() - guardAt < 25 * 60 * 1000;
+    const охрана = !guardOn ? t('alarm.guardOff')
+      : !alarms.length ? t('alarm.guardIdle')
+        : свежа ? t('alarm.guardUp', { at: час(guardAt) })
+          : t('alarm.guardDown');
+
+    $('alarmDevice').textContent = t('alarm.device', { maker, model, sdk, guard: охрана });
+    $('alarmDevice').hidden = false;
   }
 }
 
@@ -622,6 +656,7 @@ async function showAlarmTrouble() {
   $('alarmOverlayMsg').hidden = true;
   $('alarmOverlayFix').hidden = true;
   $('alarmTest').hidden = !isNative();
+  $('alarmTestReal').hidden = !isNative();
   $('alarmTestMsg').textContent = '';
   $('alarmTestMsg').className = 'gate-msg';
 
@@ -922,6 +957,7 @@ async function boot() {
   $('alarmMode').addEventListener('click', async () => {
     const alarm = await loadAlarm();
     $('alarmOn').checked = alarm.on;
+    $('alarmGuard').checked = alarm.guardOn;
     выставитьКрестик('alarmWindowOff', alarm.windowOn);
     выставитьКрестик('alarmMomentsOff', alarm.momentsOn);
     $('alarmWindowAt').value = alarm.windowAt;
@@ -943,7 +979,7 @@ async function boot() {
     $('alarmDialog').showModal();
   });
 
-  for (const id of ['alarmOn', 'alarmWindowAt', 'alarmMomentsAt']) {
+  for (const id of ['alarmOn', 'alarmGuard', 'alarmWindowAt', 'alarmMomentsAt']) {
     $(id).addEventListener('change', () => {
       const текущее = alarmFromForm();
       showAlarmSummary(текущее);
@@ -995,6 +1031,13 @@ async function boot() {
     await openAppSettings();
   });
 
+  // «Автозапуск»: отсчёт заново, как и у настроек приложения выше
+  $('alarmAutostart').addEventListener('click', async () => {
+    await forgetAlarmTrace();
+    await showAlarmPending();
+    await openAutostart();
+  });
+
   /* Человек вернулся из настроек телефона — перечитываем состояние.
      Иначе красная строка осталась бы висеть над уже выданным
      разрешением, и выглядело бы это как «не помогло». */
@@ -1024,6 +1067,25 @@ async function boot() {
     });
 
     строка.textContent = поставлен ? t('alarm.testGoing') : t('alarm.testFailed');
+    строка.className = поставлен ? 'gate-msg is-ok' : 'gate-msg is-error';
+  });
+
+  /* ПРОВЕРКА КАК НАСТОЯЩАЯ. Обычная срабатывает через десять секунд, пока
+     приложение ещё живо, — и потому не повторяет условий, в которых звонки
+     молчали. Эта ставится на две минуты вперёд: человек успевает закрыть
+     приложение и положить телефон так, как делает это всегда. Потом строка
+     следов скажет, дошёл ли звонок и докуда. */
+  $('alarmTestReal').addEventListener('click', async () => {
+    const строка = $('alarmTestMsg');
+    const поставлен = await testAlarm({
+      title: t('alarm.title'),
+      body: t('alarm.testRealGoing'),
+      stopLabel: t('alarm.stop'),
+      delayMs: 2 * 60 * 1000,
+      key: 'alarm-test-real'
+    });
+
+    строка.textContent = поставлен ? t('alarm.testRealGoing') : t('alarm.testFailed');
     строка.className = поставлен ? 'gate-msg is-ok' : 'gate-msg is-error';
   });
 

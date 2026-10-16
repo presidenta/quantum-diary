@@ -23,7 +23,7 @@
 
 import {
     ensureReady, scheduleReminders, cancelKeys, onReminderAction, isNative,
-    hasAlarmMode, alarmFullScreen, alarmOverlay
+    hasAlarmMode, alarmFullScreen, alarmOverlay, setGuard
 } from './core/reminders.js';
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
@@ -191,6 +191,18 @@ export async function planReminders() {
     const now = new Date();
     const quiet = await loadQuiet();
     const alarm = await loadAlarm();
+
+    /* СТРАЖ СТОИТ, ПОКА ВКЛЮЧЁН РЕЖИМ АКТИВНОСТИ И ЕСТЬ ЧТО ЗВОНИТЬ.
+       Нативная часть сама решает, есть ли что звонить, и сама уходит, когда
+       звонить нечем: здесь передаётся только настройка человека и подписи
+       на его языке. Ставится ДО расписания — постановка звонков следом
+       запускает стража сама. */
+    await setGuard({
+        on: alarm.on && alarm.guardOn,
+        title: t('guard.title'),
+        text: t('guard.text')
+    });
+
     const moments = momentPlan(state.quantum?.moments, now, quiet);
     const window = windowPlan(lastJumpTime(), now, {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
