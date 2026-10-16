@@ -22,7 +22,8 @@ import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
-  takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings
+  takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings,
+  forgetAlarmTrace, openAppSettings
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -479,9 +480,12 @@ async function showAlarmPending() {
   поле.textContent = '';
   батарея.hidden = true;
   кнопка.hidden = true;
+  $('alarmTrace').hidden = true;
+  $('alarmTraceFix').hidden = true;
   if (!isNative()) return;
 
-  const { alarms, systemNext, batteryUnrestricted } = await pendingAlarms();
+  const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt }
+    = await pendingAlarms();
 
   const час = at => new Intl.DateTimeFormat('ru', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -513,6 +517,35 @@ async function showAlarmPending() {
     батарея.className = 'gate-msg is-error';
     батарея.textContent = t('alarm.batteryNote');
     кнопка.hidden = false;
+  }
+
+  /* СЛЕДЫ: СРАБОТАЛ ХОТЬ ОДИН ЗВОНОК ИЛИ ВСЕ ПРОМОЛЧАЛИ.
+
+     Строка выше говорит, что поставлено СЕЙЧАС, и выглядит здоровой
+     всегда — приложение переставляет расписание при каждом открытии.
+     Поэтому по ней нельзя было понять главного: сработало ли что-нибудь,
+     пока человек в приложение не смотрел. Ровно этот вопрос и оставался
+     без ответа всю неделю, и из-за него правили код там, где виноват был
+     телефон.
+
+     Теперь ответ есть, и он точный: сработавший будильник удаляет себя из
+     списка, несработавший остаётся (разбор в AlarmStore.java). */
+  const след = $('alarmTrace');
+  const кнопкаСледа = $('alarmTraceFix');
+
+  if (missed > 0) {
+    след.textContent = t('alarm.traceMissed', { n: missed, at: час(missedAt) });
+    след.className = 'gate-msg is-error';
+    след.hidden = false;
+    кнопкаСледа.hidden = false;
+  } else if (fired > 0) {
+    след.textContent = t('alarm.traceFired', { n: fired, at: час(firedAt) });
+    след.className = 'gate-msg is-ok';
+    след.hidden = false;
+  } else if (alarms.length) {
+    след.textContent = t('alarm.traceNone');
+    след.className = 'gate-msg';
+    след.hidden = false;
   }
 }
 
@@ -882,6 +915,18 @@ async function boot() {
      он вернётся из настроек и должен увидеть ту же настройку. */
   $('alarmOverlayFix').addEventListener('click', async () => {
     await openOverlaySettings();
+  });
+
+  /* Человек идёт править настройки телефона — отсчёт начинаем заново.
+
+     Забыть следы здесь обязательно. Иначе строка о прошлых пропусках
+     висела бы над уже починенным будильником, и человек не смог бы
+     понять, помогла его правка или нет, — а это единственное, ради чего
+     эта строка и заведена. */
+  $('alarmTraceFix').addEventListener('click', async () => {
+    await forgetAlarmTrace();
+    await showAlarmPending();
+    await openAppSettings();
   });
 
   /* Человек вернулся из настроек телефона — перечитываем состояние.

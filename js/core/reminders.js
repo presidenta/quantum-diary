@@ -398,10 +398,30 @@ export async function scheduleReminders(items) {
 
     if (будущие.length === 0) return false;
 
-    /* Снимаем ВСЕ переданные ключи, а не только те, что сейчас поставим.
-       Прошедшее отсеялось выше, но в системе оно ещё лежит с прошлого
-       раза, и снять его больше некому. */
-    await cancelKeys(items.map(item => item.key));
+    /* СНИМАЕМ ТОЛЬКО ТО, ЧЕГО В НОВОМ РАСПИСАНИИ НЕТ.
+
+       Прежде снимались ВСЕ переданные ключи, и лишь потом ставились
+       заново. Между этими двумя шагами стоит await, и всё это время
+       расписание пусто.
+
+       Беда не умозрительная. Расписание переставляется в том числе на
+       УХОД из приложения (visibilitychange в js/reminder-plan.js) — а
+       уходящему приложению система вправе заморозить страницу ровно
+       посреди await. Тогда снятие прошло, постановка нет, и человек
+       остаётся без звонков вовсе, не зная об этом: в следующий раз он
+       откроет приложение, оно переставит расписание, и список будет
+       выглядеть здоровым.
+
+       Снимать заранее и не нужно. Будильник с тем же ключом заменяет
+       прежний сам: один и тот же requestCode и FLAG_UPDATE_CURRENT
+       (AlarmScheduler.сигнал). Уведомление с тем же id — тоже. Снятия
+       требует только то, чего в новом расписании больше нет: прошедшее,
+       прожитое, погашенное. */
+    const кСнятию = items
+        .map(item => item.key)
+        .filter(key => !будущие.some(item => item.key === key));
+
+    if (кСнятию.length) await cancelKeys(кСнятию);
 
     /* РАЗВОДКА ПО ДВУМ РЕЖИМАМ.
        Сначала будильники: что не вышло — то уходит обычной плашкой, и
@@ -615,7 +635,10 @@ export async function snooze(key, title, body) {
    оставляет, и отличить «не поставился» от «телефон снял» нельзя ничем
    другим. */
 export async function pendingAlarms() {
-    const пусто = { alarms: [], systemNext: 0, batteryUnrestricted: true };
+    const пусто = {
+        alarms: [], systemNext: 0, batteryUnrestricted: true,
+        missed: 0, missedAt: 0, fired: 0, firedAt: 0
+    };
 
     const QA = alarmPlugin();
     if (!QA || typeof QA.pending !== 'function') return пусто;
@@ -627,7 +650,24 @@ export async function pendingAlarms() {
             // Что помнит САМА система, а не мы: ноль при непустом списке
             // означает, что будильники сняли со стороны
             systemNext: Number(ответ && ответ.systemNext) || 0,
-            batteryUnrestricted: (ответ && ответ.batteryUnrestricted) !== false
+            batteryUnrestricted: (ответ && ответ.batteryUnrestricted) !== false,
+
+            /* СЛЕДЫ — ГЛАВНОЕ, ЧТО ЗДЕСЬ ЕСТЬ.
+
+               Список выше говорит, что поставлено СЕЙЧАС, и выглядит
+               здоровым всегда: приложение переставляет расписание при
+               каждом открытии. А следы говорят, что было, пока человек в
+               приложение не смотрел. Сработавший будильник удаляет себя
+               из списка, несработавший остаётся — по этому и считается
+               (разбор в шапке AlarmStore.java).
+
+               Сборка старше этой правки полей не пришлёт, и тогда здесь
+               нули: «следов нет» читается как «ещё ничего не известно», а
+               не как «всё плохо». */
+            missed: Number(ответ && ответ.missed) || 0,
+            missedAt: Number(ответ && ответ.missedAt) || 0,
+            fired: Number(ответ && ответ.fired) || 0,
+            firedAt: Number(ответ && ответ.firedAt) || 0
         };
     } catch (err) {
         console.error('[reminders] не удалось прочитать поставленные:', err);
@@ -639,6 +679,41 @@ export async function pendingAlarms() {
 
    Окно показывает система, ответ даёт человек. Обойти это нельзя и не
    нужно: разрешение серьёзное, и спрашивать о нём должен сам человек. */
+/* Забыть следы: человек идёт править настройки телефона, и отсчёт надо
+   начать заново. Иначе строка о прошлых пропусках висела бы над уже
+   починенным будильником, и было бы не понять, помогла правка или нет. */
+export async function forgetAlarmTrace() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.forgetTrace !== 'function') return false;
+
+    try {
+        await QA.forgetTrace();
+        return true;
+    } catch (err) {
+        console.error('[reminders] не удалось забыть следы:', err);
+        return false;
+    }
+}
+
+/* Настройки самого приложения в телефоне.
+
+   Экран системный и одинаковый у всех — в отличие от «автозапуска» и
+   прочих разделов, которые у каждого производителя свои и переезжают с
+   обновлениями. Отсюда человек дойдёт до своего раздела сам; неверный
+   путь был бы хуже никакого (то же правило, что в разделе 9.1). */
+export async function openAppSettings() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.openAppSettings !== 'function') return false;
+
+    try {
+        await QA.openAppSettings();
+        return true;
+    } catch (err) {
+        console.error('[reminders] настройки приложения не открылись:', err);
+        return false;
+    }
+}
+
 export async function askBatteryFreedom() {
     const QA = alarmPlugin();
     if (!QA || typeof QA.requestBattery !== 'function') return false;
