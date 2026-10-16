@@ -609,7 +609,19 @@ function scheduleWake(next) {
 export function initQuantum() {
   // Вернулись на вкладку — перечитываем день: момент мог наступить
   document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState !== 'visible' || state.view !== 'quantum') return;
+    if (document.visibilityState !== 'visible') return;
+
+    /* ДЕНЬ ПЕРЕЧИТЫВАЕМ НА ЛЮБОЙ ВКЛАДКЕ, а не только на «Кванте».
+       Приложение, пережившее полночь, держит вчерашний день, и расписание
+       звонков строилось по нему (в ночь на 17.10.2026 это дало девять
+       звонков-призраков). Человек мог вернуться и на «День», и на «Деньги».
+       Загрузка кончается перестановкой расписания, так что оно тоже
+       освежается. День, которого ещё не было вовсе, на чужих вкладках не
+       грузим: ему там нечем быть нужным. */
+    const устарел = state.quantum?.date && state.quantum.date !== todayKey();
+    if (устарел) await loadQuantum();
+
+    if (state.view !== 'quantum') return;
     if (state.quantum?.date !== todayKey()) await loadQuantum();
     renderQuantum();
   });

@@ -23,12 +23,12 @@
 
 import {
     ensureReady, scheduleReminders, cancelKeys, onReminderAction, isNative,
-    hasAlarmMode, alarmFullScreen, alarmOverlay, setGuard
+    hasAlarmMode, alarmFullScreen, alarmOverlay, setGuard, pendingAlarms
 } from './core/reminders.js';
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf,
-    guardFrames, guardText, namedHorizon, anchorHour
+    guardFrames, guardText, namedHorizon, anchorHour, freshDay, orphanKeys
 } from './core/reminder-rules.js';
 import { provisionalDay } from './core/quantum.js';
 import { todayKey, addDays } from './core/dates.js';
@@ -195,6 +195,12 @@ export async function planReminders() {
     const quiet = await loadQuiet();
     const alarm = await loadAlarm();
 
+    /* ТОЛЬКО СЕГОДНЯШНИЙ ДЕНЬ. Приложение, пережившее полночь, держит в
+       памяти вчерашний, и его часы привязывались к сегодняшней дате:
+       девять звонков-призраков в вчерашние часы (см. freshDay). Чужой день
+       для расписания — это «дня нет». */
+    const день = freshDay(state.quantum, todayKey(now));
+
     /* СТРАЖ СТОИТ, ПОКА ВКЛЮЧЁН РЕЖИМ АКТИВНОСТИ И ЕСТЬ ЧТО ЗВОНИТЬ.
        Нативная часть сама решает, есть ли что звонить, и сама уходит, когда
        звонить нечем: здесь передаётся только настройка человека и подписи
@@ -211,7 +217,7 @@ export async function planReminders() {
        страж обойдётся запасным текстом. */
     let кадры = [];
     try {
-        кадры = guardFrames(state.quantum?.moments, lastJumpTime(), now, {
+        кадры = guardFrames(день?.moments, lastJumpTime(), now, {
             cooldownMs: CONFIG.timing.jumpCooldownMs,
             windowMs: CONFIG.timing.opportunityWindowMs,
             // Выключенное направление времени не имеет — на плашке прочерк
@@ -234,7 +240,7 @@ export async function planReminders() {
     /* Направление выключено совсем — в план оно не попадает, а его ключи
        уходят в снятие (momentPlan и windowPlan это делают сами). Режим
        активности сюда не смотрит: он решает только, звонить ли. */
-    const moments = momentPlan(state.quantum?.moments, now, quiet, alarm);
+    const moments = momentPlan(день?.moments, now, quiet, alarm);
     const window = windowPlan(lastJumpTime(), now, {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
         quiet,
@@ -250,7 +256,7 @@ export async function planReminders() {
     /* ГОРИЗОНТ: ЗАВТРАШНИЕ МОМЕНТЫ И ПОВТОР НАЗВАННЫХ ЧАСОВ.
        Без него в системе лежит только остаток сегодняшнего дня: после
        последнего момента звонить нечем, пока приложение не откроют. */
-    const впереди = await горизонт(now, quiet, alarm);
+    const впереди = await горизонт(now, quiet, alarm, день);
 
     /* Сначала снимаем лишнее: прожитые и погашенные моменты, а если окна
        больше нет — и его. Фасад снимает только те ключи, которые ему
@@ -265,7 +271,7 @@ export async function planReminders() {
        кнопке экрана будильника. Берём у самого момента: это то, ради чего
        человека позвали, и слово «Открыть» вместо него ничего не говорит. */
     const поКлючу = new Map(
-        (state.quantum?.moments || []).map(m => [KEY_MOMENT + m.id, m]));
+        (день?.moments || []).map(m => [KEY_MOMENT + m.id, m]));
 
     const ring = moments.ring.concat(впереди.moments).map(item => ({
         ...item,
@@ -312,8 +318,41 @@ export async function planReminders() {
             });
     }
 
+    /* СВЕРКА С ТЕМ, ЧТО РЕАЛЬНО СТОИТ В СИСТЕМЕ.
+       Только если горизонт посчитался: упавший расчёт дал бы неполный
+       список, и сверка сняла бы настоящие звонки как «лишние». */
+    if (впереди.ok) await убратьЛишние(ring, now);
+
     if (!ring.length) return false;
     return scheduleReminders(ring.map(item => разметитьРежим(item, alarm)));
+}
+
+/* ЛИШНИЕ ЗВОНКИ: В СИСТЕМЕ ЕСТЬ, В РАСПИСАНИИ НЕТ.
+ *
+ * Расписание снимало только то, о чём знало: прожитое и погашенное в
+ * сегодняшнем дне. Звонок с ключом, которого в расписании больше нет —
+ * вчерашний день, момент, исчезнувший с сервера, заготовка не того дня, —
+ * не снимал никто, и он звонил в свой час, рядом с настоящим. Так в ночь на
+ * 17.10.2026 набралось 32 звонка вместо 24.
+ *
+ * Спрашиваем у нативной части, что стоит, и снимаем всё, чем распоряжается
+ * расписание (isPlannedKey), если этого нет в новом списке. Проверочные
+ * звонки не трогаем: их ставит человек. Не ответила нативная часть — не
+ * снимаем ничего: лишний звонок лучше потерянного. */
+async function убратьЛишние(ring, now) {
+    try {
+        const { alarms } = await pendingAlarms();
+        if (!Array.isArray(alarms) || alarms.length === 0) return;
+
+        const нужные = ring
+            .filter(item => new Date(item.at).getTime() > now.getTime())
+            .map(item => item.key);
+        const лишние = orphanKeys(alarms.map(a => a.key), нужные);
+
+        if (лишние.length) await cancelKeys(лишние);
+    } catch (err) {
+        console.warn('[напоминания] сверка со стоящими звонками не удалась:', err);
+    }
 }
 
 /* ГОРИЗОНТ РАСПИСАНИЯ: ЧТО ЗВОНИТ, ПОКА ПРИЛОЖЕНИЕ ЗАКРЫТО.
@@ -336,10 +375,14 @@ export async function planReminders() {
  * Ошибка здесь не вправе остановить постановку остального: без горизонта
  * приложение работает, как работало, — поэтому всё в try.
  *
- * @returns {Promise<{moments: Array, named: Array, silence: string[]}>}
+ * @param настоящий сегодняшний день или null, если его нет (не загрузился
+ *                  или в памяти чужой — см. freshDay)
+ * @returns {Promise<{moments: Array, named: Array, silence: string[], ok: boolean}>}
+ *          ok — посчитано ли всё без ошибок; от него зависит, можно ли сверять
+ *          расписание со стоящими звонками (неполный список снял бы лишнее)
  */
-async function горизонт(now, quiet, alarm) {
-    const итог = { moments: [], named: [], silence: [] };
+async function горизонт(now, quiet, alarm, настоящий) {
+    const итог = { moments: [], named: [], silence: [], ok: false };
 
     try {
         const человек = String((await getMeta('userId').catch(() => '')) || '');
@@ -355,17 +398,26 @@ async function горизонт(now, quiet, alarm) {
         итог.moments = план.ring;
         итог.silence.push(...план.silence);
 
-        /* Настоящий день сегодня есть — заготовка на него не нужна. Если
-           дня нет вовсе (ещё не загрузился), заготовку не трогаем: снимать
-           её, пока заменить нечем, значило бы остаться без звонков. */
-        if (state.quantum?.moments?.length) {
-            const сегодняшняя = provisionalDay(сегодня, человек, quiet, якорь);
+        const сегодняшняя = provisionalDay(сегодня, человек, quiet, якорь);
+
+        if (настоящий?.moments?.length) {
+            /* Настоящий день сегодня есть — заготовка на него не нужна:
+               иначе моменты звонили бы дважды. */
             итог.silence.push(...сегодняшняя.moments.map(m => KEY_MOMENT + m.id));
+        } else {
+            /* Дня нет вовсе (не загрузился, нет сервера, в памяти чужой) —
+               звонить нечем, кроме заготовки: она и звонит вместо него.
+               Снимать её, пока заменить нечем, значило бы остаться без
+               звонков на остаток дня. */
+            const запасная = momentPlan(сегодняшняя.moments, now, quiet, alarm);
+            итог.moments.push(...запасная.ring);
+            итог.silence.push(...запасная.silence);
         }
 
         const названные = namedHorizon(alarm, now);
         итог.named = названные.ring;
         итог.silence.push(...названные.silence);
+        итог.ok = true;
     } catch (err) {
         console.warn('[напоминания] горизонт не посчитался:', err);
     }

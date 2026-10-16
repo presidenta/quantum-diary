@@ -482,7 +482,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 
 /* Журнал звонков: моноширинный, переносится по символам, прокручивается —
    на телефоне строки длинные, а пересылают его скриншотом. */
-#alarmJournalBox pre {
+#alarmJournalBox pre,
+#alarmListBox pre {
   margin: 8px 0 0; padding: 10px 12px;
   max-height: 240px; overflow: auto;
   border-radius: 10px; background: rgba(255, 255, 255, .04);

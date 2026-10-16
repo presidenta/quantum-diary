@@ -30,7 +30,7 @@ import {
   loadAlarm, saveAlarm, alarmState
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
-import { formatJournal } from './core/alarm-journal.js';
+import { formatJournal, formatPending } from './core/alarm-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
@@ -472,6 +472,7 @@ async function showAlarmPending() {
   $('alarmStep').hidden = true;
   $('alarmDevice').hidden = true;
   $('alarmJournalBox').hidden = true;
+  $('alarmListBox').hidden = true;
   $('alarmAutostart').hidden = true;
   $('alarmAutostartNote').hidden = true;
   if (!isNative()) return;
@@ -608,6 +609,12 @@ async function showAlarmPending() {
     // Само форматирование — в core/alarm-journal.js: там оно под тестами
     $('alarmJournal').textContent = formatJournal(journal);
     $('alarmJournalBox').hidden = false;
+  }
+
+  // Что стоит в системе прямо сейчас — по ключам и часам, а не одним числом
+  if (alarms.length) {
+    $('alarmList').textContent = formatPending(alarms);
+    $('alarmListBox').hidden = false;
   }
 }
 
