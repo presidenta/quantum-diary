@@ -444,16 +444,23 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 
    Поле не required намеренно: пустое время — законное состояние, оно
    значит «работает обычное расписание». */
+/* Подпись СВЕРХУ, поле под ней, а не в одну строку.
+   Прежде подпись была короткой — «Звонить в», — и строка помещалась. С
+   16.10.2026 подписями стоят названия разделов («Окно возможностей —
+   Наблюдатель метавселенной»): в одной строке с полем времени они сжали
+   бы его на узком экране до нечитаемого. Привязку подписи к разделу
+   терять нельзя — в выкладке 111 их уже путали местами. */
 .alarm-at {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-left: 34px;
+  margin-top: 10px;
   font-size: 14px;
   color: var(--ink-2);
 }
-.alarm-at input { flex-grow: 1; max-width: 160px; }
+.alarm-at input { width: 160px; max-width: 100%; }
 #alarmForm label > span::after { content: none; }
 
 /* День */
