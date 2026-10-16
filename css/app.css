@@ -1590,3 +1590,22 @@ body {
   padding: 16px; background: rgba(6, 5, 10, .92); cursor: zoom-out;
 }
 .qm-photo-full img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+
+/* ---- Состояние назначенного звонка --------------------------------------
+   Одним взглядом: зелёная точка — звонок впереди, красная — час уже
+   прошёл. По одному полю времени этого не видно, а человек каждый раз
+   спрашивал, ждать ли сегодня. Точка перед словом, а не вместо него:
+   цвет не читается вслух и не виден дальтонику. */
+.alarm-state {
+  margin: -6px 0 10px 0; font-size: 13px; color: var(--ink-2);
+  display: flex; align-items: center; gap: 7px;
+}
+.alarm-state:empty { display: none; }
+.alarm-state::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ink-2); flex: 0 0 auto;
+}
+.alarm-state.is-ahead::before { background: #5fbf7f; }
+.alarm-state.is-ahead { color: #8fcf8f; }
+.alarm-state.is-passed::before { background: var(--danger); }
+.alarm-state.is-passed { color: var(--danger); }

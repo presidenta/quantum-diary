@@ -579,6 +579,10 @@
       <span data-i18n="alarm.at">Звонить в</span>
       <input name="windowAt" id="alarmWindowAt" type="time">
     </label>
+    <!-- Состояние этого звонка словом и цветом: зелёный — стоит впереди,
+         красный — час прошёл. Иначе по одному полю времени не понять,
+         ждать звонка сегодня или уже нет. -->
+    <p class="alarm-state" id="alarmWindowState" role="status"></p>
     <!-- Вторая галочка отдельно от первой, и это не придирка к удобству.
          Окно возможностей одно на прыжок — ради него будильник и ставят.
          А девять будильников в день подряд названы в разделе 9.2
@@ -592,6 +596,7 @@
       <span data-i18n="alarm.at">Звонить в</span>
       <input name="momentsAt" id="alarmMomentsAt" type="time">
     </label>
+    <p class="alarm-state" id="alarmMomentsState" role="status"></p>
     <p class="muted m0" data-i18n="alarm.momentsNote">Девять будильников в день — это много. Обычно хватает будильника на окно возможностей, а моменты оставляют плашкой.</p>
     <p class="muted m0" id="alarmSummary" role="status"></p>
     <!-- Почему будильник может не сработать: разрешение не выдано или

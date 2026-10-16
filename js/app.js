@@ -433,6 +433,38 @@ function когдаЗвонок(ключ, hhmm) {
   return t(`${ключ}${завтра ? 'Tomorrow' : 'Today'}`, { time: hhmm });
 }
 
+/* СОСТОЯНИЕ КАЖДОГО НАЗНАЧЕННОГО ЧАСА — ЦВЕТОМ И СЛОВОМ.
+
+   По одному полю времени нельзя понять главного: ждать звонка сегодня
+   или он уже прошёл. Человек спрашивал об этом каждый раз, а строка
+   внизу говорила обо всех сразу и терялась.
+
+   Зелёная точка — звонок впереди, красная — час прошёл и звонок уедет на
+   завтра. Точка стоит ПЕРЕД словом, а не вместо него: цвет не прочитать
+   вслух и не разглядеть дальтонику. */
+function showAlarmStates(alarm) {
+  const value = normalizeAlarm(alarm);
+
+  const показать = (полеId, hhmm, включено) => {
+    const поле = $(полеId);
+    поле.className = 'alarm-state';
+
+    if (!включено || !value.on) { поле.textContent = ''; return; }
+    if (!hhmm) { поле.textContent = t('alarm.notSet'); return; }
+
+    const at = atNext(hhmm);
+    const сегодня = at && at.getDate() === new Date().getDate();
+
+    поле.classList.add(сегодня ? 'is-ahead' : 'is-passed');
+    поле.textContent = сегодня
+      ? t('alarm.setFor', { at: hhmm })
+      : t('alarm.passed');
+  };
+
+  показать('alarmWindowState', value.windowAt, true);
+  показать('alarmMomentsState', value.momentsAt, value.moments);
+}
+
 /* ЧТО СЕЙЧАС СТОИТ В СИСТЕМЕ.
 
    Будильник, который промолчал, следов не оставляет: встал он вообще,
@@ -774,6 +806,7 @@ async function boot() {
     $('alarmWindowAt').value = alarm.windowAt;
     $('alarmMomentsAt').value = alarm.momentsAt;
     showAlarmSummary(alarm);
+    showAlarmStates(alarm);
     $('alarmBrowserNote').hidden = isNative();
     await showAlarmTrouble();
     await showAlarmPending();
@@ -782,7 +815,11 @@ async function boot() {
   });
 
   for (const id of ['alarmOn', 'alarmMoments', 'alarmWindowAt', 'alarmMomentsAt']) {
-    $(id).addEventListener('change', () => showAlarmSummary(alarmFromForm()));
+    $(id).addEventListener('change', () => {
+      const текущее = alarmFromForm();
+      showAlarmSummary(текущее);
+      showAlarmStates(текущее);
+    });
   }
 
   /* Отвести за разрешением. Окно не закрываем: человек вернётся из
