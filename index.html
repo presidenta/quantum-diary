@@ -602,18 +602,32 @@
          перепутаны местами, и по такой подписи человек ставит будильник не
          туда. Привязка закреплена проверкой (поломка 4 в замке). Пусто —
          работает обычное расписание. -->
-    <label class="alarm-at">
-      <span data-i18n="alarm.on">Окно возможностей — Наблюдатель метавселенной</span>
-      <input name="windowAt" id="alarmWindowAt" type="time">
-    </label>
+    <!-- КРЕСТИК У КАЖДОГО РАЗДЕЛА, И ОНИ РАЗНЫЕ. Крестик снимает с
+         раздела звонок, но не само напоминание: оно придёт обычной
+         плашкой. Кнопка вынесена ИЗ label нарочно — нажатие внутри него
+         уходило бы полю времени. -->
+    <div class="alarm-section" id="alarmWindowSection">
+      <label class="alarm-at">
+        <span data-i18n="alarm.on">Окно возможностей — Наблюдатель метавселенной</span>
+        <input name="windowAt" id="alarmWindowAt" type="time">
+      </label>
+      <button type="button" class="alarm-off" id="alarmWindowOff" aria-pressed="false"
+              data-i18n-title="alarm.sectionOff" title="Не звонить будильником в этом разделе">×</button>
+      <p class="alarm-off-note muted m0" hidden data-i18n="alarm.sectionOffNote">Этот раздел не звонит будильником — придёт обычное напоминание.</p>
+    </div>
     <!-- Состояние этого звонка словом и цветом: зелёный — стоит впереди,
          красный — час прошёл. Иначе по одному полю времени не понять,
          ждать звонка сегодня или уже нет. -->
     <p class="alarm-state" id="alarmWindowState" role="status"></p>
-    <label class="alarm-at">
-      <span data-i18n="alarm.moments">Девять моментов дня — Архитектор метавселенной</span>
-      <input name="momentsAt" id="alarmMomentsAt" type="time">
-    </label>
+    <div class="alarm-section" id="alarmMomentsSection">
+      <label class="alarm-at">
+        <span data-i18n="alarm.moments">Девять моментов дня — Архитектор метавселенной</span>
+        <input name="momentsAt" id="alarmMomentsAt" type="time">
+      </label>
+      <button type="button" class="alarm-off" id="alarmMomentsOff" aria-pressed="false"
+              data-i18n-title="alarm.sectionOff" title="Не звонить будильником в этом разделе">×</button>
+      <p class="alarm-off-note muted m0" hidden data-i18n="alarm.sectionOffNote">Этот раздел не звонит будильником — придёт обычное напоминание.</p>
+    </div>
     <p class="alarm-state" id="alarmMomentsState" role="status"></p>
     <p class="muted m0" id="alarmSummary" role="status"></p>
     <!-- Почему будильник может не сработать: разрешение не выдано или
@@ -633,6 +647,10 @@
          в приложение не смотрел, — и неделю правили код там, где виноват
          был телефон. Эта строка отвечает на тот самый вопрос. -->
     <p class="gate-msg" id="alarmTrace" hidden role="status"></p>
+    <!-- Где именно оборвалось, если не сработало: разбудили приёмник или
+         нет, дошло ли до плашки, до службы, до звука, до окна. Две разные
+         беды чинятся в разных местах, и без этой строки их не различить. -->
+    <p class="muted m0" id="alarmStep" hidden role="status"></p>
     <button type="button" class="btn" id="alarmTraceFix" hidden
             data-i18n="alarm.traceFix">Открыть настройки и считать заново</button>
     <p class="gate-msg" id="alarmBattery" hidden role="status"></p>

@@ -637,7 +637,7 @@ export async function snooze(key, title, body) {
 export async function pendingAlarms() {
     const пусто = {
         alarms: [], systemNext: 0, batteryUnrestricted: true,
-        missed: 0, missedAt: 0, fired: 0, firedAt: 0
+        missed: 0, missedAt: 0, fired: 0, firedAt: 0, step: '', stepAt: 0
     };
 
     const QA = alarmPlugin();
@@ -667,7 +667,17 @@ export async function pendingAlarms() {
             missed: Number(ответ && ответ.missed) || 0,
             missedAt: Number(ответ && ответ.missedAt) || 0,
             fired: Number(ответ && ответ.fired) || 0,
-            firedAt: Number(ответ && ответ.firedAt) || 0
+            firedAt: Number(ответ && ответ.firedAt) || 0,
+
+            /* ДОКУДА ДОШЛО В ПОСЛЕДНИЙ РАЗ.
+
+               Счётчики выше отвечают «сработало или нет». Если нет —
+               остаётся второй вопрос: приёмник вообще не был разбужен или
+               был, но дальше ничего не произошло? Это две разные беды и
+               чинятся они в разных местах. Строка шага отвечает и на
+               это. */
+            step: (ответ && ответ.step) || '',
+            stepAt: Number(ответ && ответ.stepAt) || 0
         };
     } catch (err) {
         console.error('[reminders] не удалось прочитать поставленные:', err);

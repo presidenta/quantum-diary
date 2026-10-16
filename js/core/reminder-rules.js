@@ -195,6 +195,25 @@ export function normalizeAlarm(raw) {
 
     return {
         on: src.on !== false,
+
+        /* КРЕСТИК У КАЖДОГО РАЗДЕЛА — отдельно у окна возможностей,
+           отдельно у девяти моментов дня. Появились 16.10.2026 по просьбе
+           владельца: «если человек захочет, чтобы были просто напоминания,
+           чтобы будильник не звонил».
+
+           Крестик НЕ отменяет напоминание, а только снимает с него
+           звонок: раздел продолжает напоминать обычной плашкой со звуком
+           уведомления. Отменять напоминание целиком — не то, о чём
+           просили, да и настройка такая уже есть: стереть час.
+
+           Включены оба по умолчанию, и сравнение то же «!== false», что у
+           самого режима: выключает только собственное решение человека.
+           Это и есть урок прежней второй галочки — настройка, о которой
+           надо догадаться, чтобы приложение зазвонило, уже однажды стоила
+           владельцу недели. */
+        windowOn: src.windowOn !== false,
+        momentsOn: src.momentsOn !== false,
+
         windowAt: время(src.windowAt),
         momentsAt: время(src.momentsAt)
     };
@@ -304,9 +323,11 @@ export function ringsAsAlarm(key, alarm) {
     const настройка = normalizeAlarm(alarm);
     if (!настройка.on) return false;
 
-    if (isWindowKey(key)) return true;
-    if (key === KEY_NEXT_MOMENTS) return true;
-    if (String(key).startsWith(KEY_MOMENT)) return true;
+    /* Крестик раздела снимает звонок только со своего раздела.
+       Напоминание при этом остаётся: оно уйдёт обычной плашкой. */
+    if (isWindowKey(key)) return настройка.windowOn;
+    if (key === KEY_NEXT_MOMENTS) return настройка.momentsOn;
+    if (String(key).startsWith(KEY_MOMENT)) return настройка.momentsOn;
 
     // Незнакомый ключ — плашкой. Будильник по ошибке хуже плашки по ошибке
     return false;

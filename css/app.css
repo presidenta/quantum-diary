@@ -461,6 +461,33 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   color: var(--ink-2);
 }
 .alarm-at input { width: 160px; max-width: 100%; }
+
+/* Раздел с крестиком: поле времени и кнопка в строке, объяснение под ними.
+
+   Крестик снимает с раздела звонок, но не напоминание. Поэтому
+   перечёркнутый раздел приглушается, а не прячется: он продолжает
+   работать, просто тише, и человек должен это видеть. */
+.alarm-section { display: grid; grid-template-columns: 1fr auto; align-items: end; }
+.alarm-section .alarm-at { grid-column: 1; }
+.alarm-off {
+  grid-column: 2;
+  min-width: 44px; min-height: 44px;
+  margin-bottom: 2px;
+  border: 1px solid var(--line-strong, #3a3545);
+  border-radius: 12px;
+  background: none;
+  color: var(--ink-2);
+  font-size: 20px; line-height: 1;
+  cursor: pointer;
+}
+.alarm-off[aria-pressed="true"] {
+  background: rgba(211, 157, 60, .18);
+  border-color: rgba(211, 157, 60, .55);
+  color: var(--gold, #d39d3c);
+}
+.alarm-off-note { grid-column: 1 / -1; margin-left: 34px; font-size: 13px; }
+.alarm-section.is-off .alarm-at span { text-decoration: line-through; }
+.alarm-section.is-off .alarm-at input { opacity: .55; }
 #alarmForm label > span::after { content: none; }
 
 /* День */
