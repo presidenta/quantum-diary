@@ -30,6 +30,7 @@ import {
   loadAlarm, saveAlarm, alarmState
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
+import { formatJournal } from './core/alarm-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
@@ -592,16 +593,8 @@ async function showAlarmPending() {
      гадать. Строки нейтральные, без перевода: это журнал для разбора, и
      пересылают его скриншотом. */
   if (journal.length) {
-    const сек = ms => new Intl.DateTimeFormat('ru', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }).format(new Date(ms));
-
-    $('alarmJournal').textContent = journal.map(запись => {
-      const куда = запись.a ? ` → ${сек(запись.a)}` : '';
-      const число = запись.n ? ` ×${запись.n}` : '';
-      return `${сек(запись.t)}  ${запись.e} ${запись.k || ''}${куда}${число}`.trimEnd();
-    }).join('\n');
-
+    // Само форматирование — в core/alarm-journal.js: там оно под тестами
+    $('alarmJournal').textContent = formatJournal(journal);
     $('alarmJournalBox').hidden = false;
   }
 }
