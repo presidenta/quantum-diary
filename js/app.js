@@ -401,60 +401,6 @@ function alarmFromForm() {
   };
 }
 
-/* Итог человеческими словами, под галочкой.
-
-   Одной галочки мало, чтобы человек понял, что именно он включил. Строка
-   называет вслух, что будет звонить и в какой час, — и ошибку видно до
-   сохранения, а не ночью.
-
-   Назначенный час человек через час уже не помнит, поэтому он называется
-   отдельно. Пустое время тоже называется: тишина в этом месте читалась бы
-   как поломка. */
-function showAlarmSummary(alarm) {
-  const box = $('alarmSummary');
-  const value = normalizeAlarm(alarm);
-
-  if (!value.on) { box.textContent = t('alarm.offNote'); return; }
-
-  /* Что делает каждое направление — называется вслух, по одному
-     предложению на каждое. Молчать об этом нельзя: настройка, о которой
-     надо догадаться, чтобы приложение зазвонило, уже однажды стоила
-     владельцу недели. */
-  const части = [
-    t('alarm.sectionLine', {
-      name: t('alarm.windowShort'), mode: t(`alarm.mode.${value.windowMode}`)
-    }),
-    t('alarm.sectionLine', {
-      name: t('alarm.momentsShort'), mode: t(`alarm.mode.${value.momentsMode}`)
-    })
-  ];
-
-  // Час выключенного направления не называется: его нет ни в системе, ни в расчёте дня
-  const часОкна = value.windowMode !== 'off' ? value.windowAt : '';
-  const часМоментов = value.momentsMode !== 'off' ? value.momentsAt : '';
-
-  if (часОкна) части.push(когдаЗвонок('alarm.atWindow', часОкна));
-  if (часМоментов) части.push(когдаЗвонок('alarm.atMoments', часМоментов));
-  if (!часОкна && !часМоментов) части.push(t('alarm.atEmpty'));
-
-  box.textContent = части.join(' ');
-}
-
-/* СЕГОДНЯ ИЛИ ЗАВТРА — и это главное, что здесь надо сказать.
-
-   Час, который уже прошёл, переносится на завтра: это верное поведение,
-   но прежде оно было молчаливым. Человек ставил 12:15, когда на часах
-   12:16, нажимал «Сохранить» — и ждал звонка, которого в этот день уже
-   не будет. Выглядело как поломка будильника. Теперь строка называет
-   день вслух, и ошибку видно сразу, до закрытия окна. */
-function когдаЗвонок(ключ, hhmm) {
-  const at = atNext(hhmm);
-  if (!at) return '';
-
-  const завтра = at.getDate() !== new Date().getDate();
-  return t(`${ключ}${завтра ? 'Tomorrow' : 'Today'}`, { time: hhmm });
-}
-
 /* СОСТОЯНИЕ КАЖДОГО НАЗНАЧЕННОГО ЧАСА — ЦВЕТОМ И СЛОВОМ.
 
    По одному полю времени нельзя понять главного: ждать звонка сегодня
@@ -480,7 +426,7 @@ function showAlarmStates(alarm) {
     поле.classList.add(сегодня ? 'is-ahead' : 'is-passed');
     поле.textContent = сегодня
       ? t('alarm.setFor', { at: hhmm })
-      : t('alarm.passed');
+      : t('alarm.passed', { at: hhmm });
   };
 
   показать('alarmWindowState', value.windowAt, value.windowMode !== 'off');
@@ -612,7 +558,11 @@ async function showAlarmPending() {
      если не сработало: разбудили приёмник или нет, дошло ли до плашки, до
      службы, до звука, до окна. Две разные беды чинятся в разных местах, и
      без этой строки их не различить. */
-  if (step) {
+  /* Страж пишет в то же поле своё («страж на посту», «приложение
+     смахнули, страж ставит звонки заново»), и это не про срабатывание
+     звонка: под строкой «Последнее срабатывание» оно вводило бы в
+     заблуждение. О страже говорят строка о телефоне и журнал. */
+  if (step && !/страж/.test(step)) {
     $('alarmStep').textContent = t('alarm.step', { step, at: час(stepAt) });
     $('alarmStep').hidden = false;
   }
@@ -992,7 +942,6 @@ async function boot() {
       ? t('alarm.quietNote', { from: тихо.from, until: тихо.until })
       : t('alarm.quietOff');
 
-    showAlarmSummary(alarm);
     showAlarmStates(alarm);
     $('alarmBrowserNote').hidden = isNative();
     await showAlarmTrouble();
@@ -1001,11 +950,17 @@ async function boot() {
     $('alarmDialog').showModal();
   });
 
+  /* ВРЕМЕННО: окно «Логи». Убрать вместе с кнопкой #alarmLogs и самим
+     окном в index.html, когда звонки подтвердятся (METHODOLOGY, 9.7). */
+  $('alarmLogs').addEventListener('click', async () => {
+    await showAlarmPending();
+    $('alarmLogDialog').showModal();
+  });
+
   for (const id of ['alarmOn', 'alarmGuard', 'alarmWindowMode', 'alarmMomentsMode',
     'alarmWindowAt', 'alarmMomentsAt']) {
     $(id).addEventListener('change', () => {
       const текущее = alarmFromForm();
-      showAlarmSummary(текущее);
       showAlarmStates(текущее);
     });
   }
@@ -1053,7 +1008,7 @@ async function boot() {
      разрешением, и выглядело бы это как «не помогло». */
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (!$('alarmDialog').open) return;
+    if (!$('alarmDialog').open && !$('alarmLogDialog').open) return;
     showAlarmTrouble().catch(err => console.warn('[будильник]', err.message));
     // И про усыпление тоже: человек мог вернуться именно оттуда
     showAlarmPending().catch(err => console.warn('[будильник]', err.message));

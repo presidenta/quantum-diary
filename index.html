@@ -579,149 +579,112 @@
 
 <dialog id="alarmDialog">
   <form method="dialog" class="sheet" id="alarmForm">
-    <h2 data-i18n="alarm.title">Режим будильника</h2>
-    <p class="muted m0" data-i18n="alarm.hint">Напоминание звонит как будильник: экран включается сам поверх блокировки, звук идёт по громкости будильника и звонит, пока не нажмёшь «Выключить».</p>
-    <!-- ОДНА ГАЛОЧКА, А БЫЛО ДВЕ. Вторая — «и о девяти моментах дня» —
-         была выключена по умолчанию, и именно она 16.10.2026 оставила
-         владельца с беззвучной плашкой: режим включён, час назван, а
-         звонила та галочка, которую он не нашёл. Настройка, о которой надо
-         догадаться, чтобы приложение работало как обещано, — поломка, а не
-         осторожность. Разбор — у normalizeAlarm в js/core/reminder-rules.js. -->
+    <div class="alarm-head">
+      <h2 data-i18n="alarm.title">Режим будильника</h2>
+      <!-- ВРЕМЕННО. Кнопка ведёт в окно с логами и проверками — оно нужно,
+           пока звонки не подтвердятся на разных телефонах, и потом должно
+           уйти целиком (вместе с #alarmLogDialog ниже и обработчиком в
+           app.js). Это записано в docs/METHODOLOGY.md, раздел 9.7. -->
+      <button type="button" class="alarm-logs" id="alarmLogs" data-i18n="alarm.logs">Логи</button>
+    </div>
+
     <label class="quiet-switch">
       <input type="checkbox" name="on" id="alarmOn">
       <span data-i18n="alarm.active">Режим активности: звонить будильником</span>
     </label>
-    <!-- ТИХИЙ ЧАС НАЗВАН ЗДЕСЬ ЖЕ, хотя настраивается рядом, своей
-         кнопкой. Два этих состояния — одна модель: тихий час глушит,
-         режим активности звонит. Человек, включающий будильник, должен
-         тут же видеть, в какие часы тот промолчит, а не искать это в
-         другом окне. -->
     <p class="muted m0" id="alarmQuietNote" role="status"></p>
-    <!-- СТРАЖ. Держит приложение живым, пока есть что звонить. Без него на
-         телефоне владельца звонки не доходили вовсе: проверочный работал,
-         а настоящие нет, и разница была одна — в момент настоящего
-         процесса приложения уже не было. Включён по умолчанию, потому что
-         настройка, о которой надо догадаться, чтобы приложение зазвонило,
-         уже однажды стоила неделю. Цена — постоянное уведомление, и о ней
-         сказано прямо под галочкой. -->
+
+    <!-- СТРАЖ держит приложение живым, пока есть что звонить. Без него на
+         телефоне владельца звонки не доходили: в момент звонка процесса
+         приложения уже не было. Включён по умолчанию. -->
     <label class="quiet-switch">
       <input type="checkbox" name="guard" id="alarmGuard">
-      <span data-i18n="alarm.guard">Страж: держать приложение на посту (постоянное уведомление)</span>
+      <span data-i18n="alarm.guard">Страж: не давать приложению уснуть (уведомление в шторке)</span>
     </label>
-    <p class="muted m0" data-i18n="alarm.guardNote">Без стража телефон может остановить закрытое приложение, и звонок не придёт. Уведомление в шторке — цена надёжности; выключите, если оно мешает.</p>
-    <!-- ДВА НАЗВАННЫХ ЧЕЛОВЕКОМ ЧАСА, и у каждого свой раздел. Названия
-         разделов стоят подписями прямо к полям: в выкладке 111 они были
-         перепутаны местами, и по такой подписи человек ставит будильник не
-         туда. Привязка закреплена проверкой (поломка 4 в замке). Пусто —
-         работает обычное расписание. -->
-    <!-- У КАЖДОГО НАПРАВЛЕНИЯ СВОЙ ВЫБОР ИЗ ТРЁХ, и они независимы:
-         «Будильник» — звонит; «Напоминание» — только обычная плашка, без
-         звонка; «Выключено» — совсем, ни звонка, ни напоминания. Отсюда
-         все сочетания: только Наблюдатель, только Архитектор или оба.
-         Выбор вынесен ИЗ label нарочно — нажатие внутри него уходило бы
-         полю времени. -->
-    <div class="alarm-section" id="alarmWindowSection">
-      <label class="alarm-at">
-        <span data-i18n="alarm.on">Окно возможностей — Наблюдатель метавселенной</span>
-        <input name="windowAt" id="alarmWindowAt" type="time">
-      </label>
-      <select class="alarm-mode" id="alarmWindowMode" data-i18n-title="alarm.modeTitle"
-              title="Что делает это направление">
-        <option value="alarm" data-i18n="alarm.pick.alarm">Будильник</option>
-        <option value="remind" data-i18n="alarm.pick.remind">Напоминание</option>
-        <option value="off" data-i18n="alarm.pick.off">Выключено</option>
-      </select>
-      <p class="alarm-mode-note muted m0" hidden></p>
-    </div>
-    <!-- Состояние этого звонка словом и цветом: зелёный — стоит впереди,
-         красный — час прошёл. Иначе по одному полю времени не понять,
-         ждать звонка сегодня или уже нет. -->
-    <p class="alarm-state" id="alarmWindowState" role="status"></p>
-    <div class="alarm-section" id="alarmMomentsSection">
-      <label class="alarm-at">
-        <span data-i18n="alarm.moments">Девять моментов дня — Архитектор метавселенной</span>
-        <input name="momentsAt" id="alarmMomentsAt" type="time">
-      </label>
-      <select class="alarm-mode" id="alarmMomentsMode" data-i18n-title="alarm.modeTitle"
-              title="Что делает это направление">
-        <option value="alarm" data-i18n="alarm.pick.alarm">Будильник</option>
-        <option value="remind" data-i18n="alarm.pick.remind">Напоминание</option>
-        <option value="off" data-i18n="alarm.pick.off">Выключено</option>
-      </select>
-      <p class="alarm-mode-note muted m0" hidden></p>
-    </div>
-    <p class="alarm-state" id="alarmMomentsState" role="status"></p>
-    <p class="muted m0" id="alarmSummary" role="status"></p>
-    <!-- Почему будильник может не сработать: разрешение не выдано или
-         приложение собрано раньше плагина. Молчать об этом нельзя —
-         человек включил бы настройку и ждал звонка, которого не будет. -->
-    <!-- Что СЕЙЧАС стоит в системе. Без этой строки «не прозвонил»
-         неотличимо от «не был поставлен» и от «телефон снял». -->
-    <p class="muted m0" id="alarmPending" role="status"></p>
-    <!-- Телефон усыпляет приложение — главная причина, по которой
-         поставленный будильник молчит ночью. Снять ограничение может
-         только человек, и окно для этого системное, одинаковое у всех. -->
-    <!-- СРАБОТАЛ ХОТЬ ОДИН ЗВОНОК ИЛИ ВСЕ ПРОМОЛЧАЛИ.
 
-         Строка выше («поставлено звонков») выглядит здоровой всегда:
-         приложение переставляет расписание при каждом открытии. Поэтому
-         по ней нельзя было понять, сработало ли что-нибудь, пока человек
-         в приложение не смотрел, — и неделю правили код там, где виноват
-         был телефон. Эта строка отвечает на тот самый вопрос. -->
-    <p class="gate-msg" id="alarmTrace" hidden role="status"></p>
-    <!-- Где именно оборвалось, если не сработало: разбудили приёмник или
-         нет, дошло ли до плашки, до службы, до звука, до окна. Две разные
-         беды чинятся в разных местах, и без этой строки их не различить. -->
-    <p class="muted m0" id="alarmStep" hidden role="status"></p>
-    <!-- Какой это телефон и жив ли страж. Оболочки производителей
-         останавливают закрытые приложения по-разному, и без этой строки
-         приходится гадать, на чьём телефоне чинишь. -->
-    <p class="muted m0" id="alarmDevice" hidden role="status"></p>
-    <!-- «Автозапуск» — раздел, которого нет в самом Android: его заводят
-         производители оболочек. Кнопка и подсказка видны, только когда
-         звонок промолчал и производитель известен. -->
-    <p class="gate-msg" id="alarmAutostartNote" hidden role="status"></p>
-    <button type="button" class="btn" id="alarmAutostart" hidden
-            data-i18n="alarm.autostart">Открыть «Автозапуск»</button>
-    <!-- Журнал событий по секундам: поставлен, сработал, подстраховка,
-         снят, пропущен, страж встал, приложение смахнули. Для разбора —
-         пересылается скриншотом, поэтому свёрнут и без перевода. -->
-    <details class="alarm-journal" id="alarmJournalBox" hidden>
-      <summary data-i18n="alarm.journal">Журнал звонков (для разбора)</summary>
-      <p class="muted m0" data-i18n="alarm.journalHint">Знаки: «+» поставлен, «✓» сработал, «B» сработала подстраховка, «−» снят, «✗» не удалось поставить, «!» пропущено, «G+» и «G−» страж встал и ушёл, «T» приложение смахнули, «BOOT» и «UPD» перезагрузка и обновление.</p>
-      <pre id="alarmJournal"></pre>
-    </details>
-    <button type="button" class="btn" id="alarmTraceFix" hidden
-            data-i18n="alarm.traceFix">Открыть настройки и считать заново</button>
+    <!-- ДВА НАПРАВЛЕНИЯ, у каждого своё время и свой выбор из трёх. Подпись
+         одна на оба поля (aria-labelledby): привязка названия к разделу
+         закреплена проверкой — в выкладке 111 их уже путали местами. -->
+    <div class="alarm-section" id="alarmWindowSection">
+      <span class="alarm-name" id="alarmWindowName" data-i18n="alarm.on">Окно возможностей — Наблюдатель метавселенной</span>
+      <div class="alarm-row">
+        <input name="windowAt" id="alarmWindowAt" type="time" aria-labelledby="alarmWindowName">
+        <select class="alarm-mode" id="alarmWindowMode" aria-labelledby="alarmWindowName">
+          <option value="alarm" data-i18n="alarm.pick.alarm">Будильник</option>
+          <option value="remind" data-i18n="alarm.pick.remind">Напоминание</option>
+          <option value="off" data-i18n="alarm.pick.off">Выключено</option>
+        </select>
+      </div>
+      <p class="alarm-state" id="alarmWindowState" role="status"></p>
+      <p class="alarm-mode-note muted m0" hidden></p>
+    </div>
+
+    <div class="alarm-section" id="alarmMomentsSection">
+      <span class="alarm-name" id="alarmMomentsName" data-i18n="alarm.moments">Девять моментов дня — Архитектор метавселенной</span>
+      <div class="alarm-row">
+        <input name="momentsAt" id="alarmMomentsAt" type="time" aria-labelledby="alarmMomentsName">
+        <select class="alarm-mode" id="alarmMomentsMode" aria-labelledby="alarmMomentsName">
+          <option value="alarm" data-i18n="alarm.pick.alarm">Будильник</option>
+          <option value="remind" data-i18n="alarm.pick.remind">Напоминание</option>
+          <option value="off" data-i18n="alarm.pick.off">Выключено</option>
+        </select>
+      </div>
+      <p class="alarm-state" id="alarmMomentsState" role="status"></p>
+      <p class="alarm-mode-note muted m0" hidden></p>
+    </div>
+
+    <!-- Проблемы с разрешениями: видны только когда они есть. -->
     <p class="gate-msg" id="alarmBattery" hidden role="status"></p>
     <button type="button" class="btn" id="alarmBatteryFix" hidden
             data-i18n="alarm.batteryFix">Разрешить работу в фоне</button>
     <p class="gate-msg" id="alarmTrouble" hidden role="status"></p>
     <button type="button" class="btn" id="alarmAllow" hidden data-i18n="alarm.allow">Разрешить в настройках телефона</button>
-    <!-- ОКНО ПОВЕРХ ТОГО, ЧЕМ ЧЕЛОВЕК ЗАНЯТ — своя строка, а не общая с
-         полноэкранным разрешением: разрешения разные, лежат в разных
-         местах настроек телефона и отвечают за разное. Полноэкранное — за
-         окно на ЗАБЛОКИРОВАННОМ экране, это — за окно поверх того, что
-         человек делает прямо сейчас. Без него Android показывает плашку
-         вместо окна, и это правило системы, а не поломка. -->
     <p class="gate-msg" id="alarmOverlayMsg" hidden role="status"></p>
     <button type="button" class="btn" id="alarmOverlayFix" hidden
             data-i18n="alarm.overlayFix">Разрешить окно поверх приложений</button>
-    <!-- Проверить будильник иначе нельзя: ближайший настоящий момент может
-         быть через час. Кнопка ставит звонок через десять секунд — успеть
-         заблокировать экран и увидеть, поднимется ли окно поверх блокировки. -->
-    <button type="button" class="btn" id="alarmTest" data-i18n="alarm.test">Проверить звонок</button>
-    <!-- Обычная проверка срабатывает через десять секунд, когда приложение
-         ещё живо, — и потому не повторяет настоящих условий. Эта ставит
-         звонок на две минуты вперёд: успеть закрыть приложение и положить
-         телефон, как это делает человек. Строка следов потом скажет, дошёл
-         ли звонок. -->
-    <button type="button" class="btn" id="alarmTestReal" data-i18n="alarm.testReal">Проверить как настоящий (через 2 минуты)</button>
-    <p class="gate-msg" id="alarmTestMsg" role="status"></p>
     <p class="gate-msg" id="alarmBrowserNote" hidden data-i18n="alarm.browserNote">Будильник бывает только в установленном приложении. В браузере эта настройка ни на что не влияет.</p>
+
     <div class="actions">
       <button value="cancel" formnovalidate class="btn" data-i18n="common.cancel">Отмена</button>
       <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ВРЕМЕННОЕ ОКНО «ЛОГИ». Всё, что нужно для разбора звонков и что
+     загромождало основное окно: что поставлено, счётчики, докуда дошло
+     срабатывание, марка телефона, журнал по секундам и обе проверки.
+     Убрать целиком, когда звонки подтвердятся: удалить это окно, кнопку
+     #alarmLogs выше и обработчик alarmLogs в js/app.js. -->
+<dialog id="alarmLogDialog">
+  <form method="dialog" class="sheet" id="alarmLogForm">
+    <h2 data-i18n="alarm.logsTitle">Логи звонков</h2>
+
+    <p class="muted m0" id="alarmPending" role="status"></p>
+    <p class="gate-msg" id="alarmTrace" hidden role="status"></p>
+    <p class="muted m0" id="alarmStep" hidden role="status"></p>
+    <p class="muted m0" id="alarmDevice" hidden role="status"></p>
+    <p class="gate-msg" id="alarmAutostartNote" hidden role="status"></p>
+    <button type="button" class="btn" id="alarmAutostart" hidden
+            data-i18n="alarm.autostart">Открыть «Автозапуск»</button>
+    <button type="button" class="btn" id="alarmTraceFix" hidden
+            data-i18n="alarm.traceFix">Открыть настройки и считать заново</button>
+
+    <div id="alarmJournalBox" hidden>
+      <p class="muted m0" data-i18n="alarm.journalHint">Знаки: «+» поставлен, «✓» сработал, «B» сработала подстраховка, «−» снят, «✗» не удалось поставить, «!» пропущено, «G+» и «G−» страж встал и ушёл, «T» приложение смахнули, «BOOT» и «UPD» перезагрузка и обновление.</p>
+      <pre id="alarmJournal"></pre>
+    </div>
+
+    <!-- Обычная проверка срабатывает через десять секунд, когда приложение
+         ещё живо, — и потому не повторяет настоящих условий. Вторая ставит
+         звонок на две минуты вперёд: успеть закрыть приложение и положить
+         телефон, как это делает человек. -->
+    <button type="button" class="btn" id="alarmTest" data-i18n="alarm.test">Проверить звонок</button>
+    <button type="button" class="btn" id="alarmTestReal" data-i18n="alarm.testReal">Проверить как настоящий (через 2 минуты)</button>
+    <p class="gate-msg" id="alarmTestMsg" role="status"></p>
+
+    <div class="actions">
+      <button value="close" class="btn" data-i18n="common.close">Закрыть</button>
     </div>
   </form>
 </dialog>

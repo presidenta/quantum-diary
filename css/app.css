@@ -450,45 +450,39 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    Наблюдатель метавселенной»): в одной строке с полем времени они сжали
    бы его на узком экране до нечитаемого. Привязку подписи к разделу
    терять нельзя — в выкладке 111 их уже путали местами. */
-.alarm-at {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  margin-left: 34px;
-  margin-top: 10px;
-  font-size: 14px;
-  color: var(--ink-2);
+.alarm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.alarm-head h2 { margin: 0; }
+/* Временная кнопка: ведёт в окно «Логи», которое потом уйдёт целиком */
+.alarm-logs {
+  padding: 6px 12px; border: 1px solid var(--line-strong, #3a3545); border-radius: 10px;
+  background: none; color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer;
 }
-.alarm-at input { width: 160px; max-width: 100%; }
 
-/* Раздел с крестиком: поле времени и кнопка в строке, объяснение под ними.
-
-   Крестик снимает с раздела звонок, но не напоминание. Поэтому
-   перечёркнутый раздел приглушается, а не прячется: он продолжает
-   работать, просто тише, и человек должен это видеть. */
-.alarm-section { display: grid; grid-template-columns: 1fr auto; align-items: end; }
-.alarm-section .alarm-at { grid-column: 1; }
+/* Направление: подпись, под ней время и выбор в одной строке, ниже
+   одна строка состояния. Раньше здесь стояли отдельные подписи, крестики и
+   по три абзаца пояснений на раздел — окно разрослось до «центра настроек». */
+.alarm-section { display: grid; gap: 6px; margin-top: 14px; }
+.alarm-name { font-size: 14px; color: var(--ink-2); }
+.alarm-row { display: flex; align-items: center; gap: 10px; }
+/* Время уже, чем поле по умолчанию: рядом должно поместиться слово
+   «Будильник» целиком, а не «Будильни». Часы и значок помещаются и в 118. */
+.alarm-row input { flex: 0 0 118px; width: 118px; }
 .alarm-mode {
-  grid-column: 2;
-  min-height: 44px;
-  margin-bottom: 2px;
-  padding: 0 10px;
+  flex: 1 1 auto; min-width: 0; min-height: 44px;
+  padding: 0 6px 0 10px;
   border: 1px solid var(--line-strong, #3a3545);
   border-radius: 12px;
   background: #0b0a0f;
   color: var(--ink);
-  font: inherit;
-  font-size: 14px;
+  font: inherit; font-size: 14px;
 }
-.alarm-mode-note { grid-column: 1 / -1; margin-left: 34px; font-size: 13px; }
-.alarm-section.is-off .alarm-at span { text-decoration: line-through; }
-.alarm-section.is-off .alarm-at input { opacity: .55; }
+.alarm-mode-note { font-size: 13px; }
+.alarm-section.is-off .alarm-name { text-decoration: line-through; }
+.alarm-section.is-off .alarm-row input { opacity: .55; }
 
 /* Журнал звонков: моноширинный, переносится по символам, прокручивается —
    на телефоне строки длинные, а пересылают его скриншотом. */
-.alarm-journal summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
-.alarm-journal pre {
+#alarmJournalBox pre {
   margin: 8px 0 0; padding: 10px 12px;
   max-height: 240px; overflow: auto;
   border-radius: 10px; background: rgba(255, 255, 255, .04);
@@ -1638,8 +1632,8 @@ body {
   /* Прямо под квадратиком с часами, а не под подписью слева: подпись
      относится к этому полю, и стоять она должна при нём. Правый край
      тот же, что у поля времени, — строка читается как его продолжение. */
-  margin: -6px 0 12px 34px; font-size: 13px; color: var(--ink-2);
-  display: flex; align-items: center; justify-content: flex-end; gap: 7px;
+  margin: 0; font-size: 13px; color: var(--ink-2);
+  display: flex; align-items: center; justify-content: flex-start; gap: 7px;
 }
 .alarm-state:empty { display: none; }
 .alarm-state::before {
@@ -1648,5 +1642,7 @@ body {
 }
 .alarm-state.is-ahead::before { background: #5fbf7f; }
 .alarm-state.is-ahead { color: #8fcf8f; }
-.alarm-state.is-passed::before { background: var(--danger); }
-.alarm-state.is-passed { color: var(--danger); }
+/* Прошедший час — не ошибка: звонок просто уехал на завтра. Красным его
+   красить было неверно: человек читал это как поломку. */
+.alarm-state.is-passed::before { background: var(--ink-2); }
+.alarm-state.is-passed { color: var(--ink-2); }
