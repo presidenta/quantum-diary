@@ -521,15 +521,40 @@ export async function snooze(key, title, body) {
    оставляет, и отличить «не поставился» от «телефон снял» нельзя ничем
    другим. */
 export async function pendingAlarms() {
+    const пусто = { alarms: [], systemNext: 0, batteryUnrestricted: true };
+
     const QA = alarmPlugin();
-    if (!QA || typeof QA.pending !== 'function') return [];
+    if (!QA || typeof QA.pending !== 'function') return пусто;
 
     try {
         const ответ = await QA.pending();
-        return Array.isArray(ответ && ответ.alarms) ? ответ.alarms : [];
+        return {
+            alarms: Array.isArray(ответ && ответ.alarms) ? ответ.alarms : [],
+            // Что помнит САМА система, а не мы: ноль при непустом списке
+            // означает, что будильники сняли со стороны
+            systemNext: Number(ответ && ответ.systemNext) || 0,
+            batteryUnrestricted: (ответ && ответ.batteryUnrestricted) !== false
+        };
     } catch (err) {
         console.error('[reminders] не удалось прочитать поставленные:', err);
-        return [];
+        return пусто;
+    }
+}
+
+/* Попросить телефон не усыплять приложение.
+
+   Окно показывает система, ответ даёт человек. Обойти это нельзя и не
+   нужно: разрешение серьёзное, и спрашивать о нём должен сам человек. */
+export async function askBatteryFreedom() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.requestBattery !== 'function') return false;
+
+    try {
+        await QA.requestBattery();
+        return true;
+    } catch (err) {
+        console.error('[reminders] окно про батарею не открылось:', err);
+        return false;
     }
 }
 

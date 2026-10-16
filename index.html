@@ -600,6 +600,12 @@
     <!-- Что СЕЙЧАС стоит в системе. Без этой строки «не прозвонил»
          неотличимо от «не был поставлен» и от «телефон снял». -->
     <p class="muted m0" id="alarmPending" role="status"></p>
+    <!-- Телефон усыпляет приложение — главная причина, по которой
+         поставленный будильник молчит ночью. Снять ограничение может
+         только человек, и окно для этого системное, одинаковое у всех. -->
+    <p class="gate-msg" id="alarmBattery" hidden role="status"></p>
+    <button type="button" class="btn" id="alarmBatteryFix" hidden
+            data-i18n="alarm.batteryFix">Разрешить работу в фоне</button>
     <p class="gate-msg" id="alarmTrouble" hidden role="status"></p>
     <button type="button" class="btn" id="alarmAllow" hidden data-i18n="alarm.allow">Разрешить в настройках телефона</button>
     <!-- Проверить будильник иначе нельзя: ближайший настоящий момент может

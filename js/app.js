@@ -22,7 +22,7 @@ import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
-  takeAlarmTarget, pendingAlarms
+  takeAlarmTarget, pendingAlarms, askBatteryFreedom
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -446,26 +446,47 @@ function когдаЗвонок(ключ, hhmm) {
    решает, куда идти — в код или в настройки телефона. */
 async function showAlarmPending() {
   const поле = $('alarmPending');
+  const батарея = $('alarmBattery');
+  const кнопка = $('alarmBatteryFix');
+
   поле.textContent = '';
+  батарея.hidden = true;
+  кнопка.hidden = true;
   if (!isNative()) return;
 
-  const список = await pendingAlarms();
-  if (!список.length) {
-    поле.textContent = t('alarm.pendingNone');
-    return;
-  }
+  const { alarms, systemNext, batteryUnrestricted } = await pendingAlarms();
 
   const час = at => new Intl.DateTimeFormat('ru', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
   }).format(new Date(at));
 
-  const ближайший = список
-    .filter(x => Number(x.at) > Date.now())
-    .sort((a, b) => a.at - b.at)[0];
+  /* ЧТО ПОМНИТ СИСТЕМА, А НЕ МЫ.
 
-  поле.textContent = ближайший
-    ? t('alarm.pendingNext', { at: час(ближайший.at), n: список.length })
-    : t('alarm.pendingStale', { n: список.length });
+     Своя запись говорит, что мы поставили; система говорит, что она
+     держит. Разошлись — значит будильники сняли со стороны, и это
+     единственный способ такое увидеть. */
+  if (!alarms.length) {
+    поле.textContent = t('alarm.pendingNone');
+  } else if (!systemNext) {
+    поле.textContent = t('alarm.pendingDropped', { n: alarms.length });
+  } else {
+    поле.textContent = t('alarm.pendingNext', { at: час(systemNext), n: alarms.length });
+  }
+
+  /* ГЛАВНАЯ ПРИЧИНА НОЧНОГО МОЛЧАНИЯ.
+
+     Телефон усыпляет приложение ради батареи, и поставленный будильник
+     не срабатывает — звонит, только пока телефон бодрствует. Ровно это
+     и наблюдалось. Снять ограничение может только человек, и попросить
+     его должно само приложение, иначе он никогда не узнает, где искать:
+     путей по чужим настройкам мы не называем, у каждого телефона они
+     свои, а это окно системное и одинаковое у всех. */
+  if (!batteryUnrestricted) {
+    батарея.hidden = false;
+    батарея.className = 'gate-msg is-error';
+    батарея.textContent = t('alarm.batteryNote');
+    кнопка.hidden = false;
+  }
 }
 
 /* Почему будильник может не зазвонить.
@@ -771,6 +792,11 @@ async function boot() {
     await openAlarmSettings();
   });
 
+  // Снять усыпление приложения: окно показывает система, отвечает человек
+  $('alarmBatteryFix').addEventListener('click', async () => {
+    await askBatteryFreedom();
+  });
+
   /* Человек вернулся из настроек телефона — перечитываем состояние.
      Иначе красная строка осталась бы висеть над уже выданным
      разрешением, и выглядело бы это как «не помогло». */
@@ -778,6 +804,8 @@ async function boot() {
     if (document.visibilityState !== 'visible') return;
     if (!$('alarmDialog').open) return;
     showAlarmTrouble().catch(err => console.warn('[будильник]', err.message));
+    // И про усыпление тоже: человек мог вернуться именно оттуда
+    showAlarmPending().catch(err => console.warn('[будильник]', err.message));
   });
 
   /* ПРОВЕРОЧНЫЙ ЗВОНОК.
