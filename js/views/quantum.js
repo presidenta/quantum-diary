@@ -18,7 +18,7 @@ import { localMedia, warmUp } from '../core/media.js';
 import { request } from '../core/net.js';
 /* Системный будильник телефона: расписание моментов меняется отсюда,
    отсюда же его и переставляем. */
-import { planReminders, loadQuiet } from '../reminder-plan.js';
+import { planReminders, loadQuiet, loadAlarm } from '../reminder-plan.js';
 
 let wakeTimer = null;
 let holdTimer = null;
@@ -79,8 +79,34 @@ async function saveQuantumCache() {
    Тихий час входит в расчёт нарочно: он не глушит назначенные моменты, а
    вырезает своё время из окон — значит и времена должны быть другими.
    Поэтому он же входит в зерно: поменял тишину — день пересобрался. */
+/* ЧАС, НАЗНАЧЕННЫЙ ЧЕЛОВЕКОМ ВРУЧНУЮ.
+
+   Он есть в окне «Режим будильника»: своё время у окна возможностей,
+   своё у моментов дня. Для дня важен последний из названных — от него и
+   пляшут остальные моменты: человек только что получил напоминание, и
+   следующее ждёт не через пять минут, а через положенный промежуток.
+
+   Не назвал ни одного — пусто, и день расходится сам, как прежде. */
+async function ruchnoyChas() {
+  try {
+    const alarm = await loadAlarm();
+    if (!alarm || alarm.on !== true) return '';
+
+    const часы = [alarm.windowAt, alarm.moments ? alarm.momentsAt : '']
+      .filter(Boolean)
+      .sort();
+    return часы.length ? часы[часы.length - 1] : '';
+  } catch {
+    return '';
+  }
+}
+
 async function svoyDen() {
-  return localDay(todayKey(), await whoAmI(), await loadQuiet().catch(() => null));
+  return localDay(
+    todayKey(), await whoAmI(),
+    await loadQuiet().catch(() => null),
+    await ruchnoyChas()
+  );
 }
 
 /* Человек поменял тихий час — пересобираем день и переставляем будильник.
@@ -95,7 +121,7 @@ export async function quietChanged() {
      содержимое серверного дня принадлежит серверу, а не нам. */
   state.quantum = state.quantum.offline
     ? await svoyDen()
-    : retime(state.quantum, todayKey(), await whoAmI(), quiet);
+    : retime(state.quantum, todayKey(), await whoAmI(), quiet, await ruchnoyChas());
   renderQuantum();
   saveQuantumCache();
   planReminders().catch(err => console.warn('[напоминания]', err));
@@ -131,7 +157,8 @@ export async function loadQuantum() {
        фразы, картинки, отметки «прожито» — остаётся серверным, меняется
        только час (см. retime). */
     const sday = await api('/api/quantum/today');
-    state.quantum = retime(sday, todayKey(), await whoAmI(), await loadQuiet().catch(() => null));
+    state.quantum = retime(sday, todayKey(), await whoAmI(),
+      await loadQuiet().catch(() => null), await ruchnoyChas());
 
     /* Картинки и звуки дня качаем сразу, пока сеть есть: момент наступит в
        зале или в метро, и тянуть файл в ту секунду будет поздно. Ждать этого

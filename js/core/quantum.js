@@ -270,6 +270,37 @@ export function pickMoments(window, count = PER_WINDOW, gap = MIN_GAP_MINUTES, d
   return times;
 }
 
+/* РУЧНОЙ ЗВОНОК СДВИГАЕТ ВСЕ ПОСЛЕДУЮЩИЕ.
+
+   Человек сам назвал час, когда хочет, чтобы его окликнули. С этого часа
+   день для него начинается заново: прежние времена, расставленные
+   случайно, после него уже не к месту — он только что получил
+   напоминание и следующее ждёт не через пять минут, а через положенный
+   промежуток.
+
+   Поэтому моменты, попадающие после назначенного часа, раскладываются
+   от него и до конца бодрствования. Те, что уже прошли, не трогаем: они
+   либо прожиты, либо упущены, и переписывать прошлое нельзя.
+
+   Ручного часа нет — всё остаётся как было: моменты расходятся по дню
+   сами, случайно, и это обычный порядок. */
+function peredvinut(moments, anchorMinutes, endOfDay, dice) {
+  const prosh = moments.filter(m => toMinutes(m.at) < anchorMinutes);
+  const vperedi = moments.filter(m => toMinutes(m.at) >= anchorMinutes);
+  if (vperedi.length === 0) return moments;
+
+  /* Считаем от названного часа, а не от текущего: человек задал именно
+     его. Первый момент после ручного звонка отстоит на тот же
+     минимальный промежуток, что и все прочие. */
+  const times = pickMoments(
+    { from: anchorMinutes + MIN_GAP_MINUTES, to: Math.max(endOfDay, anchorMinutes + MIN_GAP_MINUTES * vperedi.length) },
+    vperedi.length, MIN_GAP_MINUTES, dice
+  );
+
+  const sdvinutye = vperedi.map((m, i) => ({ ...m, at: hhmm(times[i] % 1440) }));
+  return prosh.concat(sdvinutye).sort((a, b) => a.at.localeCompare(b.at));
+}
+
 /**
  * День, собранный телефоном: аркан и девять моментов.
  * Форма та же, что у серверного дня, — экран не знает разницы.
@@ -279,8 +310,10 @@ export function pickMoments(window, count = PER_WINDOW, gap = MIN_GAP_MINUTES, d
  *                          устройстве получатся разные дни
  * @param {object} [quiet] тихий час {on, from, until}: вырезается из окон,
  *                         и с его изменением день пересчитывается заново
+ * @param {string} [anchorAt] час, назначенный человеком вручную: с него
+ *                            последующие моменты раскладываются заново
  */
-export function localDay(dateKey, person = '', quiet = null) {
+export function localDay(dateKey, person = '', quiet = null, anchorAt = '') {
   /* В зерно идёт не сама запись о тишине, а то, что из неё вышло:
      границы бодрствования. Иначе «с 9:00 до 9:00» (тихо никогда) дало бы
      другой день, чем выключенная тишина, — хотя день тот же самый. */
@@ -301,8 +334,13 @@ export function localDay(dateKey, person = '', quiet = null) {
     }))
   );
 
+  const ручной = toMinutes(anchorAt);
+  const готовые = ручной === null
+    ? moments
+    : peredvinut(moments, ручной, end, dice);
+
   // Пометка для экрана и для нас: день посчитан на месте, сервера не было
-  return { date: dateKey, arcana, moments, offline: true };
+  return { date: dateKey, arcana, moments: готовые, offline: true };
 }
 
 /* Пересчитать времена у готового дня — хоть своего, хоть серверного.
@@ -315,7 +353,7 @@ export function localDay(dateKey, person = '', quiet = null) {
 
    Моменты не создаются и не удаляются: сколько их пришло в каждой фазе,
    столько и остаётся, с теми же именами. Меняется только час. */
-export function retime(day, dateKey, person = '', quiet = null) {
+export function retime(day, dateKey, person = '', quiet = null, anchorAt = '') {
   if (!day || !Array.isArray(day.moments) || day.moments.length === 0) return day;
 
   const { start, end } = awakeSpan(quiet);
@@ -336,5 +374,10 @@ export function retime(day, dateKey, person = '', quiet = null) {
   for (const m of day.moments) if (!known.has(m.slot)) moments.push(m);
 
   moments.sort((a, b) => a.at.localeCompare(b.at));
-  return { ...day, moments };
+
+  const ручной = toMinutes(anchorAt);
+  return {
+    ...day,
+    moments: ручной === null ? moments : peredvinut(moments, ручной, end, dice)
+  };
 }
