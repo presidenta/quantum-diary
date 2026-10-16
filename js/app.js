@@ -29,7 +29,7 @@ import {
   loadAlarm, saveAlarm, alarmState
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
-import { shouldSeed } from './core/sectors.js';
+import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
@@ -678,6 +678,26 @@ async function start() {
       await seedSectors();
     }
   }
+
+  /* СХЛОПНУТЬ ДУБЛИ, НАДЕЛАННЫЕ ПРЕЖДЕ.
+
+     Заготовки починены, но сферы, задвоенные старым засевом, так и лежат
+     на устройстве: на экране «Колесо» они идут парами, по восемнадцать
+     вместо девяти, и руками их не убрать. Само это не рассосётся —
+     чинить надо здесь, один раз при запуске.
+
+     Лишние не стираются, а помечаются удалёнными: их уносит обычная
+     синхронизация, и то же решение доезжает до других устройств.
+     Из пары остаётся та, на которую ссылаются цели, — иначе человек
+     потерял бы их молча (правило целиком в core/sectors.js). */
+  const занятые = new Set(state.index.goals.map(g => g.sectorId).filter(Boolean));
+  const лишние = dedupeSectors(state.index.sectors, занятые);
+  if (лишние.length) {
+    await save('sectors', лишние);
+    await reload();
+    console.info('[сферы] схлопнуто дублей:', лишние.length);
+  }
+
   render();
 
   /* В собранном приложении service worker не нужен и даже вреден: файлы и
