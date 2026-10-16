@@ -4,6 +4,7 @@
 
 import { API_BASE } from './config.js';
 import { state, t, $, h } from './store.js';
+import { isDesktop } from './pc-install.js';
 
 /* ФОТОГРАФИЯ СЖИМАЕТСЯ НА УСТРОЙСТВЕ, И ЭТО НЕ МЕЛОЧЬ.
 
@@ -84,8 +85,11 @@ export function watchInstall(button) {
     && typeof window.Capacitor.isNativePlatform === 'function'
     && window.Capacitor.isNativePlatform());
 
-  button.hidden = inApp;
-  if (inApp) return;
+  /* На компьютере эта кнопка бесполезна: она ведёт на страницу
+     Android-приложения, а apk на ПК не поставить. Её место занимает
+     «Установить на ПК» (js/pc-install.js). */
+  button.hidden = inApp || isDesktop();
+  if (button.hidden) return;
 
   button.addEventListener('click', () => {
     window.open(APP_PAGE, '_blank', 'noopener');
@@ -95,7 +99,9 @@ export function watchInstall(button) {
 /* Открыт ли сайт отдельным окном, без адресной строки.
 
    Раньше по этому признаку прятали кнопку установки. Теперь он остаётся
-   признаком ярлыка, оставшегося с прежних времён: новых таких ярлыков уже
-   не появится — манифеста у страницы нет. */
+   признаком ярлыка, оставшегося с прежних времён: на телефонах новых
+   таких ярлыков не появится — манифеста у страницы нет. На компьютере
+   окно без адресной строки — это уже установленный через «Установить на
+   ПК» «Квант» (js/pc-install.js). */
 export const installed = () =>
   window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;

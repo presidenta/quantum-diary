@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 115;
+const RELEASE = 117;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -10,6 +10,11 @@ const SHELL = [
      списке отдаёт 404, и тогда перестал бы работать весь офлайн. */
   './', 'index.html', 'css/game-tokens.css', 'css/app.css',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
+  /* Манифест для компьютера и его скрипт. Манифеста для телефона в
+     странице по-прежнему нет — этот подключается только настольным
+     браузерам (js/pc-install.js). Оба файла обязаны существовать:
+     addAll падает целиком, если хоть один отдаёт 404. */
+  'manifest-pc.webmanifest', 'js/pc-install.js', 'js/core/pc-install-rules.js',
   'js/app.js', 'js/ios-home.js', 'manifest.webmanifest', 'js/store.js', 'js/db.js', 'js/sync.js', 'js/auth.js', 'js/config.js', 'js/wheel.js', 'js/errors.js', 'js/update.js', 'js/password-eye.js',
   'js/reminder-plan.js',
   'js/views/wheel.js', 'js/views/day.js', 'js/views/quantum.js', 'js/views/quantum-slit.js', 'js/views/money.js', 'js/profile.js',

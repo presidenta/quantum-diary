@@ -25,7 +25,15 @@
      Поэтому установка теперь одна — настоящее приложение со страницы
      /app/. Сайт остаётся сайтом: открывается в браузере, работает без
      сети (service worker никуда не делся), но вторым приложением больше
-     не притворяется. -->
+     не притворяется.
+
+     ИСКЛЮЧЕНИЕ — КОМПЬЮТЕР. Установка отдельным окном нужна и там, а
+     двойника на телефоне допускать нельзя. Поэтому манифест для ПК
+     (manifest-pc.webmanifest) подключает js/pc-install.js — и только
+     настольным браузерам, по правилам core/pc-install-rules.js. Сюда,
+     в HTML, ссылку на манифест возвращать по-прежнему нельзя: её
+     увидит и Chrome на Android. Это закреплено проверкой
+     (test/pc-install.test.js). -->
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <!-- ЗНАЧОК НА ДОМАШНЕМ ЭКРАНЕ iPHONE.
      Ссылки на манифест здесь по-прежнему нет и быть не должно (причина
@@ -46,6 +54,7 @@
      своих цветов не заводит, все правила живут внутри .qm-root -->
 <link rel="stylesheet" href="css/space.css">
 <script type="module" src="js/ios-home.js"></script>
+<script type="module" src="js/pc-install.js"></script>
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -387,6 +396,10 @@
 
     <div class="profile-rows">
       <button type="button" class="btn" id="installApp" hidden data-i18n="profile.install">Установить приложение</button>
+      <!-- Только на компьютере и только если браузер умеет ставить сайт
+           отдельным окном (Chrome, Edge): кнопку показывает
+           js/pc-install.js, когда браузер пришлёт событие. -->
+      <button type="button" class="btn" id="installPc" hidden data-i18n="profile.installPc">Установить на ПК</button>
       <!-- Тихий час стоит среди настроек человека, а не в общих настройках
            приложения: время сна — это про человека, а не про программу. -->
       <button type="button" class="btn" id="quietHours" data-i18n="quiet.open">Тихий час</button>
