@@ -19,7 +19,7 @@ import { request } from '../core/net.js';
 /* Системный будильник телефона: расписание моментов меняется отсюда,
    отсюда же его и переставляем. */
 import { planReminders, loadQuiet, loadAlarm } from '../reminder-plan.js';
-import { anchorHour } from '../core/reminder-rules.js';
+import { anchorHours } from '../core/reminder-rules.js';
 import { DAY_RULE } from '../core/quantum.js';
 
 let wakeTimer = null;
@@ -89,20 +89,21 @@ async function saveQuantumCache() {
 /* ЧАС, НАЗНАЧЕННЫЙ ЧЕЛОВЕКОМ ВРУЧНУЮ.
 
    Он есть в окне «Режим будильника»: своё время у окна возможностей,
-   своё у моментов дня. Для дня важен последний из названных — от него и
-   пляшут остальные моменты: человек только что получил напоминание, и
-   следующее ждёт не через пять минут, а через положенный промежуток.
+   своё у моментов дня. В день уходят оба: каждый выстраивает после себя
+   свою фазу — утренний утро, обеденный день, вечерний вечер, — и
+   следующее напоминание ждёт не через пять минут, а через положенный
+   промежуток.
 
    Не назвал ни одного — пусто, и день расходится сам, как прежде. */
 async function ruchnoyChas() {
   try {
-    /* Считает чистая anchorHour (core/reminder-rules.js). Здесь стояло
+    /* Считает чистая anchorHours (core/reminder-rules.js). Здесь стояло
        `alarm.moments ? alarm.momentsAt : ''` — чтение поля, которого с
        выкладки 116 нет: время «Архитектора» никогда не попадало в расчёт
-       дня. Разбор — у anchorHour. */
-    return anchorHour(await loadAlarm());
+       дня. Разбор — у anchorHours. */
+    return anchorHours(await loadAlarm());
   } catch {
-    return '';
+    return [];
   }
 }
 

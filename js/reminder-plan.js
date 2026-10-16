@@ -28,7 +28,7 @@ import {
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf,
-    guardFrames, guardText, namedHorizon, anchorHour, freshDay, orphanKeys
+    guardFrames, guardText, namedHorizon, anchorHours, freshDay, orphanKeys
 } from './core/reminder-rules.js';
 import { provisionalDay } from './core/quantum.js';
 import { todayKey, addDays } from './core/dates.js';
@@ -388,7 +388,7 @@ async function горизонт(now, quiet, alarm, настоящий) {
         const человек = String((await getMeta('userId').catch(() => '')) || '');
         const сегодня = todayKey(now);
         const завтра = addDays(сегодня, 1);
-        const якорь = anchorHour(alarm);
+        const якорь = anchorHours(alarm);
 
         /* «Завтра» для часов «ЧЧ:ММ» — полдень завтрашнего дня: дата
            важна, а минуты затираются самим atToday. */
