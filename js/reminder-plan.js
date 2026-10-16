@@ -23,7 +23,7 @@
 
 import {
     ensureReady, scheduleReminders, cancelKeys, onReminderAction, isNative,
-    hasAlarmMode, alarmFullScreen
+    hasAlarmMode, alarmFullScreen, alarmOverlay
 } from './core/reminders.js';
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
@@ -61,22 +61,29 @@ export const QUIET_DEFAULT = Object.freeze({
    здесь только подставляются начальные значения этого приложения. */
 export const normalizeQuiet = raw => normalize(raw, QUIET_DEFAULT);
 
-/* РЕЖИМ БУДИЛЬНИКА.
+/* РЕЖИМ АКТИВНОСТИ.
 
-   Напоминание звонит как будильник: экран включается сам поверх
-   блокировки, звук по громкости будильника, звонит, пока не нажмёшь.
-   Разбор — раздел 9.2 методологии, нативная часть — android-alarm-plugin.
+   Напоминание звонит как будильник: окно поверх всех окон, экран
+   включается сам, звук по громкости будильника, звонит, пока не нажмёшь.
+   Разбор — раздел 9.3 методологии, нативная часть — android-alarm-plugin.
 
    Хранится рядом с тихим часом и по той же причине: это свойство
-   телефона, а не учётной записи. Будильник уместен на телефоне у
-   кровати и неуместен на планшете, который лежит на столе.
+   телефона, а не учётной записи. Будильник уместен на телефоне у кровати
+   и неуместен на планшете, который лежит на столе.
 
-   Начальное значение — выключено. Обычные уведомления работают и
-   проверены на телефоне (раздел 9.1); звонок поверх блокировки человек
-   должен включить сам. */
+   НАЧАЛЬНОЕ ЗНАЧЕНИЕ — ВКЛЮЧЕНО, и это перемена от 16.10.2026. Прежде
+   режим был выключен по умолчанию, а о девяти моментах дня звонила ещё и
+   отдельная вторая галочка. Владелец включил режим, назвал час — и
+   получил беззвучную плашку, потому что звонила та галочка, которую он не
+   нашёл.
+
+   От ночного звонка защищает тихий час, он тоже включён по умолчанию (с
+   21 до 6) и в эти часы приходит беззвучная плашка. Защита от звонка —
+   его дело, а не выключенный режим: выключенный режим защищает и днём,
+   когда защищать не от чего. */
 const ALARM_KEY = 'alarmMode';
 
-export const ALARM_DEFAULT = Object.freeze({ on: false, moments: false });
+export const ALARM_DEFAULT = Object.freeze({ on: true });
 
 /** Режим будильника, как его задал человек. */
 export async function loadAlarm() {
@@ -111,10 +118,26 @@ export async function saveAlarm(value) {
  * будильник и дать ему уведомление. */
 export async function alarmState() {
     const plugin = hasAlarmMode();
-    if (!plugin) return { plugin: false, fullScreen: false, askable: false };
+    if (!plugin) {
+        return {
+            plugin: false, fullScreen: false, askable: false,
+            overlay: true, overlayAskable: false
+        };
+    }
 
     const экран = await alarmFullScreen();
-    return { plugin: true, fullScreen: экран.granted, askable: экран.askable };
+    const поверх = await alarmOverlay();
+
+    return {
+        plugin: true,
+        fullScreen: экран.granted,
+        askable: экран.askable,
+        /* Окно поверх того, чем человек занят, — отдельное разрешение и
+           отдельная строка. Валить его в одну с полноэкранным нельзя: они
+           про разное и выдаются в разных местах настроек. */
+        overlay: поверх.granted,
+        overlayAskable: поверх.askable
+    };
 }
 
 /** Тихий час, как его задал человек. */
@@ -256,6 +279,12 @@ export async function planReminders() {
  * приложении один (web/js/core/i18n.js), и человек, переключивший
  * язык, должен увидеть кнопки на своём — включая те, что рисует Java. */
 function разметитьРежим(item, alarm) {
+    /* ТИХИЙ ЧАС СИЛЬНЕЕ РЕЖИМА АКТИВНОСТИ, и проверка стоит первой.
+       Напоминание, попавшее в тишину, не звонит никогда — ни будильником,
+       ни звуком уведомления. Признак quiet несёт его до самого фаcада, а
+       тот пошлёт беззвучным каналом. */
+    if (item.quiet) return item;
+
     if (!ringsAsAlarm(item.key, alarm)) return item;
 
     return {

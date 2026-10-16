@@ -22,7 +22,7 @@ import { initSlit } from './views/quantum-slit.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
-  takeAlarmTarget, pendingAlarms, askBatteryFreedom
+  takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -383,37 +383,31 @@ function showQuietSummary(quiet) {
 function alarmFromForm() {
   return {
     on: $('alarmOn').checked,
-    moments: $('alarmMoments').checked,
     windowAt: $('alarmWindowAt').value,
     momentsAt: $('alarmMomentsAt').value
   };
 }
 
-/* Итог человеческими словами, под галочками.
+/* Итог человеческими словами, под галочкой.
 
-   Двух галочек мало, чтобы человек понял, что именно он включил: «режим
-   будильника» звучит как «теперь всё звонит», а это не так. Строка
-   называет вслух, что будет звонить, а что останется плашкой, — и
-   ошибку видно до сохранения, а не ночью. */
+   Одной галочки мало, чтобы человек понял, что именно он включил. Строка
+   называет вслух, что будет звонить и в какой час, — и ошибку видно до
+   сохранения, а не ночью.
+
+   Назначенный час человек через час уже не помнит, поэтому он называется
+   отдельно. Пустое время тоже называется: тишина в этом месте читалась бы
+   как поломка. */
 function showAlarmSummary(alarm) {
   const box = $('alarmSummary');
   const value = normalizeAlarm(alarm);
 
   if (!value.on) { box.textContent = t('alarm.offNote'); return; }
 
-  /* Сначала что звонит, потом когда. Второе важнее: «режим будильника»
-     звучит как «теперь всё звонит», а назначенный час человек через час
-     уже не помнит — строка называет его вслух. Пустое время тоже
-     называется: тишина в этом месте читалась бы как поломка. */
-  const части = [value.moments ? t('alarm.bothNote') : t('alarm.onNote')];
+  const части = [t('alarm.onNote')];
 
   if (value.windowAt) части.push(когдаЗвонок('alarm.atWindow', value.windowAt));
-  if (value.moments && value.momentsAt) {
-    части.push(когдаЗвонок('alarm.atMoments', value.momentsAt));
-  }
-  if (!value.windowAt && !(value.moments && value.momentsAt)) {
-    части.push(t('alarm.atEmpty'));
-  }
+  if (value.momentsAt) части.push(когдаЗвонок('alarm.atMoments', value.momentsAt));
+  if (!value.windowAt && !value.momentsAt) части.push(t('alarm.atEmpty'));
 
   box.textContent = части.join(' ');
 }
@@ -462,7 +456,8 @@ function showAlarmStates(alarm) {
   };
 
   показать('alarmWindowState', value.windowAt, true);
-  показать('alarmMomentsState', value.momentsAt, value.moments);
+  // Оба часа под одной галочкой: второй больше не ждёт своей
+  показать('alarmMomentsState', value.momentsAt, true);
 }
 
 /* ЧТО СЕЙЧАС СТОИТ В СИСТЕМЕ.
@@ -540,6 +535,8 @@ async function showAlarmTrouble() {
   поле.hidden = true;
   поле.className = 'gate-msg';
   кнопка.hidden = true;
+  $('alarmOverlayMsg').hidden = true;
+  $('alarmOverlayFix').hidden = true;
   $('alarmTest').hidden = !isNative();
   $('alarmTestMsg').textContent = '';
   $('alarmTestMsg').className = 'gate-msg';
@@ -564,6 +561,25 @@ async function showAlarmTrouble() {
     поле.className = 'gate-msg is-error';
     поле.hidden = false;
     кнопка.hidden = !состояние.askable;
+  }
+
+  /* ОКНО ПОВЕРХ ТОГО, ЧЕМ ЧЕЛОВЕК ЗАНЯТ.
+
+     Про это молчать нельзя, и это главное, что приложение должно было
+     сказать и не сказало. Пока человек смотрит в телефон, Android
+     показывает плашку ВМЕСТО окна будильника — таково правило системы, и
+     снимает его только разрешение «Поверх других приложений». Человек же
+     видел всплывшую плашку и делал единственный возможный вывод:
+     приложение сломано.
+
+     Строка стоит отдельно от полноэкранного разрешения: они про разное и
+     выдаются в разных местах настроек телефона. */
+  const окно = $('alarmOverlayMsg');
+  if (!состояние.overlay) {
+    окно.textContent = t('alarm.overlayNote');
+    окно.className = 'gate-msg is-error';
+    окно.hidden = false;
+    $('alarmOverlayFix').hidden = !состояние.overlayAskable;
   }
 }
 
@@ -822,9 +838,16 @@ async function boot() {
   $('alarmMode').addEventListener('click', async () => {
     const alarm = await loadAlarm();
     $('alarmOn').checked = alarm.on;
-    $('alarmMoments').checked = alarm.moments;
     $('alarmWindowAt').value = alarm.windowAt;
     $('alarmMomentsAt').value = alarm.momentsAt;
+
+    /* Тихий час называется здесь же, хотя настраивается рядом. Это одна
+       модель на два окна: тихий час глушит, режим активности звонит. */
+    const тихо = await loadQuiet();
+    $('alarmQuietNote').textContent = тихо.on
+      ? t('alarm.quietNote', { from: тихо.from, until: тихо.until })
+      : t('alarm.quietOff');
+
     showAlarmSummary(alarm);
     showAlarmStates(alarm);
     $('alarmBrowserNote').hidden = isNative();
@@ -834,7 +857,7 @@ async function boot() {
     $('alarmDialog').showModal();
   });
 
-  for (const id of ['alarmOn', 'alarmMoments', 'alarmWindowAt', 'alarmMomentsAt']) {
+  for (const id of ['alarmOn', 'alarmWindowAt', 'alarmMomentsAt']) {
     $(id).addEventListener('change', () => {
       const текущее = alarmFromForm();
       showAlarmSummary(текущее);
@@ -852,6 +875,13 @@ async function boot() {
   // Снять усыпление приложения: окно показывает система, отвечает человек
   $('alarmBatteryFix').addEventListener('click', async () => {
     await askBatteryFreedom();
+  });
+
+  /* Разрешить окно поверх других приложений. Окно выдачи системное,
+     отвечает в нём человек, и обойти его нельзя. Наше окно не закрываем:
+     он вернётся из настроек и должен увидеть ту же настройку. */
+  $('alarmOverlayFix').addEventListener('click', async () => {
+    await openOverlaySettings();
   });
 
   /* Человек вернулся из настроек телефона — перечитываем состояние.
