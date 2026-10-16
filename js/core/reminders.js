@@ -640,7 +640,8 @@ export async function pendingAlarms() {
     const пусто = {
         alarms: [], systemNext: 0, batteryUnrestricted: true,
         missed: 0, missedAt: 0, fired: 0, firedAt: 0, step: '', stepAt: 0,
-        maker: '', model: '', sdk: 0, guardOn: true, guardAt: 0, autostartKnown: false
+        maker: '', model: '', sdk: 0, guardOn: true, guardAt: 0, autostartKnown: false,
+        journal: []
     };
 
     const QA = alarmPlugin();
@@ -690,7 +691,13 @@ export async function pendingAlarms() {
             sdk: Number(ответ && ответ.sdk) || 0,
             guardOn: (ответ && ответ.guardOn) !== false,
             guardAt: Number(ответ && ответ.guardAt) || 0,
-            autostartKnown: !!(ответ && ответ.autostartKnown)
+            autostartKnown: !!(ответ && ответ.autostartKnown),
+
+            /* Что было, по секундам: поставлен, сработал, подстраховка,
+               снят, пропущен, страж встал, приложение смахнули. Счётчики
+               говорят «сколько», а когда звонок промолчал, нужно «что было
+               до этого». */
+            journal: Array.isArray(ответ && ответ.journal) ? ответ.journal : []
         };
     } catch (err) {
         console.error('[reminders] не удалось прочитать поставленные:', err);

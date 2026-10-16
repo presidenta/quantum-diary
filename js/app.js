@@ -390,21 +390,12 @@ function showQuietSummary(quiet) {
 /* ---------- Режим будильника ---------- */
 
 /** Что сейчас стоит в галочках окна. */
-/* Крестик нажат — значит раздел НЕ звонит. aria-pressed несёт это
-   состояние и для программы, и для озвучки экрана: отдельного поля
-   заводить незачем, а состояние кнопки человек слышит вслух. */
-const разделВключён = id => $(id).getAttribute('aria-pressed') !== 'true';
-
-function выставитьКрестик(id, включён) {
-  $(id).setAttribute('aria-pressed', включён ? 'false' : 'true');
-}
-
 function alarmFromForm() {
   return {
     on: $('alarmOn').checked,
     guardOn: $('alarmGuard').checked,
-    windowOn: разделВключён('alarmWindowOff'),
-    momentsOn: разделВключён('alarmMomentsOff'),
+    windowMode: $('alarmWindowMode').value,
+    momentsMode: $('alarmMomentsMode').value,
     windowAt: $('alarmWindowAt').value,
     momentsAt: $('alarmMomentsAt').value
   };
@@ -425,19 +416,26 @@ function showAlarmSummary(alarm) {
 
   if (!value.on) { box.textContent = t('alarm.offNote'); return; }
 
-  /* Что именно звонит — называется вслух, с учётом крестиков. Молчать об
-     этом нельзя: настройка, о которой надо догадаться, чтобы приложение
-     зазвонило, уже однажды стоила владельцу недели. */
-  const какЗвонит = value.windowOn && value.momentsOn ? 'alarm.onNote'
-    : value.windowOn ? 'alarm.onWindowOnly'
-      : value.momentsOn ? 'alarm.onMomentsOnly'
-        : 'alarm.onNothing';
+  /* Что делает каждое направление — называется вслух, по одному
+     предложению на каждое. Молчать об этом нельзя: настройка, о которой
+     надо догадаться, чтобы приложение зазвонило, уже однажды стоила
+     владельцу недели. */
+  const части = [
+    t('alarm.sectionLine', {
+      name: t('alarm.windowShort'), mode: t(`alarm.mode.${value.windowMode}`)
+    }),
+    t('alarm.sectionLine', {
+      name: t('alarm.momentsShort'), mode: t(`alarm.mode.${value.momentsMode}`)
+    })
+  ];
 
-  const части = [t(какЗвонит)];
+  // Час выключенного направления не называется: его нет ни в системе, ни в расчёте дня
+  const часОкна = value.windowMode !== 'off' ? value.windowAt : '';
+  const часМоментов = value.momentsMode !== 'off' ? value.momentsAt : '';
 
-  if (value.windowAt) части.push(когдаЗвонок('alarm.atWindow', value.windowAt));
-  if (value.momentsAt) части.push(когдаЗвонок('alarm.atMoments', value.momentsAt));
-  if (!value.windowAt && !value.momentsAt) части.push(t('alarm.atEmpty'));
+  if (часОкна) части.push(когдаЗвонок('alarm.atWindow', часОкна));
+  if (часМоментов) части.push(когдаЗвонок('alarm.atMoments', часМоментов));
+  if (!часОкна && !часМоментов) части.push(t('alarm.atEmpty'));
 
   box.textContent = части.join(' ');
 }
@@ -485,19 +483,21 @@ function showAlarmStates(alarm) {
       : t('alarm.passed');
   };
 
-  показать('alarmWindowState', value.windowAt, true);
-  // Оба часа под одной галочкой: второй больше не ждёт своей
-  показать('alarmMomentsState', value.momentsAt, true);
+  показать('alarmWindowState', value.windowAt, value.windowMode !== 'off');
+  показать('alarmMomentsState', value.momentsAt, value.momentsMode !== 'off');
 
-  /* Перечёркнутый раздел виден и глазом, а не только по строке итога:
-     приглушается он сам, и под ним появляется объяснение, что теперь
-     будет вместо звонка. */
-  for (const [раздел, включён] of [
-    ['alarmWindowSection', value.windowOn],
-    ['alarmMomentsSection', value.momentsOn]
+  /* Что стоит у направления, видно глазом: выключенное приглушается, а
+     «только напоминание» и «выключено» подписываются словами — чтобы
+     человек не гадал, придёт ли что-нибудь. */
+  for (const [раздел, режим] of [
+    ['alarmWindowSection', value.windowMode],
+    ['alarmMomentsSection', value.momentsMode]
   ]) {
-    $(раздел).classList.toggle('is-off', !включён);
-    $(раздел).querySelector('.alarm-off-note').hidden = включён;
+    $(раздел).classList.toggle('is-off', режим === 'off');
+
+    const заметка = $(раздел).querySelector('.alarm-mode-note');
+    заметка.hidden = режим === 'alarm';
+    заметка.textContent = t(режим === 'off' ? 'alarm.modeOffNote' : 'alarm.modeRemindNote');
   }
 }
 
@@ -524,12 +524,13 @@ async function showAlarmPending() {
   $('alarmTraceFix').hidden = true;
   $('alarmStep').hidden = true;
   $('alarmDevice').hidden = true;
+  $('alarmJournalBox').hidden = true;
   $('alarmAutostart').hidden = true;
   $('alarmAutostartNote').hidden = true;
   if (!isNative()) return;
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
-    step, stepAt, maker, model, sdk, guardOn, guardAt, autostartKnown } = await pendingAlarms();
+    step, stepAt, maker, model, sdk, guardOn, guardAt, autostartKnown, journal } = await pendingAlarms();
 
   const час = at => new Intl.DateTimeFormat('ru', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -631,6 +632,27 @@ async function showAlarmPending() {
 
     $('alarmDevice').textContent = t('alarm.device', { maker, model, sdk, guard: охрана });
     $('alarmDevice').hidden = false;
+  }
+
+  /* ЖУРНАЛ: ЧТО БЫЛО, ПО СЕКУНДАМ.
+
+     Счётчики выше говорят «сколько», а когда звонок промолчал, нужно «что
+     было до этого»: был ли он поставлен вообще и на какой час, не заменили
+     ли его, не смахнули ли приложение, встал ли страж. Без этого оставалось
+     гадать. Строки нейтральные, без перевода: это журнал для разбора, и
+     пересылают его скриншотом. */
+  if (journal.length) {
+    const сек = ms => new Intl.DateTimeFormat('ru', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).format(new Date(ms));
+
+    $('alarmJournal').textContent = journal.map(запись => {
+      const куда = запись.a ? ` → ${сек(запись.a)}` : '';
+      const число = запись.n ? ` ×${запись.n}` : '';
+      return `${сек(запись.t)}  ${запись.e} ${запись.k || ''}${куда}${число}`.trimEnd();
+    }).join('\n');
+
+    $('alarmJournalBox').hidden = false;
   }
 }
 
@@ -958,8 +980,8 @@ async function boot() {
     const alarm = await loadAlarm();
     $('alarmOn').checked = alarm.on;
     $('alarmGuard').checked = alarm.guardOn;
-    выставитьКрестик('alarmWindowOff', alarm.windowOn);
-    выставитьКрестик('alarmMomentsOff', alarm.momentsOn);
+    $('alarmWindowMode').value = alarm.windowMode;
+    $('alarmMomentsMode').value = alarm.momentsMode;
     $('alarmWindowAt').value = alarm.windowAt;
     $('alarmMomentsAt').value = alarm.momentsAt;
 
@@ -979,21 +1001,9 @@ async function boot() {
     $('alarmDialog').showModal();
   });
 
-  for (const id of ['alarmOn', 'alarmGuard', 'alarmWindowAt', 'alarmMomentsAt']) {
+  for (const id of ['alarmOn', 'alarmGuard', 'alarmWindowMode', 'alarmMomentsMode',
+    'alarmWindowAt', 'alarmMomentsAt']) {
     $(id).addEventListener('change', () => {
-      const текущее = alarmFromForm();
-      showAlarmSummary(текущее);
-      showAlarmStates(текущее);
-    });
-  }
-
-  /* КРЕСТИК РАЗДЕЛА. Два отдельных, по одному на раздел: у окна
-     возможностей свой, у девяти моментов дня свой. Сохраняется это, как и
-     всё в окне, только по кнопке «Сохранить» — чтобы случайное нажатие
-     можно было отменить. */
-  for (const id of ['alarmWindowOff', 'alarmMomentsOff']) {
-    $(id).addEventListener('click', () => {
-      выставитьКрестик(id, !разделВключён(id));
       const текущее = alarmFromForm();
       showAlarmSummary(текущее);
       showAlarmStates(текущее);

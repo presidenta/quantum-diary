@@ -19,6 +19,7 @@ import { request } from '../core/net.js';
 /* Системный будильник телефона: расписание моментов меняется отсюда,
    отсюда же его и переставляем. */
 import { planReminders, loadQuiet, loadAlarm } from '../reminder-plan.js';
+import { anchorHour } from '../core/reminder-rules.js';
 
 let wakeTimer = null;
 let holdTimer = null;
@@ -89,13 +90,11 @@ async function saveQuantumCache() {
    Не назвал ни одного — пусто, и день расходится сам, как прежде. */
 async function ruchnoyChas() {
   try {
-    const alarm = await loadAlarm();
-    if (!alarm || alarm.on !== true) return '';
-
-    const часы = [alarm.windowAt, alarm.moments ? alarm.momentsAt : '']
-      .filter(Boolean)
-      .sort();
-    return часы.length ? часы[часы.length - 1] : '';
+    /* Считает чистая anchorHour (core/reminder-rules.js). Здесь стояло
+       `alarm.moments ? alarm.momentsAt : ''` — чтение поля, которого с
+       выкладки 116 нет: время «Архитектора» никогда не попадало в расчёт
+       дня. Разбор — у anchorHour. */
+    return anchorHour(await loadAlarm());
   } catch {
     return '';
   }

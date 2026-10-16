@@ -614,18 +614,24 @@
          перепутаны местами, и по такой подписи человек ставит будильник не
          туда. Привязка закреплена проверкой (поломка 4 в замке). Пусто —
          работает обычное расписание. -->
-    <!-- КРЕСТИК У КАЖДОГО РАЗДЕЛА, И ОНИ РАЗНЫЕ. Крестик снимает с
-         раздела звонок, но не само напоминание: оно придёт обычной
-         плашкой. Кнопка вынесена ИЗ label нарочно — нажатие внутри него
-         уходило бы полю времени. -->
+    <!-- У КАЖДОГО НАПРАВЛЕНИЯ СВОЙ ВЫБОР ИЗ ТРЁХ, и они независимы:
+         «Будильник» — звонит; «Напоминание» — только обычная плашка, без
+         звонка; «Выключено» — совсем, ни звонка, ни напоминания. Отсюда
+         все сочетания: только Наблюдатель, только Архитектор или оба.
+         Выбор вынесен ИЗ label нарочно — нажатие внутри него уходило бы
+         полю времени. -->
     <div class="alarm-section" id="alarmWindowSection">
       <label class="alarm-at">
         <span data-i18n="alarm.on">Окно возможностей — Наблюдатель метавселенной</span>
         <input name="windowAt" id="alarmWindowAt" type="time">
       </label>
-      <button type="button" class="alarm-off" id="alarmWindowOff" aria-pressed="false"
-              data-i18n-title="alarm.sectionOff" title="Не звонить будильником в этом разделе">×</button>
-      <p class="alarm-off-note muted m0" hidden data-i18n="alarm.sectionOffNote">Этот раздел не звонит будильником — придёт обычное напоминание.</p>
+      <select class="alarm-mode" id="alarmWindowMode" data-i18n-title="alarm.modeTitle"
+              title="Что делает это направление">
+        <option value="alarm" data-i18n="alarm.pick.alarm">Будильник</option>
+        <option value="remind" data-i18n="alarm.pick.remind">Напоминание</option>
+        <option value="off" data-i18n="alarm.pick.off">Выключено</option>
+      </select>
+      <p class="alarm-mode-note muted m0" hidden></p>
     </div>
     <!-- Состояние этого звонка словом и цветом: зелёный — стоит впереди,
          красный — час прошёл. Иначе по одному полю времени не понять,
@@ -636,9 +642,13 @@
         <span data-i18n="alarm.moments">Девять моментов дня — Архитектор метавселенной</span>
         <input name="momentsAt" id="alarmMomentsAt" type="time">
       </label>
-      <button type="button" class="alarm-off" id="alarmMomentsOff" aria-pressed="false"
-              data-i18n-title="alarm.sectionOff" title="Не звонить будильником в этом разделе">×</button>
-      <p class="alarm-off-note muted m0" hidden data-i18n="alarm.sectionOffNote">Этот раздел не звонит будильником — придёт обычное напоминание.</p>
+      <select class="alarm-mode" id="alarmMomentsMode" data-i18n-title="alarm.modeTitle"
+              title="Что делает это направление">
+        <option value="alarm" data-i18n="alarm.pick.alarm">Будильник</option>
+        <option value="remind" data-i18n="alarm.pick.remind">Напоминание</option>
+        <option value="off" data-i18n="alarm.pick.off">Выключено</option>
+      </select>
+      <p class="alarm-mode-note muted m0" hidden></p>
     </div>
     <p class="alarm-state" id="alarmMomentsState" role="status"></p>
     <p class="muted m0" id="alarmSummary" role="status"></p>
@@ -673,6 +683,14 @@
     <p class="gate-msg" id="alarmAutostartNote" hidden role="status"></p>
     <button type="button" class="btn" id="alarmAutostart" hidden
             data-i18n="alarm.autostart">Открыть «Автозапуск»</button>
+    <!-- Журнал событий по секундам: поставлен, сработал, подстраховка,
+         снят, пропущен, страж встал, приложение смахнули. Для разбора —
+         пересылается скриншотом, поэтому свёрнут и без перевода. -->
+    <details class="alarm-journal" id="alarmJournalBox" hidden>
+      <summary data-i18n="alarm.journal">Журнал звонков (для разбора)</summary>
+      <p class="muted m0" data-i18n="alarm.journalHint">Знаки: «+» поставлен, «✓» сработал, «B» сработала подстраховка, «−» снят, «✗» не удалось поставить, «!» пропущено, «G+» и «G−» страж встал и ушёл, «T» приложение смахнули, «BOOT» и «UPD» перезагрузка и обновление.</p>
+      <pre id="alarmJournal"></pre>
+    </details>
     <button type="button" class="btn" id="alarmTraceFix" hidden
             data-i18n="alarm.traceFix">Открыть настройки и считать заново</button>
     <p class="gate-msg" id="alarmBattery" hidden role="status"></p>

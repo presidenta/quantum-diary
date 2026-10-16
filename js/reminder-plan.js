@@ -27,7 +27,7 @@ import {
 } from './core/reminders.js';
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
-    normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey
+    normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf
 } from './core/reminder-rules.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
@@ -203,10 +203,14 @@ export async function planReminders() {
         text: t('guard.text')
     });
 
-    const moments = momentPlan(state.quantum?.moments, now, quiet);
+    /* Направление выключено совсем — в план оно не попадает, а его ключи
+       уходят в снятие (momentPlan и windowPlan это делают сами). Режим
+       активности сюда не смотрит: он решает только, звонить ли. */
+    const moments = momentPlan(state.quantum?.moments, now, quiet, alarm);
     const window = windowPlan(lastJumpTime(), now, {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
-        quiet
+        quiet,
+        off: modeOf(KEY_WINDOW, alarm) === 'off'
     });
 
     /* ВРЕМЯ, НАЗНАЧЕННОЕ ЧЕЛОВЕКОМ.
