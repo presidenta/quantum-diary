@@ -25,9 +25,26 @@ export const KEY_MOMENT = 'moment-';
 export const KEY_NEXT_WINDOW = 'alarm-next-window';
 export const KEY_NEXT_MOMENTS = 'alarm-next-moments';
 
+/* КЛЮЧИ СЛЕДУЮЩИХ ДНЕЙ.
+
+   Названный час звонит каждый день, а не один раз (см. namedHorizon): на
+   завтра и послезавтра ставятся копии со своими ключами — тот же ключ с
+   суффиксом «+1», «+2». Свои ключи нужны потому, что у одного ключа в
+   системе один будильник: вторая постановка с тем же ключом заменила бы
+   первую, и звонка на завтра не оказалось бы.
+
+   Для решений «чей это звонок» важен базовый ключ, без суффикса. */
+export function baseKey(key) {
+    const match = /^(alarm-next-(?:window|moments))\+\d+$/.exec(String(key));
+    return match ? match[1] : String(key);
+}
+
 /* Про окно возможностей это напоминание или про момент дня.
    Нужно экрану: по нажатию на уведомление открывается своя вкладка. */
-export const isWindowKey = key => key === KEY_WINDOW || key === KEY_NEXT_WINDOW;
+export const isWindowKey = key => {
+    const base = baseKey(key);
+    return base === KEY_WINDOW || base === KEY_NEXT_WINDOW;
+};
 
 /* Что может делать каждое из двух направлений. См. normalizeAlarm. */
 export const РЕЖИМЫ_РАЗДЕЛА = Object.freeze(['alarm', 'remind', 'off']);
@@ -143,8 +160,13 @@ function underQuiet(at, quiet) {
    CHANNEL_QUIET в web/js/core/reminders.js).
 
    Снимается по-прежнему только то, чего уже нет: погашенное крестиком,
-   прожитое и просроченное. */
-export function momentPlan(moments, now = new Date(), quiet = null, alarm = null) {
+   прожитое и просроченное.
+
+   base — день, к которому относятся часы «ЧЧ:ММ». По умолчанию это сегодня
+   (now), и так работал весь код до выкладки 126. Для заготовки на завтра
+   (см. provisionalDay) сюда передают завтрашнюю дату; «прошло ли» при этом
+   по-прежнему меряется от now. */
+export function momentPlan(moments, now = new Date(), quiet = null, alarm = null, base = now) {
     const ring = [];
     const silence = [];
 
@@ -155,7 +177,7 @@ export function momentPlan(moments, now = new Date(), quiet = null, alarm = null
 
     for (const moment of Array.isArray(moments) ? moments : []) {
         const key = KEY_MOMENT + moment.id;
-        const at = atToday(moment.at, now);
+        const at = atToday(moment.at, base);
 
         if (выключен || isOff(moment) || moment.doneAt || !at || at.getTime() <= now.getTime()) {
             silence.push(key);
@@ -337,11 +359,70 @@ export function nextRingPlan(alarm, now = new Date()) {
     return { ring, silence, keep };
 }
 
+/* НАЗВАННЫЙ ЧАС ЗВОНИТ КАЖДЫЙ ДЕНЬ, А НЕ ОДИН РАЗ.
+
+   nextRingPlan ставит только ближайшее наступление часа. Прозвонил — и в
+   системе пусто до тех пор, пока приложение не откроют и не переставят
+   расписание. «Выключить» на экране будильника приложение не открывает,
+   поэтому на следующий день звонка не было вовсе, и человек решал, что
+   приложение сломано. Для часа, названного «каждый день в 13:00», это
+   поломка, а не особенность.
+
+   Приложение закрытым ставить будильники не умеет, поэтому ставим вперёд:
+   ближайшее наступление уже поставил nextRingPlan, а здесь — копии на
+   следующие days дней под ключами «+1», «+2» (см. baseKey). Открыли
+   приложение — всё переставляется, ключи те же, лишнего не накапливается.
+
+   Горизонт конечный, и это честно: после последней копии звонков нет,
+   пока приложение не откроют. Бесконечно это умеет только нативная часть,
+   но она хрупкая, и трогать её ради этого не стали.
+
+   Ближайшее наступление считается ровно так же, как в nextRingPlan: только
+   что прошедший час (в пределах НЕПРИКОСНОВЕН_МИН) остаётся сегодняшним, и
+   копии отсчитываются от него — иначе завтрашний звонок пропал бы. */
+export const ДНЕЙ_ВПЕРЁД = 2;
+
+export function namedHorizon(alarm, now = new Date(), days = ДНЕЙ_ВПЕРЁД) {
+    const настройка = normalizeAlarm(alarm);
+    const ring = [];
+    const silence = [];
+
+    const один = (key, hhmm, разрешено) => {
+        const ключи = Array.from({ length: days }, (_, i) => `${key}+${i + 1}`);
+        const минуты = minutesOfDay(hhmm);
+
+        // Нет часа или направление выключено — копии надо СНЯТЬ, а не
+        // пропустить: поставленные вчера живут в системе сами по себе
+        if (!разрешено || минуты === null) { silence.push(...ключи); return; }
+
+        const прошло = now.getHours() * 60 + now.getMinutes() - минуты;
+        const первое = прошло >= 0 && прошло <= НЕПРИКОСНОВЕН_МИН
+            ? atToday(hhmm, now)
+            : atNext(hhmm, now);
+        if (!первое) { silence.push(...ключи); return; }
+
+        ключи.forEach((копия, i) => {
+            // setDate, а не +24 часа: на переходе на летнее время сутки не
+            // равны 24 часам, и час звонка уехал бы
+            const at = new Date(первое);
+            at.setDate(at.getDate() + i + 1);
+            ring.push({ key: копия, at });
+        });
+    };
+
+    один(KEY_NEXT_WINDOW, настройка.windowAt,
+        настройка.on && настройка.windowMode !== 'off');
+    один(KEY_NEXT_MOMENTS, настройка.momentsAt,
+        настройка.on && настройка.momentsMode !== 'off');
+
+    return { ring, silence };
+}
+
 /* К какому направлению относится напоминание: 'window' (Наблюдатель),
    'moments' (Архитектор) или null — ключ незнакомый. */
 export function sectionOf(key) {
     if (isWindowKey(key)) return 'window';
-    if (key === KEY_NEXT_MOMENTS || String(key).startsWith(KEY_MOMENT)) return 'moments';
+    if (baseKey(key) === KEY_NEXT_MOMENTS || String(key).startsWith(KEY_MOMENT)) return 'moments';
     return null;
 }
 

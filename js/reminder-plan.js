@@ -28,8 +28,10 @@ import {
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf,
-    guardFrames, guardText
+    guardFrames, guardText, namedHorizon, anchorHour
 } from './core/reminder-rules.js';
+import { provisionalDay } from './core/quantum.js';
+import { todayKey, addDays } from './core/dates.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
 import { CONFIG } from './views/space/config.js';
@@ -204,13 +206,21 @@ export async function planReminders() {
        собирается здесь, на языке человека, а страж лишь выбирает кадр по
        часам — так времена на плашке не могут разойтись с главным экраном,
        и обновляется она, даже когда приложение закрыто. */
-    const кадры = guardFrames(state.quantum?.moments, lastJumpTime(), now, {
-        cooldownMs: CONFIG.timing.jumpCooldownMs,
-        windowMs: CONFIG.timing.opportunityWindowMs,
-        // Выключенное направление времени не имеет — на плашке прочерк
-        architectOn: alarm.momentsMode !== 'off',
-        observerOn: alarm.windowMode !== 'off'
-    }).map(кадр => ({ from: кадр.from, text: guardText(кадр, t) }));
+    /* Текст плашки — украшение, а не работа: ошибка в его расчёте не вправе
+       остановить постановку самих звонков, которая идёт ниже. Без кадров
+       страж обойдётся запасным текстом. */
+    let кадры = [];
+    try {
+        кадры = guardFrames(state.quantum?.moments, lastJumpTime(), now, {
+            cooldownMs: CONFIG.timing.jumpCooldownMs,
+            windowMs: CONFIG.timing.opportunityWindowMs,
+            // Выключенное направление времени не имеет — на плашке прочерк
+            architectOn: alarm.momentsMode !== 'off',
+            observerOn: alarm.windowMode !== 'off'
+        }).map(кадр => ({ from: кадр.from, text: guardText(кадр, t) }));
+    } catch (err) {
+        console.warn('[напоминания] текст плашки не посчитался:', err);
+    }
 
     await setGuard({
         on: alarm.on && alarm.guardOn,
@@ -237,11 +247,16 @@ export async function planReminders() {
        в снятие: стёртое время должно уйти и из системы. */
     const следующие = nextRingPlan(alarm, now);
 
+    /* ГОРИЗОНТ: ЗАВТРАШНИЕ МОМЕНТЫ И ПОВТОР НАЗВАННЫХ ЧАСОВ.
+       Без него в системе лежит только остаток сегодняшнего дня: после
+       последнего момента звонить нечем, пока приложение не откроют. */
+    const впереди = await горизонт(now, quiet, alarm);
+
     /* Сначала снимаем лишнее: прожитые и погашенные моменты, а если окна
        больше нет — и его. Фасад снимает только те ключи, которые ему
        передали на постановку, и про остальные знать не может. */
     const silence = (window ? moments.silence : moments.silence.concat(KEY_WINDOW))
-        .concat(следующие.silence);
+        .concat(следующие.silence, впереди.silence);
     if (silence.length) await cancelKeys(silence);
 
     const totalSec = Math.floor(CONFIG.timing.opportunityWindowMs / 1000);
@@ -252,7 +267,7 @@ export async function planReminders() {
     const поКлючу = new Map(
         (state.quantum?.moments || []).map(m => [KEY_MOMENT + m.id, m]));
 
-    const ring = moments.ring.map(item => ({
+    const ring = moments.ring.concat(впереди.moments).map(item => ({
         ...item,
         title: t('reminder.moment.title'),
         body: t('reminder.moment.body'),
@@ -276,7 +291,7 @@ export async function planReminders() {
     /* Назначенное время — отдельные напоминания со своими ключами. Про
        окно оно или про момент дня, видно по ключу: по нажатию откроется
        та вкладка, куда человека позвали. */
-    for (const item of следующие.ring) {
+    for (const item of следующие.ring.concat(впереди.named)) {
         ring.push(isWindowKey(item.key)
             ? {
                 ...item,
@@ -299,6 +314,63 @@ export async function planReminders() {
 
     if (!ring.length) return false;
     return scheduleReminders(ring.map(item => разметитьРежим(item, alarm)));
+}
+
+/* ГОРИЗОНТ РАСПИСАНИЯ: ЧТО ЗВОНИТ, ПОКА ПРИЛОЖЕНИЕ ЗАКРЫТО.
+ *
+ * Системный будильник умеет только то, что ему поставили заранее, а
+ * закрытое приложение ставить не умеет. Поэтому всё, что должно прозвонить
+ * без открытия приложения, надо положить в систему ДО того, как оно
+ * закроется. Раньше лежал только остаток сегодняшнего дня; к вечеру не
+ * оставалось ничего, и утреннее напоминание не приходило, если накануне
+ * приложение не открыли.
+ *
+ * Здесь два дополнения, оба чисто на стороне веб-слоя:
+ *
+ *   завтрашние моменты — заготовка дня (provisionalDay), посчитанная тем же
+ *       retime, что и экран, поэтому часы те же. Имена у неё свои, и
+ *       когда приложение открыли и пришёл настоящий день, сегодняшнюю
+ *       заготовку снимаем: иначе моменты звонили бы дважды;
+ *   названные часы на ближайшие дни — namedHorizon.
+ *
+ * Ошибка здесь не вправе остановить постановку остального: без горизонта
+ * приложение работает, как работало, — поэтому всё в try.
+ *
+ * @returns {Promise<{moments: Array, named: Array, silence: string[]}>}
+ */
+async function горизонт(now, quiet, alarm) {
+    const итог = { moments: [], named: [], silence: [] };
+
+    try {
+        const человек = String((await getMeta('userId').catch(() => '')) || '');
+        const сегодня = todayKey(now);
+        const завтра = addDays(сегодня, 1);
+        const якорь = anchorHour(alarm);
+
+        /* «Завтра» для часов «ЧЧ:ММ» — полдень завтрашнего дня: дата
+           важна, а минуты затираются самим atToday. */
+        const база = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+        const день = provisionalDay(завтра, человек, quiet, якорь);
+        const план = momentPlan(день.moments, now, quiet, alarm, база);
+        итог.moments = план.ring;
+        итог.silence.push(...план.silence);
+
+        /* Настоящий день сегодня есть — заготовка на него не нужна. Если
+           дня нет вовсе (ещё не загрузился), заготовку не трогаем: снимать
+           её, пока заменить нечем, значило бы остаться без звонков. */
+        if (state.quantum?.moments?.length) {
+            const сегодняшняя = provisionalDay(сегодня, человек, quiet, якорь);
+            итог.silence.push(...сегодняшняя.moments.map(m => KEY_MOMENT + m.id));
+        }
+
+        const названные = namedHorizon(alarm, now);
+        итог.named = названные.ring;
+        итог.silence.push(...названные.silence);
+    } catch (err) {
+        console.warn('[напоминания] горизонт не посчитался:', err);
+    }
+
+    return итог;
 }
 
 /* ЧЕМ ЗВОНИТЬ ЭТОМУ НАПОМИНАНИЮ.
