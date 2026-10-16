@@ -1597,8 +1597,11 @@ body {
    спрашивал, ждать ли сегодня. Точка перед словом, а не вместо него:
    цвет не читается вслух и не виден дальтонику. */
 .alarm-state {
-  margin: -6px 0 10px 0; font-size: 13px; color: var(--ink-2);
-  display: flex; align-items: center; gap: 7px;
+  /* Прямо под квадратиком с часами, а не под подписью слева: подпись
+     относится к этому полю, и стоять она должна при нём. Правый край
+     тот же, что у поля времени, — строка читается как его продолжение. */
+  margin: -6px 0 12px 34px; font-size: 13px; color: var(--ink-2);
+  display: flex; align-items: center; justify-content: flex-end; gap: 7px;
 }
 .alarm-state:empty { display: none; }
 .alarm-state::before {
