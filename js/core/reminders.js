@@ -802,7 +802,7 @@ export async function openAppSettings() {
    часам дня ({from, text}, см. guardFrames в reminder-rules.js), а
    settingsLabel и homeLabel — надписи на двух её кнопках. Нет кадров —
    страж покажет запасной text. */
-export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel }) {
+export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel, widgets }) {
     const QA = alarmPlugin();
     if (!QA || typeof QA.setGuard !== 'function') return false;
 
@@ -813,7 +813,9 @@ export async function setGuard({ on, title, text, frames, settingsLabel, homeLab
             text: text || '',
             frames: Array.isArray(frames) ? frames : [],
             settingsLabel: settingsLabel || '',
-            homeLabel: homeLabel || ''
+            homeLabel: homeLabel || '',
+            // Слова виджетов рабочего стола на языке человека (core/widgets.js, widgetTexts)
+            widgets: widgets && typeof widgets === 'object' ? widgets : {}
         });
         return true;
     } catch (err) {
@@ -846,15 +848,52 @@ export async function offerTile() {
 
    @returns {Promise<boolean>} показала ли система своё окно; false — виджет
             кладут руками, долгим нажатием на рабочем столе */
-export async function offerWidget() {
+export async function offerWidget(format = 'hud') {
     const QA = alarmPlugin();
     if (!QA || typeof QA.offerWidget !== 'function') return false;
 
     try {
-        const ответ = await QA.offerWidget();
+        const ответ = await QA.offerWidget({ format });
         return !!(ответ && ответ.requested);
     } catch (err) {
         console.error('[reminders] просьба о виджете не удалась:', err);
+        return false;
+    }
+}
+
+/* Какие виджеты стоят на рабочем столе и как оформлены (раздел 9.21).
+
+   @returns {Promise<{widgets: {id:number, format:string, style:object}[],
+             defaults: object, canPin: boolean}>} без плагина — пустой ответ */
+export async function widgetList() {
+    const пусто = { widgets: [], defaults: {}, canPin: false };
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.widgetList !== 'function') return пусто;
+
+    try {
+        const ответ = await QA.widgetList();
+        return {
+            widgets: Array.isArray(ответ && ответ.widgets) ? ответ.widgets : [],
+            defaults: (ответ && ответ.defaults) || {},
+            canPin: !!(ответ && ответ.canPin)
+        };
+    } catch (err) {
+        console.error('[reminders] список виджетов не прочитался:', err);
+        return пусто;
+    }
+}
+
+/* Сохранить оформление виджета; id 0 — для новых. Телефон сам перерисует все
+   виджеты. @returns {Promise<boolean>} */
+export async function widgetSave(id, style) {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.widgetSave !== 'function') return false;
+
+    try {
+        await QA.widgetSave({ id: Number(id) || 0, style });
+        return true;
+    } catch (err) {
+        console.error('[reminders] оформление виджета не сохранилось:', err);
         return false;
     }
 }

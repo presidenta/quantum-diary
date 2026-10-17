@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 134;
+const RELEASE = 135;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -17,6 +17,8 @@ const SHELL = [
   'manifest-pc.webmanifest', 'js/pc-install.js', 'js/core/pc-install-rules.js',
   'js/app.js', 'js/ios-home.js', 'manifest.webmanifest', 'js/store.js', 'js/db.js', 'js/sync.js', 'js/auth.js', 'js/config.js', 'js/wheel.js', 'js/errors.js', 'js/update.js', 'js/password-eye.js',
   'js/reminder-plan.js',
+  // Окно «Установить виджет» (раздел 9.21): модуль, его стили и чистые правила с значками
+  'js/widgets-ui.js', 'css/widgets.css', 'js/core/widgets.js', 'js/core/widget-icons.js',
   'js/views/wheel.js', 'js/views/day.js', 'js/views/quantum.js', 'js/views/quantum-slit.js', 'js/views/money.js', 'js/profile.js',
   'css/space.css',
   'js/views/space/index.js', 'js/views/space/app.js', 'js/views/space/config.js',

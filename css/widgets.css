@@ -1,0 +1,210 @@
+/* ============================================================================
+   ВИДЖЕТЫ: ОКНО «УСТАНОВИТЬ ВИДЖЕТ» И ПРЕДПРОСМОТР (раздел 9.21 методологии)
+
+   Предпросмотр рисуется теми же правилами, что настоящий виджет на телефоне
+   (WidgetLook.java и WidgetPaint.java): человек видит в окне то, что получит на
+   столе. Золото берётся ИЗ САЙТА, а не рисуется заново, — по просьбе владельца:
+   подложка — --pult-face-gold (золотая) и --pult-face-dark (чёрная), кромка —
+   --pult-rim, буквы — класс .gold-cut. Остальное — цвета дня, которые в окно
+   передаёт js/widgets-ui.js переменными --wg-*.
+
+   Переменные вида (ставятся на .wg):
+     --wg-accent  цвет дня (рамка, значки, срок Архитектора)
+     --wg-soft    он же светлее (срок Наблюдателя)
+     --wg-fill    цвет заливки у залитых видов
+     --wg-alpha   прозрачность подложки 0…1 (рамка и золотая кромка остаются)
+   Классы: .wg-fill залитый, .wg-gold золото, .wg-graphite графит, .wg-ink тёмный
+   текст на светлой заливке.
+   ========================================================================== */
+
+.wg-block { display: grid; gap: 8px; }
+.wg-modes button { flex: 1; padding-inline: 4px; font-size: 13px; }
+
+/* ---- выбор цвета чакры ---------------------------------------------------- */
+.wg-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.wg-swatch {
+  width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
+  background: var(--sw); border: 2px solid rgba(255, 255, 255, .22);
+}
+.wg-swatch[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px var(--sw); }
+
+/* ---- галерея ---------------------------------------------------------------- */
+.wg-gallery { display: grid; gap: 16px; }
+.wg-item { display: grid; gap: 8px; justify-items: center; }
+.wg-item-name { font-size: 13px; color: var(--muted, #a89fb2); justify-self: start; }
+.wg-item .btn { width: 100%; }
+
+/* ---- сам виджет ------------------------------------------------------------- */
+.wg {
+  --wg-text: #E8ECF4;
+  --wg-dim: rgba(232, 236, 244, .72);
+  --wg-valueA: var(--wg-accent);
+  --wg-valueB: var(--wg-soft);
+  --wg-ico: var(--wg-accent);
+  --wg-bar: var(--wg-accent);
+  --wg-card: rgba(0, 0, 0, .35);
+  --wg-card-line: rgba(255, 255, 255, .13);
+  --wg-btn-fill: color-mix(in srgb, #0A0E1A 78%, var(--wg-accent) 22%);
+  --wg-btn-line: var(--wg-accent);
+  --wg-btn-text: var(--wg-accent);
+  --wg-small-fill: color-mix(in srgb, #0A0E1A 92%, #fff 8%);
+  --wg-small-line: color-mix(in srgb, #0A0E1A 45%, var(--wg-accent) 55%);
+  position: relative; box-sizing: border-box; width: 100%; max-width: 340px;
+  border-radius: 16px; color: var(--wg-text); font-family: var(--sans, system-ui, sans-serif);
+  overflow: hidden; isolation: isolate;
+}
+.wg * { box-sizing: border-box; }
+
+.wg-plate, .wg-rim { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1; }
+.wg-plate {
+  opacity: var(--wg-alpha, 1);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--wg-accent) 28%, transparent), transparent 65%),
+    #0A0E1A;
+}
+.wg-rim {
+  z-index: 0; border: 1.5px solid color-mix(in srgb, var(--wg-accent) 82%, transparent);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--wg-accent) 16%, transparent),
+              0 0 12px color-mix(in srgb, var(--wg-accent) 24%, transparent);
+}
+
+.wg-body { position: relative; z-index: 1; padding: 10px 12px; display: grid; gap: 8px; }
+
+/* графит: спокойный, без неона */
+.wg-graphite .wg-plate { background: #1E2022; }
+.wg-graphite .wg-rim { border-color: rgba(255, 255, 255, .22); box-shadow: none; }
+
+/* залитый вид: цвет дня во всю подложку, сверху блик */
+.wg-fill {
+  --wg-text: #fff; --wg-dim: rgba(255, 255, 255, .8);
+  --wg-valueA: #fff; --wg-valueB: #fff; --wg-ico: #fff; --wg-bar: #fff;
+  --wg-btn-fill: #fff; --wg-btn-line: #fff; --wg-btn-text: var(--wg-fill);
+  --wg-small-fill: color-mix(in srgb, var(--wg-fill) 65%, #000);
+  --wg-small-line: color-mix(in srgb, var(--wg-fill) 65%, #fff 35%);
+}
+.wg-fill .wg-plate {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .25), transparent 55%), var(--wg-fill);
+}
+.wg-fill .wg-rim { border-color: rgba(255, 255, 255, .4); box-shadow: none; }
+
+/* залитый светлым цветом: текст тёмный, кнопка чёрная */
+.wg-fill.wg-ink {
+  --wg-text: #14110A; --wg-dim: rgba(20, 17, 10, .72);
+  --wg-valueA: #14110A; --wg-valueB: #14110A; --wg-ico: #14110A; --wg-bar: #14110A;
+  --wg-card: rgba(255, 255, 255, .28); --wg-card-line: rgba(0, 0, 0, .13);
+  --wg-btn-fill: #14110A; --wg-btn-line: color-mix(in srgb, var(--wg-fill) 65%, #000 35%);
+  --wg-btn-text: var(--wg-fill);
+  --wg-small-fill: color-mix(in srgb, var(--wg-fill) 55%, #fff 45%);
+  --wg-small-line: color-mix(in srgb, var(--wg-fill) 65%, #000 35%);
+}
+.wg-fill.wg-ink .wg-rim { border-color: rgba(0, 0, 0, .25); }
+
+/* ЗОЛОТО САЙТА. Неоновый вид — чёрная пластина, залитый — золотая; кромка — перелив
+   --pult-rim кольцом (маска вырезает середину), как border-box у золотых кнопок. */
+.wg-gold {
+  --wg-text: var(--gold, #E3C77C); --wg-dim: rgba(227, 199, 124, .8);
+  --wg-valueA: var(--gold, #E3C77C); --wg-valueB: var(--gold, #E3C77C);
+  --wg-ico: #F3D375; --wg-bar: #D9A83F;
+  --wg-card: rgba(0, 0, 0, .35); --wg-card-line: rgba(255, 255, 255, .13);
+  --wg-btn-fill: #14110A; --wg-btn-line: #D9A83F; --wg-btn-text: var(--gold, #E3C77C);
+  --wg-small-fill: #1F1B11; --wg-small-line: #C8902C;
+}
+.wg-gold .wg-plate { background: var(--pult-face-dark); }
+.wg-gold.wg-fill .wg-plate { background: var(--pult-face-gold); }
+.wg-gold .wg-rim {
+  border: 2px solid transparent; box-shadow: none;
+  background: var(--pult-rim) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+}
+
+/* ---- общие части ------------------------------------------------------------ */
+.wg-ico { display: inline-grid; width: 16px; height: 16px; color: var(--wg-ico); flex: none; }
+.wg-ico svg { width: 100%; height: 100%; }
+.wg-title {
+  font-family: var(--serif, Georgia, serif); font-weight: 700; font-size: 12px;
+  letter-spacing: .04em; text-transform: uppercase; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wg-head { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.wg-head-end { display: flex; align-items: center; gap: 5px; flex: none; }
+.wg-chip {
+  font: 700 8px var(--sans, sans-serif); letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 9px; color: var(--wg-accent);
+  background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .2);
+}
+.wg-fill .wg-chip, .wg-gold .wg-chip { color: var(--wg-text); }
+.wg-fill.wg-ink .wg-chip { background: rgba(255, 255, 255, .35); border-color: rgba(0, 0, 0, .2); }
+.wg-gear { width: 24px; height: 24px; display: grid; place-items: center; color: var(--wg-ico); }
+.wg-gear .wg-ico { width: 17px; height: 17px; }
+
+.wg-card, .wg-row {
+  background: var(--wg-card); border: 1px solid var(--wg-card-line); border-radius: 12px;
+  padding: 8px 9px; min-width: 0;
+}
+.wg-label {
+  display: flex; align-items: center; gap: 4px; font: 700 8.5px var(--sans, sans-serif);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--wg-dim);
+}
+.wg-label .wg-ico { width: 13px; height: 13px; }
+.wg-value {
+  font-family: var(--serif, Georgia, serif); font-weight: 700; font-size: 15px; margin-top: 2px;
+  text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wg-value small { font-size: .8em; opacity: .85; }
+.wg-value b { font-size: 1.25em; }
+.wg-a .wg-value { color: var(--wg-valueA); }
+.wg-b .wg-value { color: var(--wg-valueB); }
+/* золотые буквы: класс сайта красит их сам, цвет снимаем */
+.wg-gold .wg-value, .wg-gold .wg-title, .wg-gold .wg-label, .wg-gold .wg-btn-text { color: inherit; }
+
+.wg-btns { display: flex; gap: 6px; }
+.wg-btn {
+  flex: 1; min-width: 0; text-align: center; padding: 8px 6px; border-radius: 11px;
+  font: 700 10px var(--sans, sans-serif); letter-spacing: .08em; text-transform: uppercase;
+  background: var(--wg-btn-fill); border: 1px solid var(--wg-btn-line); color: var(--wg-btn-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wg-btn.small { flex: none; padding: 0; width: 32px; height: 32px; display: grid; place-items: center;
+  background: var(--wg-small-fill); border-color: var(--wg-small-line); color: var(--wg-ico); }
+.wg-btn.small .wg-ico { width: 17px; height: 17px; }
+.wg-btn.mark { color: var(--wg-btn-text); }
+/* «Настройки» рядом с главной кнопкой: потише неё, но текст того же цвета */
+.wg-btn.alt { background: var(--wg-small-fill); border-color: var(--wg-small-line); }
+
+/* ---- узкий 4×1 --------------------------------------------------------------- */
+.wg-slim .wg-body { grid-auto-flow: column; align-items: center; gap: 8px; padding: 8px 10px;
+  grid-template-columns: auto 1fr auto auto 1fr auto auto; }
+.wg-slim .wg-ico { width: 20px; height: 20px; }
+.wg-slim .wg-label { font-size: 8px; }
+.wg-slim .wg-value { font-size: 12px; margin-top: 0; }
+.wg-slim .wg-sep { width: 1px; height: 24px; background: color-mix(in srgb, var(--wg-ico) 25%, transparent); }
+.wg-slim .wg-pair { min-width: 0; }
+
+/* ---- карточки: средний, чакровый, залитый горизонтальный ---------------------- */
+.wg-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.wg-week-strip { display: flex; }
+.wg-week-strip span {
+  flex: 1; text-align: center; font: 700 9px var(--sans, sans-serif); padding: 3px 0;
+  border-radius: 9px; opacity: .6;
+}
+.wg-week-strip span.today { opacity: 1; font-size: 10px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .2); }
+
+/* ---- вертикальные ------------------------------------------------------------ */
+.wg-tall, .wg-filltall { max-width: 170px; }
+.wg-tall .wg-body, .wg-filltall .wg-body {
+  padding: 12px; gap: 6px; display: flex; flex-direction: column; min-height: 250px;
+}
+.wg-tall .wg-btns, .wg-filltall .wg-btns { margin-top: auto; }
+.wg-emblem {
+  width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--wg-ico);
+  display: grid; place-items: center; justify-self: center; color: var(--wg-ico);
+}
+.wg-emblem .wg-ico { width: 24px; height: 24px; }
+.wg-tall .wg-title { text-align: center; white-space: normal; }
+.wg-sub { text-align: center; font: 700 8px var(--sans, sans-serif); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--wg-accent); }
+.wg-gold .wg-sub { color: var(--gold, #E3C77C); }
+.wg-row { border-left: 3px solid var(--wg-bar); padding: 6px 8px; }
+.wg-row .wg-label { font-size: 8px; }

@@ -640,17 +640,22 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
    Страж на Java в свёрнутом виде не показывает ничего, кроме заголовка (так
    плашка занимает одну узкую строку), а весь этот текст виден при раскрытии. */
 export function guardText(кадр, translate) {
-    const срок = значение => {
-        if (значение === 'now') return translate('guard.now');
-        if (!значение) return translate('guard.none');
-        return translate('guard.after', { time: значение });
-    };
-
     return [
         translate('guard.lead'),
-        translate('guard.lineArchitect', { architect: срок(кадр.architect) }),
-        translate('guard.lineObserver', { observer: срок(кадр.observer) })
+        translate('guard.lineArchitect', { architect: guardTerm(кадр.architect, translate) }),
+        translate('guard.lineObserver', { observer: guardTerm(кадр.observer, translate) })
     ].join('\n');
+}
+
+/* СРОК ОДНОГО НАПРАВЛЕНИЯ СЛОВАМИ: «после 18:03», «окно открыто» или «—».
+
+   Вынесено из guardText: те же слова нужны виджетам на рабочем столе (раздел
+   9.21), которым срок нужен отдельно от остального текста плашки. Слова берутся
+   из тех же ключей, так что на виджете и на плашке написано одинаково. */
+export function guardTerm(значение, translate) {
+    if (значение === 'now') return translate('guard.now');
+    if (!значение) return translate('guard.none');
+    return translate('guard.after', { time: значение });
 }
 
 /* ДЕНЬ, КОТОРЫЙ ЕЩЁ СЕГОДНЯШНИЙ.

@@ -28,8 +28,9 @@ import {
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf,
-    guardFrames, guardText, namedHorizon, anchorHours, freshDay, orphanKeys
+    guardFrames, guardText, guardTerm, namedHorizon, anchorHours, freshDay, orphanKeys
 } from './core/reminder-rules.js';
+import { widgetTexts } from './core/widgets.js';
 import { provisionalDay } from './core/quantum.js';
 import { todayKey, addDays } from './core/dates.js';
 import { state, t } from './store.js';
@@ -178,6 +179,55 @@ function lastJumpTime() {
     }
 }
 
+/* КАДРЫ ПЛАШКИ НА ОСТАТОК ДНЯ — ОБЩИЕ ДЛЯ ПЛАШКИ, ВИДЖЕТОВ И ОКНА «УСТАНОВИТЬ ВИДЖЕТ».
+
+   Кроме готового текста плашки, в кадре едут сроки двух направлений по отдельности
+   (architect и observer, уже словами: «после 18:03», «окно открыто», «—»): виджетам
+   на рабочем столе нужны две цифры, а не весь текст. Считаются они ровно теми же
+   правилами, что и плашка, поэтому на виджете, в шторке и на главном экране
+   времена совпадают.
+
+   Текст плашки — украшение, а не работа: ошибка в его расчёте не вправе
+   остановить постановку самих звонков. Без кадров нативная часть обойдётся
+   запасным текстом. */
+function guardFramesFor(now, alarm, день) {
+    try {
+        return guardFrames(день?.moments, lastJumpTime(), now, {
+            cooldownMs: CONFIG.timing.jumpCooldownMs,
+            windowMs: CONFIG.timing.opportunityWindowMs,
+            // Выключенное направление времени не имеет — на плашке прочерк
+            architectOn: alarm.momentsMode !== 'off',
+            observerOn: alarm.windowMode !== 'off'
+        }).map(кадр => ({
+            from: кадр.from,
+            text: guardText(кадр, t),
+            architect: guardTerm(кадр.architect, t),
+            observer: guardTerm(кадр.observer, t)
+        }));
+    } catch (err) {
+        console.warn('[напоминания] текст плашки не посчитался:', err);
+        return [];
+    }
+}
+
+/**
+ * Сроки двух направлений на сейчас словами — то, что сейчас написано на плашке и
+ * виджетах. Окно «Установить виджет» показывает ими живой предпросмотр.
+ *
+ * @returns {Promise<{architect: string, observer: string}|null>} null — кадров нет
+ */
+export async function widgetTerms(now = new Date()) {
+    const alarm = await loadAlarm();
+    const день = freshDay(state.quantum, todayKey(now));
+
+    // Тот же выбор, что у AlarmStore.кадрСейчас: последний кадр, чей час уже наступил
+    let выбран = null;
+    for (const кадр of guardFramesFor(now, alarm, день)) {
+        if (!выбран || кадр.from <= now.getTime()) выбран = кадр;
+    }
+    return выбран ? { architect: выбран.architect, observer: выбран.observer } : null;
+}
+
 /**
  * Переставить всё расписание заново.
  *
@@ -216,18 +266,7 @@ export async function planReminders() {
     /* Текст плашки — украшение, а не работа: ошибка в его расчёте не вправе
        остановить постановку самих звонков, которая идёт ниже. Без кадров
        страж обойдётся запасным текстом. */
-    let кадры = [];
-    try {
-        кадры = guardFrames(день?.moments, lastJumpTime(), now, {
-            cooldownMs: CONFIG.timing.jumpCooldownMs,
-            windowMs: CONFIG.timing.opportunityWindowMs,
-            // Выключенное направление времени не имеет — на плашке прочерк
-            architectOn: alarm.momentsMode !== 'off',
-            observerOn: alarm.windowMode !== 'off'
-        }).map(кадр => ({ from: кадр.from, text: guardText(кадр, t) }));
-    } catch (err) {
-        console.warn('[напоминания] текст плашки не посчитался:', err);
-    }
+    const кадры = guardFramesFor(now, alarm, день);
 
     await setGuard({
         on: alarm.on && alarm.guardOn,
@@ -235,7 +274,9 @@ export async function planReminders() {
         text: t('guard.text'),
         frames: кадры,
         settingsLabel: t('guard.settings'),
-        homeLabel: t('guard.home')
+        homeLabel: t('guard.home'),
+        // Слова виджетов рабочего стола: они рисуются, когда приложение закрыто
+        widgets: widgetTexts(t)
     });
 
     /* Направление выключено совсем — в план оно не попадает, а его ключи

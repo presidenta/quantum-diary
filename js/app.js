@@ -19,6 +19,7 @@ import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum, quietChanged } from './views/quantum.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
+import { initWidgets, openWidgets } from './widgets-ui.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
@@ -764,6 +765,8 @@ async function openAlarmDialog() {
  *           время Архитектора, — цифры на плашке и на экране сверяются
  *           глазом.
  *   space — окно возможностей (звонок Наблюдателя).
+ *   widget:<номер> — шестерёнка на виджете рабочего стола: окно «Установить
+ *           виджет» сразу на настройках этого виджета (раздел 9.21).
  *   всё остальное — вкладка «Моменты», как и раньше. */
 async function открытьПоЗвонку() {
   const цель = await takeAlarmTarget();
@@ -771,6 +774,13 @@ async function открытьПоЗвонку() {
 
   if (цель === 'alarm') {
     await openAlarmDialog();
+    return;
+  }
+
+  /* Шестерёнка на виджете рабочего стола: «widget:<номер>». Открываем окно «Установить
+     виджет» сразу на настройках этого виджета. */
+  if (цель === 'widget' || цель.startsWith('widget:')) {
+    await openWidgets(Number(цель.slice('widget:'.length)) || 0);
     return;
   }
 
@@ -950,6 +960,7 @@ async function boot() {
   initQuantum();
   initSpace();
   initSlit();
+  initWidgets();
 
   // Ежедневная проверка прав и «рубильник». Пока ACCESS_ENABLED = false,
   // этот блок не делает ничего: ни запросов, ни блокировок.

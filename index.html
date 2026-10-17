@@ -53,6 +53,8 @@
 <!-- Вторая вкладка «Кванта». Идёт последней: берёт имена из app.css,
      своих цветов не заводит, все правила живут внутри .qm-root -->
 <link rel="stylesheet" href="css/space.css">
+<!-- Окно «Установить виджет»: предпросмотр берёт золото и буквы из app.css -->
+<link rel="stylesheet" href="css/widgets.css">
 <script type="module" src="js/ios-home.js"></script>
 <script type="module" src="js/pc-install.js"></script>
 <script type="module" src="js/app.js"></script>
@@ -407,11 +409,72 @@
            про одно и то же — как именно телефон зовёт человека. Одна о том,
            когда молчать, вторая о том, как звонить. -->
       <button type="button" class="btn" id="alarmMode" data-i18n="alarm.open">Режим будильника</button>
+      <!-- Виджеты рабочего стола — отдельная кнопка в меню профиля, а не в «Логах»
+           (просьба владельца 17.10.2026): там их смотрят, настраивают и ставят. -->
+      <button type="button" class="btn" id="widgetsOpen" data-i18n="profile.widgets">Установить виджет</button>
       <button type="button" class="btn" id="changePassword" hidden data-i18n="password.change">Сменить пароль</button>
       <button type="button" class="btn" id="profileLogout" data-i18n="auth.logout">Выйти</button>
       <button type="button" class="btn danger" id="deleteData" data-i18n="profile.removeApp">Удалить приложение</button>
     </div>
     <p class="muted m0" data-i18n="profile.removeNote">Удаление стирает все записи на этом устройстве. Если вход сохранён на сервере, они вернутся при следующем входе.</p>
+  </div>
+</dialog>
+
+<!-- ОКНО «УСТАНОВИТЬ ВИДЖЕТ» (раздел 9.21).
+
+     Сверху — что настраиваем (новые виджеты или один из стоящих на столе), цвет,
+     прозрачность и надписи; ниже — все шесть видов с живым предпросмотром и кнопкой
+     «Установить». Наполняет окно js/widgets-ui.js: здесь только каркас. -->
+<dialog id="widgetsDialog">
+  <div class="sheet">
+    <div class="sheet-head">
+      <button type="button" class="icon-btn plain back-btn" id="widgetsBack" aria-label="Назад">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      </button>
+      <h2 data-i18n="widgets.title">Виджеты</h2>
+    </div>
+    <p class="muted m0" data-i18n="widgets.intro">Выберите вид, настройте цвет и надписи — и положите виджет на рабочий стол. Сроки на нём те же, что на плашке в шторке.</p>
+    <p class="gate-msg" id="widgetsBrowserNote" hidden data-i18n="widgets.browserOnly">Виджеты ставятся только в приложении на телефоне. Здесь можно посмотреть, как они выглядят.</p>
+
+    <label>
+      <span data-i18n="widgets.target">Что настраиваем</span>
+      <select id="widgetsTarget"></select>
+    </label>
+
+    <div class="wg-block">
+      <span class="muted" data-i18n="widgets.color">Цвет</span>
+      <div class="segmented wg-modes" id="widgetsModes" role="group">
+        <button type="button" data-mode="auto" aria-pressed="true" data-i18n="widgets.mode.auto">Авто по дням</button>
+        <button type="button" data-mode="chakra" aria-pressed="false" data-i18n="widgets.mode.chakra">Цвет чакры</button>
+        <button type="button" data-mode="gold" aria-pressed="false" data-i18n="widgets.mode.gold">Золото</button>
+        <button type="button" data-mode="graphite" aria-pressed="false" data-i18n="widgets.mode.graphite">Графит</button>
+      </div>
+      <div class="wg-swatches" id="widgetsSwatches" hidden></div>
+      <p class="muted m0" id="widgetsModeNote"></p>
+    </div>
+
+    <label>
+      <span id="widgetsAlphaLabel"></span>
+      <input type="range" id="widgetsAlpha" min="0" max="100" step="5" value="88">
+    </label>
+
+    <div class="wg-block">
+      <span class="muted" data-i18n="widgets.texts">Надписи</span>
+      <label><span data-i18n="widgets.field.title">Заголовок</span><input type="text" id="widgetsTitle" maxlength="40"></label>
+      <label><span data-i18n="widgets.field.subtitle">Подзаголовок</span><input type="text" id="widgetsSubtitle" maxlength="40"></label>
+      <label><span data-i18n="widgets.field.architect">Подпись Архитектора</span><input type="text" id="widgetsArchitect" maxlength="40"></label>
+      <label><span data-i18n="widgets.field.observer">Подпись Наблюдателя</span><input type="text" id="widgetsObserver" maxlength="40"></label>
+      <button type="button" class="btn" id="widgetsReset" data-i18n="widgets.reset">Вернуть стандартные надписи</button>
+    </div>
+
+    <div class="wg-block">
+      <span class="muted" data-i18n="widgets.catalog">Виды виджетов</span>
+      <div class="wg-gallery" id="widgetsGallery"></div>
+    </div>
+
+    <p class="gate-msg" id="widgetsMsg" hidden role="status"></p>
+    <p class="muted m0" data-i18n="widgets.manual">Если окно не открылось: долгое нажатие на рабочем столе → «Виджеты» → «Квант» → нужный вид.</p>
+    <div class="actions"><button type="button" class="btn primary" id="widgetsDone"><span class="gold-cut" data-i18n="widgets.close">Готово</span></button></div>
   </div>
 </dialog>
 
