@@ -822,6 +822,43 @@ export async function setGuard({ on, title, text, frames, settingsLabel, homeLab
     }
 }
 
+/* Просьба к системе добавить плитку «Квант» в шторку (Android 13+: окно с кнопкой
+   «Добавить»). Плитка — один из путей, которыми система сама поднимает приложение
+   после того, как прошивка его закрыла (AlarmRevive, раздел 9.20).
+
+   @returns {Promise<number>} 0 — не добавлена, 1 — уже была, 2 — добавлена;
+            отрицательное — система не умеет (-100) или не ответила (-101) */
+export async function offerTile() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.offerTile !== 'function') return -100;
+
+    try {
+        const ответ = await QA.offerTile();
+        const код = Number(ответ && ответ.code);
+        return Number.isFinite(код) ? код : -101;
+    } catch (err) {
+        console.error('[reminders] просьба о плитке не удалась:', err);
+        return -101;
+    }
+}
+
+/* Просьба положить виджет на рабочий стол (Android 8+, если лаунчер умеет).
+
+   @returns {Promise<boolean>} показала ли система своё окно; false — виджет
+            кладут руками, долгим нажатием на рабочем столе */
+export async function offerWidget() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.offerWidget !== 'function') return false;
+
+    try {
+        const ответ = await QA.offerWidget();
+        return !!(ответ && ответ.requested);
+    } catch (err) {
+        console.error('[reminders] просьба о виджете не удалась:', err);
+        return false;
+    }
+}
+
 /* Отчёт «Квант против To Do»: что объявлено в манифестах обоих приложений и
    чьи на телефоне менеджеры питания. Текст собирает нативная часть
    (AlarmProbe), здесь только вызов.

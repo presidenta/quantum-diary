@@ -23,7 +23,8 @@ import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
   takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings,
-  forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget, probePhone, shareText
+  forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget, probePhone, shareText,
+  offerTile, offerWidget
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -472,6 +473,10 @@ async function showAlarmPending() {
   $('alarmProbe').hidden = true;
   $('alarmProbeOut').hidden = true;
   $('alarmProbeShare').hidden = true;
+  $('alarmReviveNote').hidden = true;
+  $('alarmTileAdd').hidden = true;
+  $('alarmWidgetAdd').hidden = true;
+  $('alarmReviveMsg').hidden = true;
   $('alarmStep').hidden = true;
   $('alarmDevice').hidden = true;
   $('alarmJournalBox').hidden = true;
@@ -480,8 +485,11 @@ async function showAlarmPending() {
   $('alarmAutostartNote').hidden = true;
   if (!isNative()) return;
 
-  // Отчёт про To Do есть только в приложении: в браузере читать нечего
+  // Отчёт про To Do и пути возврата есть только в приложении: в браузере им нечего делать
   $('alarmProbe').hidden = false;
+  $('alarmReviveNote').hidden = false;
+  $('alarmTileAdd').hidden = false;
+  $('alarmWidgetAdd').hidden = false;
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
@@ -1085,6 +1093,27 @@ async function boot() {
 
   $('alarmProbeShare').addEventListener('click', async () => {
     await shareText($('alarmProbeOut').textContent);
+  });
+
+  /* Плитка и виджет — пути возврата после закрытия приложения прошивкой.
+     Журнал и следы НЕ забываем: это просьба к системе, а не правка настроек. */
+  const сказатьОВозврате = ключ => {
+    const поле = $('alarmReviveMsg');
+    поле.textContent = t(ключ);
+    поле.hidden = false;
+  };
+
+  $('alarmTileAdd').addEventListener('click', async () => {
+    const код = await offerTile();
+    if (код === 2) сказатьОВозврате('alarm.tileAdded');
+    else if (код === 1) сказатьОВозврате('alarm.tileHave');
+    else if (код === 0) сказатьОВозврате('alarm.tileNo');
+    else сказатьОВозврате('alarm.tileManual');
+  });
+
+  $('alarmWidgetAdd').addEventListener('click', async () => {
+    const показано = await offerWidget();
+    сказатьОВозврате(показано ? 'alarm.widgetAsked' : 'alarm.widgetManual');
   });
 
   // «Автозапуск»: отсчёт заново, как и у настроек приложения выше
