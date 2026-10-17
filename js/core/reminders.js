@@ -505,6 +505,9 @@ async function поставитьБудильники(items) {
            открывает вкладку: «space» или «moments». */
         openLabel: item.openLabel || '',
         openTarget: item.openTarget || '',
+        /* До какого часа звонок ещё годится, если приложение разбудят позже срока:
+           нативная часть звонит опоздавшему, пока этот час не вышел (раздел 9.23). */
+        lateUntil: Number(item.lateUntil) || 0,
         snoozeLeft: snoozeLeft(item.key)
     }));
 

@@ -27,7 +27,7 @@ import {
 } from './core/reminders.js';
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
-    normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf,
+    normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf, lateUntil,
     guardFrames, guardText, guardTerm, namedHorizon, anchorHours, freshDay, orphanKeys
 } from './core/reminder-rules.js';
 import { widgetTexts } from './core/widgets.js';
@@ -366,7 +366,13 @@ export async function planReminders() {
     if (впереди.ok) await убратьЛишние(ring, now);
 
     if (!ring.length) return false;
-    return scheduleReminders(ring.map(item => разметитьРежим(item, alarm)));
+
+    /* ГОДЕН ДО. Каждому напоминанию — час, до которого оно ещё годится, если телефон
+       разбудит приложение позже срока (lateUntil в reminder-rules.js). Нативная часть
+       хранит его вместе со звонком и по нему решает: опоздавший звонит, а не
+       записывается «не дошёл». */
+    return scheduleReminders(ring.map(item => разметитьРежим(
+        { ...item, lateUntil: lateUntil(item, CONFIG.timing.opportunityWindowMs, quiet) }, alarm)));
 }
 
 /* ЛИШНИЕ ЗВОНКИ: В СИСТЕМЕ ЕСТЬ, В РАСПИСАНИИ НЕТ.
