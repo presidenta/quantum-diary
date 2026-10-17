@@ -5,7 +5,8 @@
    (WidgetLook.java и WidgetPaint.java): человек видит в окне то, что получит на
    столе. Золото берётся ИЗ САЙТА, а не рисуется заново, — по просьбе владельца:
    подложка — --pult-face-gold (золотая) и --pult-face-dark (чёрная), кромка —
-   --pult-rim, буквы — класс .gold-cut. Остальное — цвета дня, которые в окно
+   --pult-rim; буквы — обычный текст цвета --gold, как на телефоне (выкладка 144).
+   Остальное — цвета дня, которые в окно
    передаёт js/widgets-ui.js переменными --wg-*.
 
    Переменные вида (ставятся на .wg):
@@ -114,6 +115,12 @@
   --wg-small-fill: #1F1B11; --wg-small-line: #C8902C; --wg-small-text: var(--gold, #E3C77C);
 }
 .wg-gold .wg-plate { background: var(--pult-face-dark); }
+/* Залитое золото: буквы тёмные, как у светлых чакр (выкладка 144) — золото на золоте не читается */
+.wg-gold.wg-fill {
+  --wg-text: #14110A; --wg-dim: rgba(20, 17, 10, .72);
+  --wg-valueA: #14110A; --wg-valueB: #14110A; --wg-ico: #14110A; --wg-bar: #14110A;
+  --wg-card: rgba(255, 255, 255, .28); --wg-card-line: rgba(0, 0, 0, .13);
+}
 .wg-gold.wg-fill .wg-plate { background: var(--pult-face-gold); }
 .wg-gold .wg-rim {
   border: 2px solid transparent; box-shadow: none;
@@ -160,8 +167,6 @@
 .wg-value b { font-size: 1.25em; }
 .wg-a .wg-value { color: var(--wg-valueA); }
 .wg-b .wg-value { color: var(--wg-valueB); }
-/* золотые буквы: класс сайта красит их сам, цвет снимаем */
-.wg-gold .wg-value, .wg-gold .wg-title, .wg-gold .wg-label, .wg-gold .wg-btn-text { color: inherit; }
 
 .wg-btns { display: flex; gap: 6px; }
 .wg-btn {

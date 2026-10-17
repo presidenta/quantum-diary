@@ -7,8 +7,9 @@
 
    ГДЕ ЧТО. Цвета, золото и правила цвета дня — core/widgets.js; рисует виджет на
    телефоне Java (WidgetRender), а здесь — его копия в HTML, чтобы человек видел
-   результат до установки. Золото в копии берётся классами сайта (--pult-face-gold,
-   --pult-rim, .gold-cut), а не рисуется заново: см. css/widgets.css.
+   результат до установки. Золотые пластина и кромка в копии — классы сайта
+   (--pult-face-gold, --pult-rim), а не рисуются заново: см. css/widgets.css. Буквы в
+   золоте — обычный текст цвета --gold, как на телефоне (выкладка 144).
 
    СОХРАНЕНИЕ. Любая правка уходит на телефон сразу (с короткой паузой, пока человек
    двигает ползунок или печатает) и перерисовывает стоящие виджеты. «Для новых» —
@@ -97,8 +98,6 @@ function предпросмотр(формат, стиль, дата) {
     const look = resolveLook(стиль, дата);
     const слово = слова(стиль, формат.key, look);
     const золото = look.gold;
-    // Золотые буквы — класс сайта; у остальных обычный текст
-    const буквы = html => золото ? `<span class="gold-cut">${html}</span>` : html;
 
     const alpha = (стиль.alpha ?? (формат.fill ? DEFAULT_ALPHA.fill : DEFAULT_ALPHA.neon)) / 100;
     const заливка = look.graphite ? GRAPHITE.base : look.accent;
@@ -107,34 +106,34 @@ function предпросмотр(формат, стиль, дата) {
         формат.fill && look.ink && !золото && !look.graphite ? 'wg-ink' : ''].filter(Boolean).join(' ');
 
     const срок = (с) => срокHtml(с === 'a' ? сроки.architect : сроки.observer);
-    const метка = (с) => буквы(экран(с === 'a' ? слово.architect : слово.observer));
+    const метка = (с) => экран(с === 'a' ? слово.architect : слово.observer);
     const иконка = с => значок(с === 'a' ? 'book' : 'flower');
 
     const карточка = (с, класс = 'wg-card') => `
         <div class="${класс} wg-${с}">
           <div class="wg-label">${иконка(с)}${метка(с)}</div>
-          <div class="wg-value">${буквы(срок(с))}</div>
+          <div class="wg-value">${срок(с)}</div>
         </div>`;
 
     const кнопка = (текст, класс = '') =>
-        `<span class="wg-btn ${класс}">${буквы(экран(текст))}</span>`;
+        `<span class="wg-btn ${класс}">${экран(текст)}</span>`;
     const шестерня = `<span class="wg-gear">${значок('gear')}</span>`;
-    const заголовок = `<span class="wg-title">${буквы(экран(слово.title))}</span>`;
+    const заголовок = `<span class="wg-title">${экран(слово.title)}</span>`;
 
     let тело;
     if (формат.key === 'slim') {
         // Как на телефоне (выкладка 141): справа столбиком шестерёнка и вход в кабинет
         тело = `
-          <div class="wg-pair wg-a"><div class="wg-label">${иконка('a')}${метка('a')}</div><div class="wg-value">${буквы(срок('a'))}</div></div>
+          <div class="wg-pair wg-a"><div class="wg-label">${иконка('a')}${метка('a')}</div><div class="wg-value">${срок('a')}</div></div>
           <span class="wg-sep"></span>
-          <div class="wg-pair wg-b"><div class="wg-label">${иконка('b')}${метка('b')}</div><div class="wg-value">${буквы(срок('b'))}</div></div>
+          <div class="wg-pair wg-b"><div class="wg-label">${иконка('b')}${метка('b')}</div><div class="wg-value">${срок('b')}</div></div>
           <span class="wg-stack"><span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span></span>`;
     } else if (формат.tall) {
         const шапка = формат.fill
             // «Активно» сразу за заголовком, мельче и другим цветом — как на телефоне
-            ? `<div class="wg-head"><span class="wg-title wg-title-wrap">${буквы(экран(слово.title))} <small class="wg-tail">${экран(слово.sub)}</small></span>${шестерня}</div>`
+            ? `<div class="wg-head"><span class="wg-title wg-title-wrap">${экран(слово.title)} <small class="wg-tail">${экран(слово.sub)}</small></span>${шестерня}</div>`
             : `<span class="wg-emblem">${значок('mark')}</span>
-               <div class="wg-title">${буквы(экран(слово.title))}</div>
+               <div class="wg-title">${экран(слово.title)}</div>
                <div class="wg-sub">${экран(слово.sub)}</div>`;
         const низ = формат.fill
             ? `<div class="wg-btns">${кнопка(слово.cabinet)}</div>`
