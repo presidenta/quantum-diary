@@ -679,6 +679,7 @@ export async function pendingAlarms() {
         alarms: [], systemNext: 0, batteryUnrestricted: true,
         missed: 0, missedAt: 0, fired: 0, firedAt: 0, step: '', stepAt: 0,
         maker: '', model: '', sdk: 0, guardOn: true, guardAt: 0, autostartKnown: false,
+        bucket: 0, bgRestricted: false,
         journal: []
     };
 
@@ -730,6 +731,13 @@ export async function pendingAlarms() {
             guardOn: (ответ && ответ.guardOn) !== false,
             guardAt: Number(ответ && ответ.guardAt) || 0,
             autostartKnown: !!(ответ && ответ.autostartKnown),
+
+            /* Группа ожидания приложения у системы (10 активное … 45
+               ограниченное, 0 — неизвестно) и запрет фоновой работы. «Батарея
+               без ограничений» этого не покрывает: любой из двух отбирает у
+               закрытого приложения звонки. */
+            bucket: Number(ответ && ответ.bucket) || 0,
+            bgRestricted: !!(ответ && ответ.bgRestricted),
 
             /* Что было, по секундам: поставлен, сработал, подстраховка,
                снят, пропущен, страж встал, приложение смахнули. Счётчики

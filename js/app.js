@@ -30,7 +30,7 @@ import {
   loadAlarm, saveAlarm, alarmState
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
-import { formatJournal, formatPending } from './core/alarm-journal.js';
+import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
@@ -478,7 +478,8 @@ async function showAlarmPending() {
   if (!isNative()) return;
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
-    step, stepAt, maker, model, sdk, guardOn, guardAt, autostartKnown, journal } = await pendingAlarms();
+    step, stepAt, maker, model, sdk, guardOn, guardAt, autostartKnown, bucket, bgRestricted,
+    journal } = await pendingAlarms();
 
   const час = at => new Intl.DateTimeFormat('ru', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -594,7 +595,19 @@ async function showAlarmPending() {
         : свежа ? t('alarm.guardUp', { at: час(guardAt) })
           : t('alarm.guardDown');
 
-    $('alarmDevice').textContent = t('alarm.device', { maker, model, sdk, guard: охрана });
+    /* Что о приложении думает сама система: группа ожидания и запрет на
+       фон. «Батарея без ограничений» — лишь половина ответа; ограниченное
+       приложение остаётся без звонков и при ней (выкладка 131). Группа
+       неизвестна (старый Android) — строки о ней нет. */
+    const группа = standbyName(bucket);
+    const состояние = группа
+      ? ' ' + t('alarm.deviceState', {
+        bucket: группа, bg: t(bgRestricted ? 'alarm.bgOn' : 'alarm.bgOff')
+      })
+      : '';
+
+    $('alarmDevice').textContent =
+      t('alarm.device', { maker, model, sdk, guard: охрана }) + состояние;
     $('alarmDevice').hidden = false;
   }
 
