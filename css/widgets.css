@@ -44,11 +44,12 @@
   --wg-bar: var(--wg-accent);
   --wg-card: rgba(0, 0, 0, .35);
   --wg-card-line: rgba(255, 255, 255, .13);
-  --wg-btn-fill: color-mix(in srgb, #0A0E1A 78%, var(--wg-accent) 22%);
+  --wg-btn-fill: color-mix(in srgb, #0A0E1A 82%, var(--wg-accent) 18%);
   --wg-btn-line: var(--wg-accent);
-  --wg-btn-text: var(--wg-accent);
+  --wg-btn-text: var(--wg-soft);
   --wg-small-fill: color-mix(in srgb, #0A0E1A 92%, #fff 8%);
   --wg-small-line: color-mix(in srgb, #0A0E1A 45%, var(--wg-accent) 55%);
+  --wg-small-text: var(--wg-soft);
   position: relative; box-sizing: border-box; width: 100%; max-width: 340px;
   border-radius: 16px; color: var(--wg-text); font-family: var(--sans, system-ui, sans-serif);
   overflow: hidden; isolation: isolate;
@@ -78,9 +79,11 @@
 .wg-fill {
   --wg-text: #fff; --wg-dim: rgba(255, 255, 255, .8);
   --wg-valueA: #fff; --wg-valueB: #fff; --wg-ico: #fff; --wg-bar: #fff;
-  --wg-btn-fill: #fff; --wg-btn-line: #fff; --wg-btn-text: var(--wg-fill);
+  --wg-btn-fill: #fff; --wg-btn-line: #fff;
+  --wg-btn-text: color-mix(in srgb, var(--wg-fill) 55%, #000);
   --wg-small-fill: color-mix(in srgb, var(--wg-fill) 65%, #000);
   --wg-small-line: color-mix(in srgb, var(--wg-fill) 65%, #fff 35%);
+  --wg-small-text: #fff;
 }
 .wg-fill .wg-plate {
   background: linear-gradient(135deg, rgba(255, 255, 255, .25), transparent 55%), var(--wg-fill);
@@ -96,6 +99,7 @@
   --wg-btn-text: var(--wg-fill);
   --wg-small-fill: color-mix(in srgb, var(--wg-fill) 55%, #fff 45%);
   --wg-small-line: color-mix(in srgb, var(--wg-fill) 65%, #000 35%);
+  --wg-small-text: #14110A;
 }
 .wg-fill.wg-ink .wg-rim { border-color: rgba(0, 0, 0, .25); }
 
@@ -107,7 +111,7 @@
   --wg-ico: #F3D375; --wg-bar: #D9A83F;
   --wg-card: rgba(0, 0, 0, .35); --wg-card-line: rgba(255, 255, 255, .13);
   --wg-btn-fill: #14110A; --wg-btn-line: #D9A83F; --wg-btn-text: var(--gold, #E3C77C);
-  --wg-small-fill: #1F1B11; --wg-small-line: #C8902C;
+  --wg-small-fill: #1F1B11; --wg-small-line: #C8902C; --wg-small-text: var(--gold, #E3C77C);
 }
 .wg-gold .wg-plate { background: var(--pult-face-dark); }
 .wg-gold.wg-fill .wg-plate { background: var(--pult-face-gold); }
@@ -171,7 +175,7 @@
 .wg-btn.small .wg-ico { width: 17px; height: 17px; }
 .wg-btn.mark { color: var(--wg-btn-text); }
 /* «Настройки» рядом с главной кнопкой: потише неё, но текст того же цвета */
-.wg-btn.alt { background: var(--wg-small-fill); border-color: var(--wg-small-line); }
+.wg-btn.alt { background: var(--wg-small-fill); border-color: var(--wg-small-line); color: var(--wg-small-text); }
 
 /* ---- узкий 4×1 --------------------------------------------------------------- */
 .wg-slim .wg-body { grid-auto-flow: column; align-items: center; gap: 8px; padding: 8px 10px;

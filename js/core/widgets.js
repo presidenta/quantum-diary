@@ -53,14 +53,24 @@ export const DEFAULT_ALPHA = Object.freeze({ neon: 88, fill: 100 });
    а золотая надпись рисуется картинкой, и длинная только сжимается. */
 export const TEXT_MAX = 40;
 
-/** Контраст цвета с белым (WCAG): 1,05 / (L + 0,05). */
-export function contrastWithWhite(hex) {
+/** Относительная яркость цвета «#RRGGBB» по WCAG. */
+export function luminance(hex) {
     const канал = i => {
         const c = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255;
         return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
     };
-    const L = 0.2126 * канал(0) + 0.7152 * канал(1) + 0.0722 * канал(2);
-    return 1.05 / (L + 0.05);
+    return 0.2126 * канал(0) + 0.7152 * канал(1) + 0.0722 * канал(2);
+}
+
+/** Контраст двух цветов (WCAG): от 1 до 21. */
+export function contrastRatio(a, b) {
+    const [ярче, темнее] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (ярче + 0.05) / (темнее + 0.05);
+}
+
+/** Контраст цвета с белым (WCAG): 1,05 / (L + 0,05). */
+export function contrastWithWhite(hex) {
+    return contrastRatio(hex, '#FFFFFF');
 }
 
 /* Нужен ли ТЁМНЫЙ текст на заливке этого цвета: белый на нём читается хуже трёх. */
@@ -85,6 +95,49 @@ export function mix(a, b, k) {
     const ч = (hex, i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
     const к = i => Math.round(ч(a, i) * (1 - k) + ч(b, i) * k).toString(16).padStart(2, '0');
     return `#${к(0)}${к(1)}${к(2)}`.toUpperCase();
+}
+
+/* КНОПКИ. Насколько цвет дня подмешан в заливку главной кнопки неонового вида и насколько
+   затемнён цвет заливки для надписи на белой кнопке. Те же числа в WidgetLook.java
+   (КНОПКА_ОТТЕНОК, КНОПКА_ТЕМНЕЕ); подобраны так, чтобы надпись читалась с контрастом
+   не ниже 4,5 на любой кнопке любого цвета (проверка — test/vidzhety.test.js). */
+export const BUTTON_TINT = 0.18;
+export const BUTTON_DARKEN = 0.45;
+export const INK = '#14110A';
+
+/**
+ * Цвета кнопок вида: главной («В кабинет») и малой («Настройки»), заливка и надпись.
+ * Тот же расчёт, что в WidgetLook.java; окно рисует ими предпросмотр.
+ *
+ * @param look результат resolveLook
+ * @param fill залитый ли вид
+ */
+export function buttonColors(look, fill) {
+    if (look.gold) {
+        return {
+            main: { fill: INK, text: GOLD.text },
+            small: { fill: '#1F1B11', text: GOLD.text }
+        };
+    }
+
+    const основа = look.graphite ? GRAPHITE.base : look.accent;
+    if (!fill) {
+        const подложка = look.graphite ? GRAPHITE.base : NEON_BASE;
+        return {
+            main: { fill: mix(подложка, look.accent, BUTTON_TINT), text: look.soft },
+            small: { fill: mix(подложка, '#FFFFFF', 0.08), text: look.soft }
+        };
+    }
+    if (look.ink && !look.graphite) {
+        return {
+            main: { fill: INK, text: основа },
+            small: { fill: mix(основа, '#FFFFFF', 0.45), text: INK }
+        };
+    }
+    return {
+        main: { fill: '#FFFFFF', text: mix(основа, '#000000', BUTTON_DARKEN) },
+        small: { fill: mix(основа, '#000000', 0.35), text: '#FFFFFF' }
+    };
 }
 
 const текст = значение => String(значение ?? '').trim().slice(0, TEXT_MAX);
