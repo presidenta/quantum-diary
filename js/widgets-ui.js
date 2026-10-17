@@ -66,9 +66,9 @@ function слова(стиль, ключ, look) {
     const заголовок = ключ === 'fillWide' ? слово('titleWide')
         : ключ === 'tall' || ключ === 'fillTall' ? слово('titleTall') : слово('titleHud');
 
-    // Метка в шапке: у залитого горизонтального — сегодняшний день, как на макете
+    // Метка в шапке: у залитого горизонтального — сегодняшний день, как на макете; у остальных
+    // одно слово «Активно» (владелец 18.10.2026: «Связь активна» — лишнее, «просто Активно»)
     const метка = ключ === 'fillWide' ? (стиль.subtitle || дни[look.day])
-        : ключ === 'tall' ? своё('subtitle', слово('subLong'))
         : своё('subtitle', слово('subShort'));
 
     return {
@@ -131,7 +131,8 @@ function предпросмотр(формат, стиль, дата) {
           <span class="wg-stack"><span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span></span>`;
     } else if (формат.tall) {
         const шапка = формат.fill
-            ? `<div class="wg-head">${заголовок}${шестерня}</div>`
+            // «Активно» сразу за заголовком, мельче и другим цветом — как на телефоне
+            ? `<div class="wg-head"><span class="wg-title wg-title-wrap">${буквы(экран(слово.title))} <small class="wg-tail">${экран(слово.sub)}</small></span>${шестерня}</div>`
             : `<span class="wg-emblem">${значок('mark')}</span>
                <div class="wg-title">${буквы(экран(слово.title))}</div>
                <div class="wg-sub">${экран(слово.sub)}</div>`;

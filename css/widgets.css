@@ -214,6 +214,9 @@
 }
 .wg-emblem .wg-ico { width: 24px; height: 24px; }
 .wg-tall .wg-title { text-align: center; white-space: normal; }
+.wg-title-wrap { white-space: normal; }
+.wg-tail { font-size: .62em; color: color-mix(in srgb, var(--wg-text) 62%, var(--wg-fill)); }
+.wg-gold .wg-tail { color: var(--gold, #E3C77C); }
 .wg-sub { text-align: center; font: 700 8px var(--sans, sans-serif); letter-spacing: .1em;
   text-transform: uppercase; color: var(--wg-accent); }
 .wg-gold .wg-sub { color: var(--gold, #E3C77C); }

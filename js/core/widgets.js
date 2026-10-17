@@ -207,7 +207,6 @@ export function widgetTexts(translate) {
         titleWide: слово('titleWide'),
         titleTall: слово('titleTall'),
         subShort: слово('subShort'),
-        subLong: слово('subLong'),
         architect: слово('architect'),
         observer: слово('observer'),
         settings: слово('settings'),
