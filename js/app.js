@@ -478,7 +478,7 @@ async function showAlarmPending() {
   if (!isNative()) return;
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
-    step, stepAt, maker, model, sdk, guardOn, guardAt, autostartKnown, bucket, bgRestricted,
+    step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
     journal } = await pendingAlarms();
 
   const час = at => new Intl.DateTimeFormat('ru', {
@@ -576,23 +576,21 @@ async function showAlarmPending() {
   /* Страж пишет в то же поле своё («страж на посту», «приложение
      смахнули, страж ставит звонки заново»), и это не про срабатывание
      звонка: под строкой «Последнее срабатывание» оно вводило бы в
-     заблуждение. О страже говорят строка о телефоне и журнал. */
+     заблуждение. О плашке говорят строка о телефоне и журнал. */
   if (step && !/страж/.test(step)) {
     $('alarmStep').textContent = t('alarm.step', { step, at: час(stepAt) });
     $('alarmStep').hidden = false;
   }
 
-  /* КАКОЙ ЭТО ТЕЛЕФОН И ЖИВ ЛИ СТРАЖ.
+  /* КАКОЙ ЭТО ТЕЛЕФОН И СТОИТ ЛИ ПЛАШКА.
 
-     Отметка стража, а не флаг «запущен»: убитый процесс флага не снимет, а
-     отметка протухнет сама, и строка честно скажет «не запущен». Проверка
-     раз в десять минут, поэтому свежей считается отметка не старше
-     двадцати пяти. */
+     Стоит ли плашка в шторке, отвечает сама система (getActiveNotifications),
+     а не наша отметка: службы-стража больше нет (раздел 9.18), и «подавал
+     голос» говорить некому. */
   if (maker || model) {
-    const свежа = guardAt && Date.now() - guardAt < 25 * 60 * 1000;
     const охрана = !guardOn ? t('alarm.guardOff')
       : !alarms.length ? t('alarm.guardIdle')
-        : свежа ? t('alarm.guardUp', { at: час(guardAt) })
+        : plashkaUp ? t('alarm.guardUp')
           : t('alarm.guardDown');
 
     /* Что о приложении думает сама система: группа ожидания и запрет на

@@ -255,11 +255,12 @@ export function normalizeAlarm(raw) {
         windowMode: режим(src.windowMode, src.windowOn === false ? 'remind' : 'alarm'),
         momentsMode: режим(src.momentsMode, src.momentsOn === false ? 'remind' : 'alarm'),
 
-        /* СТРАЖ — держит приложение живым, пока есть что звонить
-           (android-alarm-plugin, AlarmGuardService). Включён по умолчанию:
-           без него на телефоне владельца звонки не доходили вовсе, потому
-           что в момент звонка процесса приложения уже не было. Выключает
-           только явное false — то же правило, что у крестиков. */
+        /* ПЛАШКА В ШТОРКЕ — время следующих входов и две кнопки
+           (android-alarm-plugin, AlarmPlashka). Поле называется guardOn по
+           старой памяти: раньше это был «страж» — служба, державшая
+           приложение живым, и от неё отказались (раздел 9.18). Включена по
+           умолчанию; выключает только явное false — то же правило, что у
+           крестиков. */
         guardOn: src.guardOn !== false,
 
         windowAt: время(src.windowAt),
