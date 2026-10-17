@@ -190,14 +190,19 @@ function lastJumpTime() {
    Текст плашки — украшение, а не работа: ошибка в его расчёте не вправе
    остановить постановку самих звонков. Без кадров нативная часть обойдётся
    запасным текстом. */
-function guardFramesFor(now, alarm, день) {
+function guardFramesFor(now, alarm, день, заготовка = {}) {
     try {
-        return guardFrames(день?.moments, lastJumpTime(), now, {
+        /* Сегодняшнего дня нет (не загрузился) — звонит заготовка (см. горизонт), и на
+           плашке её же часы. Завтрашняя заготовка — для кадров после последнего момента:
+           там Архитектор показывает первый завтрашний момент, а не прочерк. */
+        const сегодня = день?.moments?.length ? день.moments : заготовка.сегодня?.moments;
+        return guardFrames(сегодня, lastJumpTime(), now, {
             cooldownMs: CONFIG.timing.jumpCooldownMs,
             windowMs: CONFIG.timing.opportunityWindowMs,
             // Выключенное направление времени не имеет — на плашке прочерк
             architectOn: alarm.momentsMode !== 'off',
-            observerOn: alarm.windowMode !== 'off'
+            observerOn: alarm.windowMode !== 'off',
+            tomorrow: заготовка.завтра?.moments
         }).map(кадр => ({
             from: кадр.from,
             text: guardText(кадр, t),
@@ -210,6 +215,24 @@ function guardFramesFor(now, alarm, день) {
     }
 }
 
+/* ЗАГОТОВКИ СЕГОДНЯШНЕГО И ЗАВТРАШНЕГО ДНЯ — те же, по которым горизонт ставит звонки
+   (provisionalDay: часы считает телефон по дате, человеку, тихому часу и названным часам).
+   Не посчиталось — пусто: плашка обойдётся без завтрашних кадров. */
+async function заготовки(now, quiet, alarm) {
+    try {
+        const человек = String((await getMeta('userId').catch(() => '')) || '');
+        const якорь = anchorHours(alarm);
+        const сегодня = todayKey(now);
+        return {
+            сегодня: provisionalDay(сегодня, человек, quiet, якорь),
+            завтра: provisionalDay(addDays(сегодня, 1), человек, quiet, якорь)
+        };
+    } catch (err) {
+        console.warn('[напоминания] заготовка дня не посчиталась:', err);
+        return {};
+    }
+}
+
 /**
  * Сроки двух направлений на сейчас словами — то, что сейчас написано на плашке и
  * виджетах. Окно «Установить виджет» показывает ими живой предпросмотр.
@@ -219,10 +242,11 @@ function guardFramesFor(now, alarm, день) {
 export async function widgetTerms(now = new Date()) {
     const alarm = await loadAlarm();
     const день = freshDay(state.quantum, todayKey(now));
+    const заготовка = await заготовки(now, await loadQuiet(), alarm);
 
     // Тот же выбор, что у AlarmStore.кадрСейчас: последний кадр, чей час уже наступил
     let выбран = null;
-    for (const кадр of guardFramesFor(now, alarm, день)) {
+    for (const кадр of guardFramesFor(now, alarm, день, заготовка)) {
         if (!выбран || кадр.from <= now.getTime()) выбран = кадр;
     }
     return выбран ? { architect: выбран.architect, observer: выбран.observer } : null;
@@ -266,7 +290,7 @@ export async function planReminders() {
     /* Текст плашки — украшение, а не работа: ошибка в его расчёте не вправе
        остановить постановку самих звонков, которая идёт ниже. Без кадров
        страж обойдётся запасным текстом. */
-    const кадры = guardFramesFor(now, alarm, день);
+    const кадры = guardFramesFor(now, alarm, день, await заготовки(now, quiet, alarm));
 
     await setGuard({
         on: alarm.on && alarm.guardOn,

@@ -594,6 +594,16 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
    сейчас, а если такого нет — ближайший (activeMoment, потом nextMoment, те
    самые функции, что рисуют экран).
 
+   МОМЕНТЫ ДНЯ ПРОШЛИ — НЕ ПРОЧЕРК, А ПЕРВЫЙ ЗАВТРАШНИЙ (выкладка 143, просьба
+   владельца 18.10.2026: «вместо прочерка показывать утро, а как сработает —
+   следующее, перепрыгивать»). Часы завтрашних моментов телефон знает заранее:
+   их считает retime по дате, человеку и тихому часу, и по этой заготовке
+   (provisionalDay, options.tomorrow) уже стоят утренние звонки. Поэтому после
+   последнего сегодняшнего момента Архитектор показывает первый завтрашний —
+   тот, что и прозвонит, — а кадры после полуночи идут по заготовке: наступил
+   момент — следующий. Когда откроют приложение и придёт настоящий день,
+   кадры пересчитаются по нему.
+
    НАБЛЮДАТЕЛЬ — окно возможностей: открывается через cooldownMs после
    последнего прыжка и держится windowMs. Прыжка ещё не было — окно открыто
    (так же показывает его таймер в «Пространстве вариантов»). Окно прошло
@@ -603,9 +613,13 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
    @returns {{from: number, architect: string, observer: string}[]}
             по возрастанию from; у первого from равен 0 — «с самого начала» */
 export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
-    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true } = options;
+    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true, tomorrow = [] } = options;
 
     const список = Array.isArray(moments) ? moments : [];
+    const завтра = Array.isArray(tomorrow) ? tomorrow : [];
+    // Полдень завтрашнего дня — опора для часов «ЧЧ:ММ» завтрашней заготовки
+    const базаЗавтра = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+    const сегодняшний = миг => new Date(миг).toDateString() === now.toDateString();
     const last = Number(lastJump);
     const прыгал = Number.isFinite(last) && last > 0;
     const откроется = last + cooldownMs;
@@ -613,7 +627,16 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
     const архитектор = миг => {
         if (!architectOn) return '';
         const время = timeNow(new Date(миг));
-        const момент = activeMoment(список, время) || nextMoment(список, время);
+
+        if (сегодняшний(миг)) {
+            const момент = activeMoment(список, время) || nextMoment(список, время);
+            if (момент) return момент.at;
+            // Сегодня моментов больше нет — первый живой момент завтрашнего дня
+            const первый = nextMoment(завтра, '');
+            return первый ? первый.at : '';
+        }
+        // Кадр уже завтрашний (после полуночи) — расписание завтрашней заготовки
+        const момент = activeMoment(завтра, время) || nextMoment(завтра, время);
         return момент ? момент.at : '';
     };
 
@@ -638,6 +661,16 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
         if (isOff(момент) || момент.doneAt) continue;
 
         const at = atToday(момент.at, now);
+        if (!at) continue;
+
+        границы.add(at.getTime());
+        границы.add(at.getTime() + MOMENT_WINDOW_MINUTES * 60 * 1000);
+    }
+    // Те же границы у завтрашних моментов: после полуночи кадры перепрыгивают по ним
+    for (const момент of завтра) {
+        if (isOff(момент) || момент.doneAt) continue;
+
+        const at = atToday(момент.at, базаЗавтра);
         if (!at) continue;
 
         границы.add(at.getTime());
