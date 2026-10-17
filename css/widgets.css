@@ -5,8 +5,9 @@
    (WidgetLook.java и WidgetPaint.java): человек видит в окне то, что получит на
    столе. Золото берётся ИЗ САЙТА, а не рисуется заново, — по просьбе владельца:
    подложка — --pult-face-gold (золотая) и --pult-face-dark (чёрная), кромка —
-   --pult-rim; буквы — обычный текст цвета --gold, как на телефоне (выкладка 144).
-   Остальное — цвета дня, которые в окно
+   --pult-rim; буквы на тёмном — класс .gold-cut. Основа залитого золота и золотые кнопки —
+   фотографии владельца (img/widget), растянутые «девятью частями», как на телефоне
+   (выкладка 145). Остальное — цвета дня, которые в окно
    передаёт js/widgets-ui.js переменными --wg-*.
 
    Переменные вида (ставятся на .wg):
@@ -115,12 +116,28 @@
   --wg-small-fill: #1F1B11; --wg-small-line: #C8902C; --wg-small-text: var(--gold, #E3C77C);
 }
 .wg-gold .wg-plate { background: var(--pult-face-dark); }
-/* Залитое золото: буквы тёмные, как у светлых чакр (выкладка 144) — золото на золоте не читается */
+/* ЗАЛИТОЕ ЗОЛОТО (выкладка 145): основа — слиток с фотографии, буквы гравировкой — чёрные с
+   белой обводкой, чтобы читались и при сильной прозрачности поверх тёмных обоев. */
 .wg-gold.wg-fill {
-  --wg-text: #14110A; --wg-dim: rgba(20, 17, 10, .72);
+  --wg-text: #14110A; --wg-dim: #14110A;
   --wg-valueA: #14110A; --wg-valueB: #14110A; --wg-ico: #14110A; --wg-bar: #14110A;
   --wg-card: rgba(255, 255, 255, .28); --wg-card-line: rgba(0, 0, 0, .13);
 }
+.wg-gold.wg-fill .wg-plate {
+  background: none;
+  border: 16px solid transparent; border-image: url(../img/widget/gold-tray.webp) 46 fill / 16px stretch;
+}
+.wg-gold.wg-fill .wg-body, .wg-gold .wg-btn {
+  text-shadow: 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff,
+               1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
+}
+/* Золотые кнопки — пластина с фотографии, надпись гравировкой */
+.wg-gold .wg-btn, .wg-gold .wg-btn.alt, .wg-gold .wg-btn.small {
+  background: none; color: #14110A;
+  border: 8px solid transparent; border-image: url(../img/widget/gold-button.webp) 22 fill / 8px stretch;
+}
+.wg-gold .wg-btn.small { --wg-ico: #14110A; color: #14110A; }
+.wg-gold .wg-btn.small .wg-ico { color: #14110A; }
 .wg-gold.wg-fill .wg-plate { background: var(--pult-face-gold); }
 .wg-gold .wg-rim {
   border: 2px solid transparent; box-shadow: none;

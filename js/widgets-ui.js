@@ -8,8 +8,9 @@
    ГДЕ ЧТО. Цвета, золото и правила цвета дня — core/widgets.js; рисует виджет на
    телефоне Java (WidgetRender), а здесь — его копия в HTML, чтобы человек видел
    результат до установки. Золотые пластина и кромка в копии — классы сайта
-   (--pult-face-gold, --pult-rim), а не рисуются заново: см. css/widgets.css. Буквы в
-   золоте — обычный текст цвета --gold, как на телефоне (выкладка 144).
+   (--pult-face-dark, --pult-rim), а не рисуются заново: см. css/widgets.css. Буквы на
+   тёмном золоте — .gold-cut сайта; основа залитого золота и золотые кнопки — фотографии
+   владельца (img/widget), те же, что в приложении на телефоне (выкладка 145).
 
    СОХРАНЕНИЕ. Любая правка уходит на телефон сразу (с короткой паузой, пока человек
    двигает ползунок или печатает) и перерисовывает стоящие виджеты. «Для новых» —
@@ -105,8 +106,12 @@ function предпросмотр(формат, стиль, дата) {
         формат.fill ? 'wg-fill' : '', золото ? 'wg-gold' : '', look.graphite ? 'wg-graphite' : '',
         формат.fill && look.ink && !золото && !look.graphite ? 'wg-ink' : ''].filter(Boolean).join(' ');
 
-    const срок = (с) => срокHtml(с === 'a' ? сроки.architect : сроки.observer);
-    const метка = (с) => экран(с === 'a' ? слово.architect : слово.observer);
+    /* Блестящие буквы — класс сайта .gold-cut, как на телефоне на тёмной пластине (выкладка 145).
+       На залитом золоте буквы гравировкой (чёрные с белой обводкой) — это делает CSS. */
+    const блеск = золото && !формат.fill;
+    const буквы = html => блеск ? `<span class="gold-cut">${html}</span>` : html;
+    const срок = (с) => буквы(срокHtml(с === 'a' ? сроки.architect : сроки.observer));
+    const метка = (с) => буквы(экран(с === 'a' ? слово.architect : слово.observer));
     const иконка = с => значок(с === 'a' ? 'book' : 'flower');
 
     const карточка = (с, класс = 'wg-card') => `
@@ -118,7 +123,7 @@ function предпросмотр(формат, стиль, дата) {
     const кнопка = (текст, класс = '') =>
         `<span class="wg-btn ${класс}">${экран(текст)}</span>`;
     const шестерня = `<span class="wg-gear">${значок('gear')}</span>`;
-    const заголовок = `<span class="wg-title">${экран(слово.title)}</span>`;
+    const заголовок = `<span class="wg-title">${буквы(экран(слово.title))}</span>`;
 
     let тело;
     if (формат.key === 'slim') {
@@ -131,9 +136,9 @@ function предпросмотр(формат, стиль, дата) {
     } else if (формат.tall) {
         const шапка = формат.fill
             // «Активно» сразу за заголовком, мельче и другим цветом — как на телефоне
-            ? `<div class="wg-head"><span class="wg-title wg-title-wrap">${экран(слово.title)} <small class="wg-tail">${экран(слово.sub)}</small></span>${шестерня}</div>`
+            ? `<div class="wg-head"><span class="wg-title wg-title-wrap">${буквы(экран(слово.title))} <small class="wg-tail">${экран(слово.sub)}</small></span>${шестерня}</div>`
             : `<span class="wg-emblem">${значок('mark')}</span>
-               <div class="wg-title">${экран(слово.title)}</div>
+               <div class="wg-title">${буквы(экран(слово.title))}</div>
                <div class="wg-sub">${экран(слово.sub)}</div>`;
         const низ = формат.fill
             ? `<div class="wg-btns">${кнопка(слово.cabinet)}</div>`
