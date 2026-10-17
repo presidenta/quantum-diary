@@ -898,25 +898,8 @@ export async function widgetSave(id, style) {
     }
 }
 
-/* Отчёт «Квант против To Do»: что объявлено в манифестах обоих приложений и
-   чьи на телефоне менеджеры питания. Текст собирает нативная часть
-   (AlarmProbe), здесь только вызов.
-
-   @returns {Promise<string>} отчёт или пустая строка, если плагина нет */
-export async function probePhone() {
-    const QA = alarmPlugin();
-    if (!QA || typeof QA.probe !== 'function') return '';
-
-    try {
-        const ответ = await QA.probe();
-        return (ответ && ответ.report) || '';
-    } catch (err) {
-        console.error('[reminders] отчёт не собрался:', err);
-        return '';
-    }
-}
-
-/* Отправить текст через окно «Поделиться». Выбирает, куда, человек. */
+/* Отправить текст через окно «Поделиться» (журнал звонков одним текстом). Выбирает, куда,
+   человек. */
 export async function shareText(text) {
     const QA = alarmPlugin();
     if (!QA || typeof QA.shareText !== 'function' || !text) return false;

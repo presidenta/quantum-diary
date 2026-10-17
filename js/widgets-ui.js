@@ -16,7 +16,7 @@
    трогает. В браузере телефона нет: окно работает как просмотр. */
 
 import { t } from './store.js';
-import { isNative, widgetList, widgetSave, offerWidget } from './core/reminders.js';
+import { isNative, widgetList, widgetSave, offerWidget, offerTile } from './core/reminders.js';
 import { widgetTerms } from './reminder-plan.js';
 import {
     FORMATS, CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, normalizeStyle, resolveLook
@@ -264,6 +264,17 @@ async function установить(ключВида) {
     сказать(показано ? 'widgets.asked' : 'widgets.manual');
 }
 
+/* Плитка в шторке: система сама показывает окно с кнопкой «Добавить» (Android 13+).
+   Коды ответа — как у StatusBarManager: 0 не добавлена, 1 уже была, 2 добавлена;
+   отрицательные — телефон не умеет (ниже Android 13) или не ответил. */
+async function поставитьПлитку() {
+    const код = await offerTile();
+    if (код === 2) сказать('widgets.tileAdded');
+    else if (код === 1) сказать('widgets.tileHave');
+    else if (код === 0) сказать('widgets.tileNo');
+    else сказать('widgets.tileManual');
+}
+
 /**
  * Открыть окно. Номер — на каком стоящем виджете: шестерёнка на виджете ведёт
  * сюда с его номером. Нет такого — окно открывается на «новых».
@@ -286,6 +297,7 @@ export async function openWidgets(номер = 0) {
     };
 
     $('widgetsBrowserNote').hidden = isNative();
+    $('widgetsTileBox').hidden = !isNative();
     $('widgetsMsg').hidden = true;
     нарисоватьВсё();
     if (!окно.open) окно.showModal();
@@ -327,6 +339,8 @@ export function initWidgets() {
         for (const id of ['widgetsTitle', 'widgetsSubtitle', 'widgetsArchitect', 'widgetsObserver']) $(id).value = '';
         изменить({ title: '', subtitle: '', architect: '', observer: '' });
     });
+
+    $('widgetsTileAdd').addEventListener('click', поставитьПлитку);
 
     $('widgetsGallery').addEventListener('click', событие => {
         const кнопка = событие.target.closest('button[data-install]');

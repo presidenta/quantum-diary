@@ -1647,3 +1647,10 @@ body {
    красить было неверно: человек читал это как поломку. */
 .alarm-state.is-passed::before { background: var(--ink-2); }
 .alarm-state.is-passed { color: var(--ink-2); }
+
+/* ---- Окно «Логи»: расшифровка знаков журнала спрятана под заголовок ---------------
+   Справочник нужен не каждый раз, а простыня из двадцати знаков загромождала окно
+   (просьба владельца 17.10.2026, раздел 9.22). */
+.alarm-legend { margin: 8px 0; }
+.alarm-legend summary { cursor: pointer; color: var(--gold); font-size: 13px; font-weight: 600; padding: 6px 0; }
+.alarm-legend[open] summary { margin-bottom: 4px; }

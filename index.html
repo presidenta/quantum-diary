@@ -472,6 +472,14 @@
       <div class="wg-gallery" id="widgetsGallery"></div>
     </div>
 
+    <!-- Плитка в шторке — того же рода, что виджет: её запускает сама система (раздел 9.20),
+         поэтому она живёт здесь, а не в «Логах». Видна только в приложении. -->
+    <div class="wg-block" id="widgetsTileBox" hidden>
+      <span class="muted" data-i18n="widgets.tileTitle">Плитка в шторке</span>
+      <p class="muted m0" data-i18n="widgets.tileNote">Плитка включается, когда открывают шторку, и показывает время ближайшего входа. Её запускает сама система, поэтому она помогает вернуть звонки, если телефон закрыл приложение.</p>
+      <button type="button" class="btn" id="widgetsTileAdd" data-i18n="widgets.tileAdd">Добавить плитку в шторку</button>
+    </div>
+
     <p class="gate-msg" id="widgetsMsg" hidden role="status"></p>
     <p class="muted m0" data-i18n="widgets.manual">Если окно не открылось: долгое нажатие на рабочем столе → «Виджеты» → «Квант» → нужный вид.</p>
     <div class="actions"><button type="button" class="btn primary" id="widgetsDone"><span class="gold-cut" data-i18n="widgets.close">Готово</span></button></div>
@@ -733,30 +741,16 @@
     <button type="button" class="btn" id="alarmTraceFix" hidden
             data-i18n="alarm.traceFix">Открыть настройки и считать заново</button>
 
-    <!-- Отчёт «Квант против To Do»: что на самом деле объявлено в манифесте
-         приложения, которое живёт на этом телефоне, и чьи на телефоне
-         менеджеры питания. Читает нативная часть (AlarmProbe), отправляет
-         человек сам. -->
-    <button type="button" class="btn" id="alarmProbe" hidden
-            data-i18n="alarm.probe">Сравнить с To Do (отчёт)</button>
-    <pre id="alarmProbeOut" hidden></pre>
-    <button type="button" class="btn" id="alarmProbeShare" hidden
-            data-i18n="alarm.probeShare">Поделиться отчётом</button>
-
-    <!-- Пути возврата после того, как прошивка закрыла приложение (раздел 9.20).
-         У To Do на том же телефоне есть плитка шторки и виджет рабочего стола —
-         их запускает сама система, и закрытие приложением им не мешает. Положить
-         их должен человек; приложение может только попросить. -->
-    <p class="muted m0" id="alarmReviveNote" hidden data-i18n="alarm.reviveNote">Прошивка этого телефона закрывает приложение вместе со звонками. Плитка в шторке и виджет на рабочем столе возвращают звонки и плашку: их запускает сама система.</p>
-    <button type="button" class="btn" id="alarmTileAdd" hidden
-            data-i18n="alarm.tileAdd">Добавить плитку в шторку</button>
-    <button type="button" class="btn" id="alarmWidgetAdd" hidden
-            data-i18n="alarm.widgetAdd">Добавить виджет на экран</button>
-    <p class="gate-msg" id="alarmReviveMsg" hidden role="status"></p>
-
     <div id="alarmJournalBox" hidden>
-      <p class="muted m0" data-i18n="alarm.journalHint">Знаки: «+» поставлен, «✓» сработал (в скобках — на сколько позже часа), «B» сработала подстраховка, «−» снят, «✗» не удалось поставить, «!» не дошёл (имя и час), «♪✗» звук не пошёл, «☠» процесс остановила система (причина, imp — состояние процесса, час смерти), «∅» система не держала наши звонки (на какой час), «P» плашку убрали, а приёмник вернул, «P✗» плашка не показалась, «J», «W», «Q» систему подняло фоновое задание, виджет или плитка, и чего-то не хватало — вернули, «BOOT» и «UPD» перезагрузка и обновление.</p>
       <pre id="alarmJournal"></pre>
+      <!-- Знаки журнала — справочник, а не то, что нужно читать каждый раз: спрятан. -->
+      <details class="alarm-legend">
+        <summary data-i18n="alarm.journalHintTitle">Что значат знаки</summary>
+        <p class="muted m0" data-i18n="alarm.journalHint">Знаки: «+» поставлен, «✓» сработал (в скобках — на сколько позже часа), «B» сработала подстраховка, «−» снят, «✗» не удалось поставить, «!» не дошёл (имя и час), «♪✗» звук не пошёл, «☠» процесс остановила система (причина, imp — состояние процесса, час смерти), «∅» система не держала наши звонки (на какой час), «P» плашку убрали, а приёмник вернул, «P✗» плашка не показалась, «J», «W», «Q» систему подняло фоновое задание, виджет или плитка, и чего-то не хватало — вернули, «BOOT» и «UPD» перезагрузка и обновление.</p>
+      </details>
+      <!-- Журнал текстом, а не скриншотом: длинный, и на снимке его не прочесть. -->
+      <button type="button" class="btn" id="alarmJournalShare" hidden
+              data-i18n="alarm.journalShare">Отправить журнал</button>
     </div>
 
     <!-- Что реально стоит в системе: ключ и час. Нужно, чтобы по скриншоту было видно

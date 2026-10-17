@@ -24,8 +24,7 @@ import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
   takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings,
-  forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget, probePhone, shareText,
-  offerTile, offerWidget
+  forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget, shareText
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -471,13 +470,7 @@ async function showAlarmPending() {
   кнопка.hidden = true;
   $('alarmTrace').hidden = true;
   $('alarmTraceFix').hidden = true;
-  $('alarmProbe').hidden = true;
-  $('alarmProbeOut').hidden = true;
-  $('alarmProbeShare').hidden = true;
-  $('alarmReviveNote').hidden = true;
-  $('alarmTileAdd').hidden = true;
-  $('alarmWidgetAdd').hidden = true;
-  $('alarmReviveMsg').hidden = true;
+  $('alarmJournalShare').hidden = true;
   $('alarmStep').hidden = true;
   $('alarmDevice').hidden = true;
   $('alarmJournalBox').hidden = true;
@@ -485,12 +478,6 @@ async function showAlarmPending() {
   $('alarmAutostart').hidden = true;
   $('alarmAutostartNote').hidden = true;
   if (!isNative()) return;
-
-  // Отчёт про To Do и пути возврата есть только в приложении: в браузере им нечего делать
-  $('alarmProbe').hidden = false;
-  $('alarmReviveNote').hidden = false;
-  $('alarmTileAdd').hidden = false;
-  $('alarmWidgetAdd').hidden = false;
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
@@ -635,6 +622,7 @@ async function showAlarmPending() {
     // Само форматирование — в core/alarm-journal.js: там оно под тестами
     $('alarmJournal').textContent = formatJournal(journal);
     $('alarmJournalBox').hidden = false;
+    $('alarmJournalShare').hidden = false;
   }
 
   // Что стоит в системе прямо сейчас — по ключам и часам, а не одним числом
@@ -642,6 +630,29 @@ async function showAlarmPending() {
     $('alarmList').textContent = formatPending(alarms);
     $('alarmListBox').hidden = false;
   }
+}
+
+/* ВСЁ, ЧТО ВИДНО В ОКНЕ «ЛОГИ», ОДНИМ ТЕКСТОМ.
+
+   Для кнопки «Отправить журнал»: скриншот длинного журнала не прочесть, а текст читается
+   целиком и точно. Берётся то, что на экране сейчас (скрытые строки не попадают): что
+   поставлено, телефон, шаг, следы и сам журнал со списком того, что стоит в системе. */
+function journalText() {
+  const виден = id => {
+    const элемент = $(id);
+    return Boolean(элемент && !элемент.closest('[hidden]') && элемент.textContent.trim());
+  };
+  const строка = id => (виден(id) ? [$(id).textContent.trim()] : []);
+
+  return [
+    `Квант, журнал звонков, ${new Date().toLocaleString('ru')}`,
+    ...строка('alarmPending'),
+    ...строка('alarmDevice'),
+    ...строка('alarmStep'),
+    ...строка('alarmTrace'),
+    ...(виден('alarmJournal') ? ['', 'Журнал:', $('alarmJournal').textContent.trim()] : []),
+    ...(виден('alarmList') ? ['', 'Стоит в системе:', $('alarmList').textContent.trim()] : [])
+  ].join('\n');
 }
 
 /* Почему будильник может не зазвонить.
@@ -1089,42 +1100,11 @@ async function boot() {
     await openAppSettings();
   });
 
-  /* Отчёт «Квант против To Do». Журнал и следы НЕ забываем: это чтение, а не
-     правка настроек, и улики должны остаться. */
-  $('alarmProbe').addEventListener('click', async () => {
-    const вывод = $('alarmProbeOut');
-    вывод.textContent = t('alarm.probeWait');
-    вывод.hidden = false;
-    $('alarmProbeShare').hidden = true;
-
-    const отчёт = await probePhone();
-    вывод.textContent = отчёт || t('alarm.probeNone');
-    $('alarmProbeShare').hidden = !отчёт;
-  });
-
-  $('alarmProbeShare').addEventListener('click', async () => {
-    await shareText($('alarmProbeOut').textContent);
-  });
-
-  /* Плитка и виджет — пути возврата после закрытия приложения прошивкой.
-     Журнал и следы НЕ забываем: это просьба к системе, а не правка настроек. */
-  const сказатьОВозврате = ключ => {
-    const поле = $('alarmReviveMsg');
-    поле.textContent = t(ключ);
-    поле.hidden = false;
-  };
-
-  $('alarmTileAdd').addEventListener('click', async () => {
-    const код = await offerTile();
-    if (код === 2) сказатьОВозврате('alarm.tileAdded');
-    else if (код === 1) сказатьОВозврате('alarm.tileHave');
-    else if (код === 0) сказатьОВозврате('alarm.tileNo');
-    else сказатьОВозврате('alarm.tileManual');
-  });
-
-  $('alarmWidgetAdd').addEventListener('click', async () => {
-    const показано = await offerWidget();
-    сказатьОВозврате(показано ? 'alarm.widgetAsked' : 'alarm.widgetManual');
+  /* Журнал текстом: на скриншоте он длинный и нечитаемый. Журнал и следы НЕ забываем:
+     это чтение, а не правка настроек, и улики должны остаться. Отправляет сам человек,
+     выбрав, куда (окно «Поделиться»). */
+  $('alarmJournalShare').addEventListener('click', async () => {
+    await shareText(journalText());
   });
 
   // «Автозапуск»: отсчёт заново, как и у настроек приложения выше
