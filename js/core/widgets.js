@@ -215,6 +215,16 @@ export function widgetTexts(translate) {
         cabinet: слово('cabinet'),
         cabinetPersonal: слово('cabinetPersonal'),
         cabinetMain: слово('cabinetMain'),
+        // Панель настроек на рабочем столе (WidgetSheetActivity, выкладка 141)
+        sheetTitle: слово('sheetTitle'),
+        sheetOpacity: слово('sheetOpacity'),
+        sheetColor: слово('sheetColor'),
+        modeAuto: слово('modeAuto'),
+        modeGold: слово('modeGold'),
+        modeGraphite: слово('modeGraphite'),
+        modeChakra: слово('modeChakra'),
+        sheetMore: слово('sheetMore'),
+        sheetDone: слово('sheetDone'),
         days: translate('widgets.days').split(',').map(д => д.trim())
     };
 }

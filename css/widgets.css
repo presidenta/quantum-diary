@@ -177,17 +177,24 @@
 /* «Настройки» рядом с главной кнопкой: потише неё, но текст того же цвета */
 .wg-btn.alt { background: var(--wg-small-fill); border-color: var(--wg-small-line); color: var(--wg-small-text); }
 
-/* ---- узкий 4×1 --------------------------------------------------------------- */
-.wg-slim .wg-body { grid-auto-flow: column; align-items: center; gap: 8px; padding: 8px 10px;
-  grid-template-columns: auto 1fr auto auto 1fr auto auto; }
-.wg-slim .wg-ico { width: 20px; height: 20px; }
-.wg-slim .wg-label { font-size: 8px; }
-.wg-slim .wg-value { font-size: 12px; margin-top: 0; }
-.wg-slim .wg-sep { width: 1px; height: 24px; background: color-mix(in srgb, var(--wg-ico) 25%, transparent); }
+/* ---- узкий 4×1: два срока и справа столбиком кнопки (выкладка 141) ------------- */
+.wg-slim .wg-body { grid-auto-flow: column; align-items: center; gap: 10px; padding: 10px 12px;
+  grid-template-columns: 1fr auto 1fr auto; }
+.wg-slim .wg-label { font-size: 10px; }
+.wg-slim .wg-label .wg-ico { width: 14px; height: 14px; }
+.wg-slim .wg-value { font-size: 16px; margin-top: 3px; }
+.wg-slim .wg-sep { width: 1px; align-self: stretch; background: color-mix(in srgb, var(--wg-ico) 25%, transparent); }
 .wg-slim .wg-pair { min-width: 0; }
+.wg-stack { display: grid; gap: 5px; }
+.wg-slim .wg-btn.small { width: 40px; height: 30px; }
 
 /* ---- карточки: средний, чакровый, залитый горизонтальный ---------------------- */
 .wg-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+/* В карточке срок столбиком: «после» мелко над крупным временем, как на телефоне */
+.wg-cards .wg-value { font-size: 26px; line-height: 1.1; }
+.wg-cards .wg-value small { display: block; font-size: 11px; margin-bottom: 1px; }
+.wg-cards .wg-value b { font-size: 1em; }
+.wg-btn { font-size: 11px; padding-block: 11px; }
 .wg-week-strip { display: flex; }
 .wg-week-strip span {
   flex: 1; text-align: center; font: 700 9px var(--sans, sans-serif); padding: 3px 0;

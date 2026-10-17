@@ -123,11 +123,12 @@ function предпросмотр(формат, стиль, дата) {
 
     let тело;
     if (формат.key === 'slim') {
+        // Как на телефоне (выкладка 141): справа столбиком шестерёнка и вход в кабинет
         тело = `
-          ${иконка('a')}<div class="wg-pair wg-a"><div class="wg-label">${метка('a')}</div><div class="wg-value">${буквы(срок('a'))}</div></div>
+          <div class="wg-pair wg-a"><div class="wg-label">${иконка('a')}${метка('a')}</div><div class="wg-value">${буквы(срок('a'))}</div></div>
           <span class="wg-sep"></span>
-          ${иконка('b')}<div class="wg-pair wg-b"><div class="wg-label">${метка('b')}</div><div class="wg-value">${буквы(срок('b'))}</div></div>
-          <span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span>`;
+          <div class="wg-pair wg-b"><div class="wg-label">${иконка('b')}${метка('b')}</div><div class="wg-value">${буквы(срок('b'))}</div></div>
+          <span class="wg-stack"><span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span></span>`;
     } else if (формат.tall) {
         const шапка = формат.fill
             ? `<div class="wg-head">${заголовок}${шестерня}</div>`
@@ -281,7 +282,8 @@ async function поставитьПлитку() {
  */
 export async function openWidgets(номер = 0) {
     const окно = $('widgetsDialog');
-    if (окно.open) return;
+    /* Окно уже открыто (нажали шестерёнку на одном виджете, потом на другом) — не выходим,
+       а перечитываем список и встаём на тот виджет, чья шестерёнка нажата последней. */
 
     const список = await widgetList();
     стоящие = список.widgets;
