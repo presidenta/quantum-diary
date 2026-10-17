@@ -23,7 +23,7 @@ import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
   takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings,
-  forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget
+  forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget, probePhone, shareText
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
@@ -469,6 +469,9 @@ async function showAlarmPending() {
   кнопка.hidden = true;
   $('alarmTrace').hidden = true;
   $('alarmTraceFix').hidden = true;
+  $('alarmProbe').hidden = true;
+  $('alarmProbeOut').hidden = true;
+  $('alarmProbeShare').hidden = true;
   $('alarmStep').hidden = true;
   $('alarmDevice').hidden = true;
   $('alarmJournalBox').hidden = true;
@@ -476,6 +479,9 @@ async function showAlarmPending() {
   $('alarmAutostart').hidden = true;
   $('alarmAutostartNote').hidden = true;
   if (!isNative()) return;
+
+  // Отчёт про To Do есть только в приложении: в браузере читать нечего
+  $('alarmProbe').hidden = false;
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
@@ -1062,6 +1068,23 @@ async function boot() {
     await forgetAlarmTrace();
     await showAlarmPending();
     await openAppSettings();
+  });
+
+  /* Отчёт «Квант против To Do». Журнал и следы НЕ забываем: это чтение, а не
+     правка настроек, и улики должны остаться. */
+  $('alarmProbe').addEventListener('click', async () => {
+    const вывод = $('alarmProbeOut');
+    вывод.textContent = t('alarm.probeWait');
+    вывод.hidden = false;
+    $('alarmProbeShare').hidden = true;
+
+    const отчёт = await probePhone();
+    вывод.textContent = отчёт || t('alarm.probeNone');
+    $('alarmProbeShare').hidden = !отчёт;
+  });
+
+  $('alarmProbeShare').addEventListener('click', async () => {
+    await shareText($('alarmProbeOut').textContent);
   });
 
   // «Автозапуск»: отсчёт заново, как и у настроек приложения выше

@@ -670,6 +670,16 @@
     <button type="button" class="btn" id="alarmTraceFix" hidden
             data-i18n="alarm.traceFix">Открыть настройки и считать заново</button>
 
+    <!-- Отчёт «Квант против To Do»: что на самом деле объявлено в манифесте
+         приложения, которое живёт на этом телефоне, и чьи на телефоне
+         менеджеры питания. Читает нативная часть (AlarmProbe), отправляет
+         человек сам. -->
+    <button type="button" class="btn" id="alarmProbe" hidden
+            data-i18n="alarm.probe">Сравнить с To Do (отчёт)</button>
+    <pre id="alarmProbeOut" hidden></pre>
+    <button type="button" class="btn" id="alarmProbeShare" hidden
+            data-i18n="alarm.probeShare">Поделиться отчётом</button>
+
     <div id="alarmJournalBox" hidden>
       <p class="muted m0" data-i18n="alarm.journalHint">Знаки: «+» поставлен, «✓» сработал (в скобках — на сколько позже часа), «B» сработала подстраховка, «−» снят, «✗» не удалось поставить, «!» не дошёл (имя и час), «♪✗» звук не пошёл, «☠» процесс остановила система (причина, imp — состояние процесса, час смерти), «∅» система не держала наши звонки (на какой час), «P» плашку убрали, а приёмник вернул, «P✗» плашка не показалась, «BOOT» и «UPD» перезагрузка и обновление.</p>
       <pre id="alarmJournal"></pre>
