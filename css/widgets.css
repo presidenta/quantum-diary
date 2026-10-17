@@ -116,29 +116,25 @@
   --wg-small-fill: #1F1B11; --wg-small-line: #C8902C; --wg-small-text: var(--gold, #E3C77C);
 }
 .wg-gold .wg-plate { background: var(--pult-face-dark); }
-/* ЗАЛИТОЕ ЗОЛОТО (выкладка 145): основа — слиток с фотографии, буквы гравировкой — чёрные с
-   белой обводкой, чтобы читались и при сильной прозрачности поверх тёмных обоев. */
-.wg-gold.wg-fill {
-  --wg-text: #14110A; --wg-dim: #14110A;
-  --wg-valueA: #14110A; --wg-valueB: #14110A; --wg-ico: #14110A; --wg-bar: #14110A;
-  --wg-card: rgba(255, 255, 255, .28); --wg-card-line: rgba(0, 0, 0, .13);
-}
+/* ЗАЛИТОЕ ЗОЛОТО (выкладки 145–146): основа — слиток с фотографии владельца. Надписи — .gold-cut
+   сайта, как везде в золоте; на слитке их держат тёмный контур и ореол самого класса. */
+.wg-gold.wg-fill { --wg-ico: #14110A; }
 .wg-gold.wg-fill .wg-plate {
   background: none;
   border: 16px solid transparent; border-image: url(../img/widget/gold-tray.webp) 46 fill / 16px stretch;
 }
-.wg-gold.wg-fill .wg-body, .wg-gold .wg-btn {
-  text-shadow: 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff,
-               1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
+/* Карточки сроков в золоте — чёрные пластины с золотым кантом, как ячейки таблицы девяти моментов */
+.wg-gold .wg-card, .wg-gold .wg-row {
+  --wg-ico: #F3D375;
+  border: 1.5px solid transparent; background: var(--pult-plate-dark);
 }
-/* Золотые кнопки — пластина с фотографии, надпись гравировкой */
+.wg-gold .wg-row { border-left-width: 3px; }
+/* Золотые кнопки — пластина с фотографии; надпись — .gold-cut, значки тёмные */
 .wg-gold .wg-btn, .wg-gold .wg-btn.alt, .wg-gold .wg-btn.small {
   background: none; color: #14110A;
   border: 8px solid transparent; border-image: url(../img/widget/gold-button.webp) 22 fill / 8px stretch;
 }
-.wg-gold .wg-btn.small { --wg-ico: #14110A; color: #14110A; }
 .wg-gold .wg-btn.small .wg-ico { color: #14110A; }
-.wg-gold.wg-fill .wg-plate { background: var(--pult-face-gold); }
 .wg-gold .wg-rim {
   border: 2px solid transparent; box-shadow: none;
   background: var(--pult-rim) border-box;
