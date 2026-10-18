@@ -77,7 +77,8 @@ function нарисоватьГалерею() {
           ${widgetHtml(формат, стиль, дата, сроки, t)}
           ${можноСтавить
             ? `<button type="button" class="btn" data-install="${формат.key}">${экран(t('widgets.install'))}</button>`
-            : `<button type="button" class="btn" data-desktop="${формат.key}">${экран(t('widgets.openDesktop'))}</button>`}
+            : `<button type="button" class="btn" data-desktop="${формат.key}">${экран(t(вПриложенииДляКомпьютера()
+                ? 'widgets.placeDesktop' : 'widgets.openDesktop'))}</button>`}
         </div>`).join('');
     applyWidgetVars($('widgetsGallery'));
 }
@@ -88,6 +89,10 @@ function нарисоватьГалерею() {
    «Установить виджет» и по кадрам сроков, которые кладёт приложение (publishDesktopWidget):
    кадры расписаны по часам вперёд, поэтому окно переключает сроки само, даже когда приложение
    закрыто. Стиль кладётся на компьютер при каждой правке — открытое окно перекрашивается сразу. */
+/* Окно открыто в приложении для компьютера (desktop/, Electron): оно ставит виджет прямо на
+   рабочий стол окном без рамки. Узнаётся по метке в строке браузера, которую ставит оболочка. */
+const вПриложенииДляКомпьютера = () => /KvantDesktop\//.test(navigator.userAgent);
+
 const ОКНО_ВИДЖЕТА = {
     slim: [420, 130], hud: [380, 300], week: [380, 330], fillWide: [380, 300], tall: [230, 420], fillTall: [230, 420]
 };
@@ -232,6 +237,8 @@ export async function openWidgets(номер = 0) {
     };
 
     $('widgetsBrowserNote').hidden = isNative();
+    // Ссылка на установщик для компьютера — только в обычном браузере
+    $('widgetsDesktopDownload').hidden = isNative() || вПриложенииДляКомпьютера();
     $('widgetsTileBox').hidden = !isNative();
     $('widgetsMsg').hidden = true;
     нарисоватьВсё();

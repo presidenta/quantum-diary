@@ -5,3 +5,10 @@
 .wd { box-sizing: border-box; min-height: 100vh; padding: 6px; display: grid; align-items: center; }
 .wd .wg { max-width: none; width: 100%; }
 .wd .wg-btn, .wd .wg-gear { cursor: pointer; }
+
+/* В приложении для компьютера (Electron, выкладка 152): окно без рамки и прозрачное — видна только
+   сама пластина виджета со скруглёнными углами. Тянуть окно — за любое место виджета; кнопки из
+   перетаскивания исключены, иначе на них нельзя нажать. */
+html.wd-app, .wd-app.wd-body { background: transparent; }
+.wd-app .wd { padding: 0; -webkit-app-region: drag; }
+.wd-app .wg-btn, .wd-app .wg-gear { -webkit-app-region: no-drag; }

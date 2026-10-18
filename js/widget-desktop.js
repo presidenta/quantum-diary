@@ -19,7 +19,16 @@ import { widgetHtml, applyWidgetVars } from './core/widget-html.js';
 const ПЕРЕРИСОВКА_МС = 20 * 1000;
 
 const корень = document.getElementById('wd');
-const ключ = new URLSearchParams(location.search).get('f');
+const параметры = new URLSearchParams(location.search);
+const ключ = параметры.get('f');
+
+/* В приложении для компьютера (desktop/, Electron, выкладка 152) окно виджета без рамки и с
+   прозрачным фоном: виджет лежит прямо на рабочем столе и тянется за любое место, кроме
+   кнопок (стили .wd-app в widget-desktop.css). */
+if (параметры.get('app') === 'desktop') {
+    document.documentElement.classList.add('wd-app');
+    document.body.classList.add('wd-app');
+}
 const формат = FORMATS.find(ф => ф.key === ключ) || FORMATS.find(ф => ф.key === 'hud');
 
 function прочитать(имя) {
