@@ -1,0 +1,7 @@
+/* Окно виджета на компьютере (widget.html, выкладка 150): виджет на всё окно, без полей и
+   прокрутки, кнопки — с указателем: шестерёнка открывает окно «Установить виджет» в
+   приложении, кабинет — само приложение. */
+.wd-body { margin: 0; min-height: 100vh; background: #0b0a0f; overflow: hidden; }
+.wd { box-sizing: border-box; min-height: 100vh; padding: 6px; display: grid; align-items: center; }
+.wd .wg { max-width: none; width: 100%; }
+.wd .wg-btn, .wd .wg-gear { cursor: pointer; }

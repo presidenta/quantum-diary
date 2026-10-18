@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'self'">
+<meta name="theme-color" content="#0b0a0f">
+<title>Квант · виджет</title>
+<!-- ОКНО ВИДЖЕТА НА КОМПЬЮТЕРЕ (выкладка 150). Открывается кнопкой «Открыть на компьютере» в окне
+     «Установить виджет» маленьким отдельным окном, которое ставят в угол экрана. Вид — тот же, что
+     на телефоне и в предпросмотре (core/widget-html.js), сроки — кадры, которые кладёт приложение
+     (publishDesktopWidget), стиль — из окна «Установить виджет». Вид выбирается адресом: ?f=hud. -->
+<link rel="stylesheet" href="css/game-tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/widgets.css">
+<link rel="stylesheet" href="css/widget-desktop.css">
+</head>
+<body class="wd-body">
+<main id="wd" class="wd"></main>
+<script type="module" src="js/widget-desktop.js"></script>
+</body>
+</html>

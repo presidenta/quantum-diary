@@ -280,6 +280,27 @@ export async function widgetTerms(now = new Date()) {
     return выбран ? { architect: выбран.architect, observer: выбран.observer } : null;
 }
 
+/* СРОКИ ДЛЯ ОКНА ВИДЖЕТА НА КОМПЬЮТЕРЕ (выкладка 150). Те же кадры, что получает плашка на
+   телефоне (guardFramesFor): расписаны по часам вперёд, и окно виджета (widget.html) само
+   выбирает текущий — последний, чей час наступил. Кладутся на компьютер (localStorage) при
+   каждой перестановке расписания в браузере; открытое окно виджета слышит это сразу. */
+export async function publishDesktopWidget(now = new Date()) {
+    try {
+        const alarm = await loadAlarm();
+        const день = freshDay(state.quantum, todayKey(now));
+        const кадры = guardFramesFor(now, alarm, день, await заготовки(now, await loadQuiet(), alarm));
+        localStorage.setItem('kvant-desktop-widget', JSON.stringify({
+            at: now.getTime(),
+            lang: state.language,
+            frames: кадры.map(к => ({ from: к.from, architect: к.architect, observer: к.observer }))
+        }));
+        return true;
+    } catch (err) {
+        console.warn('[виджет на компьютере] сроки не положились:', err);
+        return false;
+    }
+}
+
 /**
  * Переставить всё расписание заново.
  *
@@ -290,7 +311,11 @@ export async function widgetTerms(now = new Date()) {
  * @returns {Promise<boolean>} поставлено ли хоть одно напоминание
  */
 export async function planReminders() {
-    if (!isNative()) return false;        // в браузере ставить нечего
+    // В браузере ставить нечего — но окну виджета на компьютере нужны свежие сроки
+    if (!isNative()) {
+        await publishDesktopWidget();
+        return false;
+    }
     if (!await readyOnce()) return false; // человек не дал разрешения
 
     const now = new Date();

@@ -941,6 +941,14 @@ async function start() {
      приложение было уже открыто, страница не перезагружается, и запуск
      второй раз не случится. */
   await открытьПоЗвонку();
+
+  /* Шестерёнка окна виджета на компьютере (widget.html, выкладка 150) открывает приложение с
+     адресом #widgets — сразу окно «Установить виджет». Метка снимается, чтобы обновление
+     страницы не открывало окно снова. */
+  if (location.hash === '#widgets') {
+    history.replaceState(null, '', location.pathname + location.search);
+    await openWidgets(0);
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     открытьПоЗвонку().catch(err => console.warn('[будильник]', err.message));
