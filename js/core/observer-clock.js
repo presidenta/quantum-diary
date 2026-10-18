@@ -41,6 +41,27 @@ function вТотЖеДень(минуты, миг) {
     return день.getTime() + минуты * МИНУТА_МС;
 }
 
+/* ТИХИЙ ЧАС (выкладка 160). Владелец 18.10.2026: прыгнул в 23:03 — и таймер, плашка и звонок
+   показали окно в 02:36, посреди тишины 23:00–06:00. «Если тихий час — в это время звонить
+   телефон не может, кроме лично наведённого будильника; окно автоматически переходит на утро».
+   Окно, которое открылось бы в тихий час, открывается с её концом и держится windowMs оттуда.
+   Назначенный час — личный будильник человека: тишина его не двигает. */
+
+/** Миг, перенесённый за тихий час: попал в тишину — её конец, иначе как есть. */
+export function afterQuiet(миг, quiet) {
+    if (!quiet || quiet.on === false || !миг) return миг;
+    const с = минутыЧаса(quiet.from);
+    const до = минутыЧаса(quiet.until);
+    if (с === null || до === null || с === до) return миг;
+    const день = new Date(миг);
+    const минуты = день.getHours() * 60 + день.getMinutes();
+    const тихо = с > до ? (минуты >= с || минуты < до) : (минуты >= с && минуты < до);
+    if (!тихо) return миг;
+    const конец = new Date(вТотЖеДень(до, миг));
+    if (конец.getTime() <= миг) конец.setDate(конец.getDate() + 1);
+    return конец.getTime();
+}
+
 /** Последний приход ежедневного часа не позже мига; часа нет — 0. */
 export function lastNamedAt(hhmm, миг) {
     const минуты = минутыЧаса(hhmm);
@@ -72,6 +93,7 @@ export function nextNamedAt(hhmm, миг) {
  * @param {number} p.now        миг, мс
  * @param {number} p.cooldownMs через сколько после опоры открывается окно
  * @param {number} p.windowMs   сколько окно держится
+ * @param {{on: boolean, from: string, until: string}} [p.quiet] тихий час: окно в нём — с его концом
  * @returns {{phase: 'never'|'cooldown'|'open'|'missed', anchor: number, opens: number,
  *            closes: number, nextNamed: number, next: number}}
  *   phase  — never: опоры нет (не было ни прыжка, ни звонка) — окно открыто с начала;
@@ -79,7 +101,7 @@ export function nextNamedAt(hhmm, миг) {
  *   next   — ближайший срок Наблюдателя после мига (открытие окна или назначенный звонок),
  *            0 — неизвестен (окно открыто или прошло, а часа не назначено).
  */
-export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs }) {
+export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null }) {
     const прыжок = Number(lastJump) > 0 ? Number(lastJump) : 0;
     const опора = Math.max(прыжок, lastNamedAt(named, now));
     const nextNamed = nextNamedAt(named, now);
@@ -87,7 +109,7 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
     if (!опора) {
         return { phase: 'never', anchor: 0, opens: 0, closes: 0, nextNamed, next: 0 };
     }
-    const opens = опора + cooldownMs;
+    const opens = afterQuiet(опора + cooldownMs, quiet);
     const closes = opens + windowMs;
 
     if (now < opens) {
@@ -110,12 +132,12 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
    окно впереди (cooldown): открытое или прошедшее окно часа не даёт.
 
    @returns {string} новый час «ЧЧ:ММ» или '' — оставить как есть */
-export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs }) {
+export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs, quiet = null }) {
     if (!named) return '';
     const прозвучал = lastNamedAt(named, now);
     if (!прозвучал || прозвучал < setAt) return '';
 
-    const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs });
+    const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs, quiet });
     if (часы.phase !== 'cooldown') return '';
     const открытие = new Date(часы.opens);
     const час = `${String(открытие.getHours()).padStart(2, '0')}:${String(открытие.getMinutes()).padStart(2, '0')}`;

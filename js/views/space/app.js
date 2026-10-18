@@ -16,7 +16,7 @@ import {
 } from './photos.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
    значит, он же и переставляет напоминание, когда это время меняется. */
-import { planReminders, loadAlarm, observerNamedHour } from '../../reminder-plan.js';
+import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerQuiet } from '../../reminder-plan.js';
 import { observerClock, countdownText } from '../../core/observer-clock.js';
 
 /* Языки раздела — те же и в том же порядке, что в Ежедневнике.
@@ -2028,12 +2028,14 @@ export class QuantumApp {
     checkScheduleAndTimer() {
         // Назначенный час — в память таймера; дальше его обновляет каждое чтение и сохранение режима
         loadAlarm().catch(() => null);
+        loadQuiet().catch(() => null);   // и тихий час: окно в нём открывается с её концом
         this.scheduleInterval = setInterval(() => {
             const last = parseInt(localStorage.getItem('last_quantum_jump_time') || '0');
             const now = Date.now();
             const часы = observerClock({
                 lastJump: last, named: observerNamedHour(), now,
-                cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs
+                cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs,
+                quiet: observerQuiet()
             });
             const disp = document.getElementById('s5-cooldown-timer');
 

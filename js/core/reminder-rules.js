@@ -11,7 +11,7 @@
    или погашен крестиком, — снять его может только приложение, и только
    если знает, что именно снимать. */
 
-import { observerClock } from './observer-clock.js';
+import { observerClock, afterQuiet } from './observer-clock.js';
 import {
     isOff, activeMoment, nextMoment, timeNow, MOMENT_WINDOW_MINUTES
 } from './quantum.js';
@@ -563,12 +563,14 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
        прозвучавший назначенный звонок. Ждём открытия — звоним в открытие; но если
        назначенный звонок раньше, он перезапустит цикл, и окно откроется через 3:33 после
        него. Окно открыто или прошло — следующее откроется после назначенного звонка. */
-    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs });
+    /* Тихий час (выкладка 160): окно, попавшее в тишину, открывается с её концом и звонит
+       будильником утром, а не беззвучной плашкой посреди ночи. */
+    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs, quiet });
     let когда = 0;
     if (часы.phase === 'cooldown') {
-        когда = часы.nextNamed && часы.nextNamed < часы.opens ? часы.nextNamed + cooldownMs : часы.opens;
+        когда = часы.nextNamed && часы.nextNamed < часы.opens ? afterQuiet(часы.nextNamed + cooldownMs, quiet) : часы.opens;
     } else if (часы.phase !== 'never' && часы.nextNamed) {
-        когда = часы.nextNamed + cooldownMs;
+        когда = afterQuiet(часы.nextNamed + cooldownMs, quiet);
     }
     if (!когда) return null;
 
@@ -643,7 +645,7 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
 const СУТКИ_МС = 24 * 60 * 60 * 1000;
 
 export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
-    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true, tomorrow = [], named = {} } = options;
+    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true, tomorrow = [], named = {}, quiet = null } = options;
 
     const список = Array.isArray(moments) ? moments : [];
     const завтра = Array.isArray(tomorrow) ? tomorrow : [];
@@ -652,7 +654,8 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
     const сегодняшний = миг => new Date(миг).toDateString() === now.toDateString();
     const last = Number(lastJump);
     const прыгал = Number.isFinite(last) && last > 0;
-    const откроется = last + cooldownMs;
+    // Окно, попавшее в тихий час, открывается с её концом (core/observer-clock.js)
+    const откроется = afterQuiet(last + cooldownMs, quiet);
 
     /* Срок словами для кадра: «ЧЧ:ММ», а если он на следующий день после кадра — «ЧЧ:ММ+1». */
     const срок = (когда, миг) => {
@@ -714,7 +717,7 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
        идущего момента: следующий момент, после последнего — первый утренний завтра. */
     const наблюдатель = миг => {
         if (!observerOn) return '';
-        const часы = observerClock({ lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs });
+        const часы = observerClock({ lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs, quiet });
         if (часы.phase === 'open') return timeNow(new Date(часы.opens));
         if (часы.phase === 'cooldown' || часы.next) return срок(new Date(часы.next), миг);
         return ближайшийЗвонок(миг);
@@ -758,8 +761,9 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
     if (observerOn && named.window) {
         for (const опора of [atToday(named.window, now), atToday(named.window, базаЗавтра)]) {
             if (!опора) continue;
-            границы.add(опора.getTime() + cooldownMs);
-            границы.add(опора.getTime() + cooldownMs + windowMs);
+            const открытие = afterQuiet(опора.getTime() + cooldownMs, quiet);
+            границы.add(открытие);
+            границы.add(открытие + windowMs);
         }
     }
     границы.add(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0).getTime());

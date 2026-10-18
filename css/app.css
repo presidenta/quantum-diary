@@ -1648,19 +1648,20 @@ body {
   /* Прямо под квадратиком с часами, а не под подписью слева: подпись
      относится к этому полю, и стоять она должна при нём. Правый край
      тот же, что у поля времени, — строка читается как его продолжение. */
-  margin: 0; font-size: 13px; color: var(--ink-2);
-  display: flex; align-items: center; justify-content: flex-start; gap: 7px;
+  margin: 0; font-size: 14px; color: var(--ink-2);
+  display: flex; align-items: center; justify-content: flex-start; gap: 6px;
 }
 .alarm-state:empty { display: none; }
+/* Значок будильника (Material «alarm») маской: красится цветом строки (выкладка 160) */
 .alarm-state::before {
-  content: ''; width: 8px; height: 8px; border-radius: 50%;
-  background: var(--ink-2); flex: 0 0 auto;
+  content: ''; width: 15px; height: 15px; flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39L6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12.5 8H11v6l4.75 2.85.75-1.23-4-2.37V8zM12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39L6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12.5 8H11v6l4.75 2.85.75-1.23-4-2.37V8zM12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
-.alarm-state.is-ahead::before { background: #5fbf7f; }
-.alarm-state.is-ahead { color: #8fcf8f; }
+.alarm-state.is-ahead { color: #6fd895; font-weight: 600; }
 /* Прошедший час — не ошибка: звонок просто уехал на завтра. Красным его
    красить было неверно: человек читал это как поломку. */
-.alarm-state.is-passed::before { background: var(--ink-2); }
 .alarm-state.is-passed { color: var(--ink-2); }
 
 /* ---- Окно «Логи»: расшифровка знаков журнала спрятана под заголовок ---------------

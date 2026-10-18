@@ -109,7 +109,8 @@ async function следоватьЦиклу(alarm, now = Date.now()) {
     if (!alarm.on || alarm.windowMode === 'off') return alarm;
     const новый = cycleNamedHour({
         named: alarm.windowAt, setAt: alarm.windowSetAt, lastJump: lastJumpTime(), now,
-        cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs
+        cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs,
+        quiet: await loadQuiet()
     });
     if (!новый) return alarm;
     const следующий = { ...alarm, windowAt: новый, windowSetAt: now };
@@ -187,15 +188,30 @@ export async function alarmState() {
 /** Тихий час, как его задал человек. */
 export async function loadQuiet() {
     try {
-        return normalizeQuiet(await getMeta(QUIET_KEY));
+        return запомнитьТишину(normalizeQuiet(await getMeta(QUIET_KEY)));
     } catch {
         return { ...QUIET_DEFAULT };
     }
 }
 
+/* ТИХИЙ ЧАС — В ПАМЯТИ ДЛЯ ТАЙМЕРОВ (выкладка 160), как назначенный час (observerNamedHour):
+   таймеры тикают каждую секунду и ждать хранилища не могут, а окно, попавшее в тишину, у них
+   должно открываться там же, где у плашки и звонка. Обновляется при каждом чтении и сохранении. */
+let тишина = null;
+
+function запомнитьТишину(quiet) {
+    тишина = quiet;
+    return quiet;
+}
+
+/** Тихий час для часов Наблюдателя; ещё не прочитан — null (тогда тишины не учитываем). */
+export function observerQuiet() {
+    return тишина;
+}
+
 /** Сохранить тихий час и сразу переставить расписание под него. */
 export async function saveQuiet(value) {
-    const quiet = normalizeQuiet(value);
+    const quiet = запомнитьТишину(normalizeQuiet(value));
     await setMeta(QUIET_KEY, quiet);
     await publishPref('quiet', quiet);
     await planReminders();
@@ -215,7 +231,7 @@ export async function syncPrefs(known) {
     if (!known.includes('prefs')) return false;
     const пришло = await takeRemotePrefs();
     if ('alarm' in пришло) await setMeta(ALARM_KEY, запомнитьЧас(normalizeAlarm(пришло.alarm)));
-    if ('quiet' in пришло) await setMeta(QUIET_KEY, normalizeQuiet(пришло.quiet));
+    if ('quiet' in пришло) await setMeta(QUIET_KEY, запомнитьТишину(normalizeQuiet(пришло.quiet)));
     const прыжок = Number(пришло.observer?.lastJump) || 0;
     const принятПрыжок = прыжок > lastJumpTime();
     if (принятПрыжок) запомнитьПрыжок(прыжок);
@@ -276,7 +292,7 @@ function lastJumpTime() {
    Текст плашки — украшение, а не работа: ошибка в его расчёте не вправе
    остановить постановку самих звонков. Без кадров нативная часть обойдётся
    запасным текстом. */
-function guardFramesFor(now, alarm, день, заготовка = {}) {
+function guardFramesFor(now, alarm, день, заготовка = {}, quiet = тишина) {
     try {
         /* Сегодняшнего дня нет (не загрузился) — звонит заготовка (см. горизонт), и на
            плашке её же часы. Завтрашняя заготовка — для кадров после последнего момента:
@@ -289,7 +305,9 @@ function guardFramesFor(now, alarm, день, заготовка = {}) {
             architectOn: alarm.momentsMode !== 'off',
             observerOn: alarm.windowMode !== 'off',
             tomorrow: заготовка.завтра?.moments,
-            named: назначенныеЧасы(alarm)
+            named: назначенныеЧасы(alarm),
+            // Окно, попавшее в тихий час, — с её концом (core/observer-clock.js, выкладка 160)
+            quiet
         }).map(кадр => ({
             from: кадр.from,
             text: guardText(кадр, t),
@@ -341,11 +359,12 @@ async function заготовки(now, quiet, alarm) {
 export async function widgetTerms(now = new Date()) {
     const alarm = await loadAlarm();
     const день = freshDay(state.quantum, todayKey(now));
-    const заготовка = await заготовки(now, await loadQuiet(), alarm);
+    const quiet = await loadQuiet();
+    const заготовка = await заготовки(now, quiet, alarm);
 
     // Тот же выбор, что у AlarmStore.кадрСейчас: последний кадр, чей час уже наступил
     let выбран = null;
-    for (const кадр of guardFramesFor(now, alarm, день, заготовка)) {
+    for (const кадр of guardFramesFor(now, alarm, день, заготовка, quiet)) {
         if (!выбран || кадр.from <= now.getTime()) выбран = кадр;
     }
     return выбран ? { architect: выбран.architect, observer: выбран.observer } : null;
@@ -359,7 +378,8 @@ export async function publishDesktopWidget(now = new Date()) {
     try {
         const alarm = await loadAlarm();
         const день = freshDay(state.quantum, todayKey(now));
-        const кадры = guardFramesFor(now, alarm, день, await заготовки(now, await loadQuiet(), alarm));
+        const quiet = await loadQuiet();
+        const кадры = guardFramesFor(now, alarm, день, await заготовки(now, quiet, alarm), quiet);
         localStorage.setItem('kvant-desktop-widget', JSON.stringify({
             at: now.getTime(),
             lang: state.language,
@@ -416,7 +436,7 @@ export async function planReminders() {
     /* Текст плашки — украшение, а не работа: ошибка в его расчёте не вправе
        остановить постановку самих звонков, которая идёт ниже. Без кадров
        страж обойдётся запасным текстом. */
-    const кадры = guardFramesFor(now, alarm, день, await заготовки(now, quiet, alarm));
+    const кадры = guardFramesFor(now, alarm, день, await заготовки(now, quiet, alarm), quiet);
 
     await setGuard({
         on: alarm.on && alarm.guardOn,

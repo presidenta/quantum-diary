@@ -30,7 +30,7 @@ import {
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
-  loadAlarm, saveAlarm, alarmState, syncPrefs
+  loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
 import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
@@ -411,30 +411,44 @@ function alarmFromForm() {
    или он уже прошёл. Человек спрашивал об этом каждый раз, а строка
    внизу говорила обо всех сразу и терялась.
 
-   Зелёная точка — звонок впереди, красная — час прошёл и звонок уедет на
-   завтра. Точка стоит ПЕРЕД словом, а не вместо него: цвет не прочитать
-   вслух и не разглядеть дальтонику. */
+   Значок будильника перед словами «сегодня в…» / «завтра в…»: зелёный — звонок
+   стоит и прозвонит, серый — нет (подробно — у звонокСтоит ниже). Слова стоят
+   рядом с цветом, а не вместо него: цвет не прочитать вслух и не разглядеть
+   дальтонику. */
+/* КАК БУДИЛЬНИК (выкладка 160). Владелец 18.10.2026: «время, на которое наведён будильник, —
+   значком будильника и зелёным, пока оно ещё должно прозвонить; прозвонило — серым». «Завтра
+   в 08:00» тоже ещё прозвонит — зелёное. Серое — звонка на этот час в телефоне нет: прозвенел и
+   не переставлен, или час изменён и ещё не сохранён. На телефоне сверяется со списком того, что
+   реально стоит (стоящиеЗвонки, из showAlarmPending); в браузере звонков нет — по настройке. */
+let стоящиеЗвонки = null;
+
+function звонокСтоит(поле, at) {
+  if (!Array.isArray(стоящиеЗвонки)) return true;
+  return стоящиеЗвонки.some(з => String(з.key).startsWith(`alarm-next-${поле}`)
+    && Math.abs(Number(з.at) - at.getTime()) < 60 * 1000);
+}
+
 function showAlarmStates(alarm) {
   const value = normalizeAlarm(alarm);
 
-  const показать = (полеId, hhmm, включено) => {
-    const поле = $(полеId);
-    поле.className = 'alarm-state';
+  const показать = (полеId, hhmm, включено, поле) => {
+    const строка = $(полеId);
+    строка.className = 'alarm-state';
 
-    if (!включено || !value.on) { поле.textContent = ''; return; }
-    if (!hhmm) { поле.textContent = t('alarm.notSet'); return; }
+    if (!включено || !value.on) { строка.textContent = ''; return; }
+    if (!hhmm) { строка.textContent = t('alarm.notSet'); return; }
 
     const at = atNext(hhmm);
     const сегодня = at && at.getDate() === new Date().getDate();
 
-    поле.classList.add(сегодня ? 'is-ahead' : 'is-passed');
-    поле.textContent = сегодня
+    строка.classList.add(at && звонокСтоит(поле, at) ? 'is-ahead' : 'is-passed');
+    строка.textContent = сегодня
       ? t('alarm.setFor', { at: hhmm })
       : t('alarm.passed', { at: hhmm });
   };
 
-  показать('alarmWindowState', value.windowAt, value.windowMode !== 'off');
-  показать('alarmMomentsState', value.momentsAt, value.momentsMode !== 'off');
+  показать('alarmWindowState', value.windowAt, value.windowMode !== 'off', 'window');
+  показать('alarmMomentsState', value.momentsAt, value.momentsMode !== 'off', 'moments');
 
   /* Что стоит у направления, видно глазом: выключенное приглушается, а
      «только напоминание» и «выключено» подписываются словами — чтобы
@@ -484,6 +498,7 @@ async function showAlarmPending() {
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
     journal } = await pendingAlarms();
+  стоящиеЗвонки = alarms;
 
   const час = at => new Intl.DateTimeFormat('ru', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -746,7 +761,9 @@ function показатьЧасыНаблюдателя() {
   const now = Date.now();
   const часы = observerClock({
     lastJump: Number(localStorage.getItem('last_quantum_jump_time')) || 0, named, now,
-    cooldownMs: SPACE_CONFIG.timing.jumpCooldownMs, windowMs: SPACE_CONFIG.timing.opportunityWindowMs
+    cooldownMs: SPACE_CONFIG.timing.jumpCooldownMs, windowMs: SPACE_CONFIG.timing.opportunityWindowMs,
+    // Окно в тихий час — с её концом, как у плашки и звонка (выкладка 160)
+    quiet: observerQuiet()
   });
 
   let время = '--:--:--';
@@ -795,6 +812,7 @@ async function openAlarmDialog() {
   $('alarmBrowserNote').hidden = isNative();
   await showAlarmTrouble();
   await showAlarmPending();
+  showAlarmStates(alarm);   // теперь известно, что стоит в телефоне: зелёное — только стоящее
   $('alarmDialog').returnValue = '';
   // За время ожиданий выше окно могли открыть вторым нажатием
   if (!$('alarmDialog').open) $('alarmDialog').showModal();
