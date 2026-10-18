@@ -17,6 +17,8 @@ import { initPasswordEyes } from './password-eye.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
 import { initQuantum, renderQuantum, loadQuantum, quietChanged } from './views/quantum.js';
+import { observerClock, countdownText } from './core/observer-clock.js';
+import { CONFIG as SPACE_CONFIG } from './views/space/config.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 import { initWidgets, openWidgets } from './widgets-ui.js';
@@ -732,6 +734,42 @@ async function showAlarmTrouble() {
    теперь умеют двое: сама кнопка и плашка стража в шторке («Настроить
    время»). Второму нажимать чужую кнопку было бы обходом: её обработчик
    может измениться, а окно должно открываться одинаково с обеих сторон. */
+/* ЖИВОЙ ТАЙМЕР НАБЛЮДАТЕЛЯ В «РЕЖИМЕ БУДИЛЬНИКА» (выкладка 148, ТЗ владельца 18.10.2026).
+   Часы Наблюдателя (core/observer-clock.js) — тот же расчёт, что у таймера «До возможного
+   следующего прыжка», плашки и виджетов. Час берётся из поля формы, а не из сохранённого:
+   правка часа сразу пересчитывает остаток («сейчас 15:30, поставил 16:00 — 00:30:00»). */
+let тикЧасов = 0;
+
+function показатьЧасыНаблюдателя() {
+  const включено = $('alarmOn').checked && $('alarmWindowMode').value !== 'off';
+  const named = включено ? $('alarmWindowAt').value : '';
+  const now = Date.now();
+  const часы = observerClock({
+    lastJump: Number(localStorage.getItem('last_quantum_jump_time')) || 0, named, now,
+    cooldownMs: SPACE_CONFIG.timing.jumpCooldownMs, windowMs: SPACE_CONFIG.timing.opportunityWindowMs
+  });
+
+  let время = '--:--:--';
+  let пояснение = t('alarm.clockAfterJump');
+  if (часы.phase === 'never') {
+    пояснение = t('alarm.clockOpen');
+  } else if (часы.phase === 'open') {
+    время = countdownText(часы.closes - now);
+    пояснение = t('alarm.clockOpenLeft');
+  } else if (часы.next) {
+    время = countdownText(часы.next - now);
+    пояснение = часы.next === часы.nextNamed ? t('alarm.clockToNamed') : t('alarm.clockToWindow');
+  }
+  $('alarmClockTime').textContent = время;
+  $('alarmClockNote').textContent = пояснение;
+}
+
+function завестиЧасыНаблюдателя() {
+  clearInterval(тикЧасов);
+  показатьЧасыНаблюдателя();
+  тикЧасов = setInterval(показатьЧасыНаблюдателя, 1000);
+}
+
 async function openAlarmDialog() {
   // Окно уже открыто (плашку нажали дважды) — повторный showModal бросил бы
   // InvalidStateError и оборвал бы остальной вызов
@@ -753,6 +791,7 @@ async function openAlarmDialog() {
     : t('alarm.quietOff');
 
   showAlarmStates(alarm);
+  завестиЧасыНаблюдателя();
   $('alarmBrowserNote').hidden = isNative();
   await showAlarmTrouble();
   await showAlarmPending();
@@ -1208,7 +1247,14 @@ async function boot() {
     строка.className = поставлен ? 'gate-msg is-ok' : 'gate-msg is-error';
   });
 
+  // Правка часа или режима — таймер пересчитывает остаток сразу, до «Сохранить»
+  for (const id of ['alarmWindowAt', 'alarmWindowMode', 'alarmOn']) {
+    $(id).addEventListener('input', показатьЧасыНаблюдателя);
+    $(id).addEventListener('change', показатьЧасыНаблюдателя);
+  }
+
   $('alarmDialog').addEventListener('close', async () => {
+    clearInterval(тикЧасов);
     if ($('alarmDialog').returnValue !== 'save') return;
     await saveAlarm(alarmFromForm());
     /* Названный вручную час сдвигает все последующие моменты дня: человек

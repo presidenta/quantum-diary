@@ -92,15 +92,30 @@ export const ALARM_DEFAULT = Object.freeze({ on: true });
 /** Режим будильника, как его задал человек. */
 export async function loadAlarm() {
     try {
-        return normalizeAlarm(await getMeta(ALARM_KEY));
+        return запомнитьЧас(normalizeAlarm(await getMeta(ALARM_KEY)));
     } catch {
         return { ...ALARM_DEFAULT };
     }
 }
 
+/* НАЗНАЧЕННЫЙ ЧАС НАБЛЮДАТЕЛЯ — В ПАМЯТИ ДЛЯ ТАЙМЕРОВ (выкладка 148). Таймеры тикают каждую
+   секунду и ждать хранилища не могут, а считать им надо по тем же часам Наблюдателя, что и
+   плашке (core/observer-clock.js). Обновляется при каждом чтении и сохранении режима. */
+let часНаблюдателя = '';
+
+function запомнитьЧас(alarm) {
+    часНаблюдателя = назначенныеЧасы(alarm).window || '';
+    return alarm;
+}
+
+/** Назначенный час Наблюдателя «ЧЧ:ММ» или '' — для таймеров обратного отсчёта. */
+export function observerNamedHour() {
+    return часНаблюдателя;
+}
+
 /** Сохранить режим будильника и сразу переставить расписание под него. */
 export async function saveAlarm(value) {
-    const alarm = normalizeAlarm(value);
+    const alarm = запомнитьЧас(normalizeAlarm(value));
     await setMeta(ALARM_KEY, alarm);
     await planReminders();
     return alarm;
@@ -324,6 +339,9 @@ export async function planReminders() {
     const moments = momentPlan(день?.moments, now, quiet, alarm);
     const window = windowPlan(lastJumpTime(), now, {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
+        windowMs: CONFIG.timing.opportunityWindowMs,
+        // Назначенный звонок Наблюдателя перезапускает цикл (core/observer-clock.js)
+        named: назначенныеЧасы(alarm).window || '',
         quiet,
         off: modeOf(KEY_WINDOW, alarm) === 'off'
     });

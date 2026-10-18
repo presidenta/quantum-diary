@@ -16,7 +16,8 @@ import {
 } from './photos.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
    значит, он же и переставляет напоминание, когда это время меняется. */
-import { planReminders } from '../../reminder-plan.js';
+import { planReminders, loadAlarm, observerNamedHour } from '../../reminder-plan.js';
+import { observerClock, countdownText } from '../../core/observer-clock.js';
 
 /* Языки раздела — те же и в том же порядке, что в Ежедневнике.
    Название языка пишется на нём самом, поэтому переводить его не нужно. */
@@ -1772,6 +1773,47 @@ export class QuantumApp {
     paintChronicles(list) {
         list.innerHTML = this.renderRecentChronicles() + this.renderChronicleStats();
         this.applyStatShares(list);
+        // Табы периода и «Сброс» — одним обработчиком на список (свойство, а не addEventListener:
+        // список перерисовывается целиком, и обработчики не копятся)
+        list.onclick = (событие) => this.onStatsClick(событие, list);
+    }
+
+    /* ПЕРИОД И ТОЧКА ОТСЧЁТА СВОДКИ (выкладка 148, ТЗ владельца 18.10.2026).
+
+       Табы «За неделю» (7 дней), «За месяц» (30 дней), «За всё время» — сводка пересчитывается
+       сразу при смене таба, отдельной кнопки «Обновить» нет. Кнопка «Сброс» одна на все табы:
+       после подтверждения запоминает миг сброса (analytics_reset_timestamp), и все три периода
+       считают только с него. Записи Хроник при этом не трогаются — меняется только выборка
+       для шкал. Выбранный таб помнится на этом устройстве. */
+    statsPeriod() {
+        const сохранённый = localStorage.getItem('quantum_stats_period');
+        return ['week', 'month', 'all'].includes(сохранённый) ? сохранённый : 'all';
+    }
+
+    statsBaseline() {
+        const миг = Number(localStorage.getItem('analytics_reset_timestamp'));
+        return Number.isFinite(миг) && миг > 0 ? миг : 0;
+    }
+
+    /* С какого мига считать сводку: начало периода или сброс — что позже; 0 — со всех записей */
+    statsSince(now = Date.now()) {
+        const сутки = 24 * 60 * 60 * 1000;
+        const период = { week: 7 * сутки, month: 30 * сутки }[this.statsPeriod()];
+        return Math.max(this.statsBaseline(), период ? now - период : 0);
+    }
+
+    onStatsClick(событие, list) {
+        const таб = событие.target.closest('[data-stats-period]');
+        if (таб) {
+            localStorage.setItem('quantum_stats_period', таб.dataset.statsPeriod);
+            this.paintChronicles(list);
+            return;
+        }
+        if (событие.target.closest('[data-stats-reset]')) {
+            if (!window.confirm(this.t('chroniclesResetAsk'))) return;
+            localStorage.setItem('analytics_reset_timestamp', String(Date.now()));
+            this.paintChronicles(list);
+        }
     }
 
     // Ширина каждой шкалы — её доля. Ставится кодом: см. renderChronicleStats.
@@ -1843,13 +1885,16 @@ export class QuantumApp {
        в эту дверь — половина шкалы. */
     renderChronicleStats() {
         const counts = new Map();
+        // Только записи выбранного периода и после сброса; записи без времени — только «за всё время» без сброса
+        const since = this.statsSince();
+        const выборка = since === 0 ? this.history : this.history.filter(item => Number(item.ts) >= since);
 
         // Сначала все нынешние двери, по порядку и с нулями
         for (let slot = 0; slot < this.realities.length; slot++) {
             counts.set('slot:' + slot, { key: 'slot:' + slot, slot, count: 0, fallback: '' });
         }
 
-        for (const item of this.history) {
+        for (const item of выборка) {
             const key = this.statKeyOf(item);
             const row = counts.get(key)
                 || { key, slot: null, count: 0, fallback: item.reality || '' };
@@ -1858,7 +1903,7 @@ export class QuantumApp {
             counts.set(key, row);
         }
 
-        const total = this.history.length;
+        const total = выборка.length;
 
         // Чаще открытые — выше; при равенстве держим порядок дверей
         const rows = Array.from(counts.values()).sort((a, b) => {
@@ -1890,8 +1935,24 @@ export class QuantumApp {
             </div>`;
         }).join('');
 
+        const период = this.statsPeriod();
+        const таб = (ключ, слово) => `<button type="button" class="qm-stats-tab" data-stats-period="${ключ}"
+            aria-pressed="${период === ключ}">${this.escapeHtml(this.t(слово))}</button>`;
+        const сброс = this.statsBaseline();
+        const сКакого = сброс
+            ? `<p class="qm-stats-since">${this.escapeHtml(this.t('chroniclesSince').replace('{date}',
+                new Date(сброс).toLocaleString(this.lang === 'en' ? 'en-GB' : this.lang === 'uk' ? 'uk-UA' : 'ru-RU',
+                    { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })))}</p>`
+            : '';
+
         return `<section class="qm-chron-section">
-            <h4 class="qm-chron-head">${this.escapeHtml(this.t('chroniclesAll'))}</h4>
+            <div class="qm-stats-bar">
+                <div class="qm-stats-tabs" role="group">
+                    ${таб('week', 'chroniclesWeek')}${таб('month', 'chroniclesMonth')}${таб('all', 'chroniclesAll')}
+                </div>
+                <button type="button" class="qm-stats-reset" data-stats-reset>${this.escapeHtml(this.t('chroniclesReset'))}</button>
+            </div>
+            ${сКакого}
             ${body}
         </section>`;
     }
@@ -1947,35 +2008,38 @@ export class QuantumApp {
         if (modal) modal.classList.add('hidden');
     }
 
+    /* ТАЙМЕР «ДО ВОЗМОЖНОГО СЛЕДУЮЩЕГО ПРЫЖКА» — по часам Наблюдателя (core/observer-clock.js,
+       выкладка 148): тот же расчёт, что у плашки, виджетов и таймера в «Режиме будильника».
+       Опора цикла — прыжок или прозвучавший назначенный звонок; до назначенного звонка, если
+       он раньше окна, таймер считает до него. */
     checkScheduleAndTimer() {
+        // Назначенный час — в память таймера; дальше его обновляет каждое чтение и сохранение режима
+        loadAlarm().catch(() => null);
         this.scheduleInterval = setInterval(() => {
             const last = parseInt(localStorage.getItem('last_quantum_jump_time') || '0');
             const now = Date.now();
+            const часы = observerClock({
+                lastJump: last, named: observerNamedHour(), now,
+                cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs
+            });
+            const disp = document.getElementById('s5-cooldown-timer');
 
-            if (last === 0) {
-                const disp = document.getElementById('s5-cooldown-timer');
+            if (часы.phase === 'never') {
                 if (disp) disp.innerText = this.t('windowOpen');
                 return;
             }
 
-            const timeSinceLast = now - last;
-            const cooldownRemaining = CONFIG.timing.jumpCooldownMs - timeSinceLast;
-            const disp = document.getElementById('s5-cooldown-timer');
-
-            if (cooldownRemaining > 0) {
+            if (часы.phase === 'cooldown') {
                 this.windowTriggered = false;
                 if (disp) {
-                    const hours = Math.floor(cooldownRemaining / (1000 * 60 * 60)).toString().padStart(2, '0');
-                    const mins = Math.floor((cooldownRemaining % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-                    const secs = Math.floor((cooldownRemaining % (1000 * 60)) / 1000).toString().padStart(2, '0');
-                    disp.innerText = `${this.t('timerPrefix')}${hours}:${mins}:${secs}`;
+                    disp.innerText = `${this.t('timerPrefix')}${countdownText(часы.next - now)}`;
                     this.updateSnoozeButtonUI();
                 }
             } else {
                 // Окно возможностей открыто
-                const elapsedWindowMs = timeSinceLast - CONFIG.timing.jumpCooldownMs;
+                const elapsedWindowMs = now - часы.opens;
 
-                if (elapsedWindowMs < CONFIG.timing.opportunityWindowMs) {
+                if (часы.phase === 'open') {
                     const totalElapsedSec = Math.floor(elapsedWindowMs / 1000);
                     const mins = Math.floor(totalElapsedSec / 60);
                     const secs = totalElapsedSec % 60;

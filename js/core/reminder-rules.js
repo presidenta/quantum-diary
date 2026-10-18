@@ -11,6 +11,7 @@
    или погашен крестиком, — снять его может только приложение, и только
    если знает, что именно снимать. */
 
+import { observerClock } from './observer-clock.js';
 import {
     isOff, activeMoment, nextMoment, timeNow, MOMENT_WINDOW_MINUTES
 } from './quantum.js';
@@ -546,16 +547,26 @@ export function ringsAsAlarm(key, alarm) {
    Тихий час в это число больше не входит. Он не снимает напоминание, а
    глушит его: приходит беззвучная плашка (разбор у momentPlan выше). */
 export function windowPlan(lastJump, now = new Date(), options = {}) {
-    const { cooldownMs = 0, quiet = null, off = false } = options;
+    const { cooldownMs = 0, windowMs = 0, quiet = null, off = false, named = '' } = options;
 
     // Наблюдатель выключен совсем: окно не ставится, а прежнее снимает
     // вызывающий (reminder-plan.js кладёт ключ в снятие, когда окна нет)
     if (off) return null;
 
-    const last = Number(lastJump);
-    if (!Number.isFinite(last) || last <= 0) return null;
+    /* ЧАСЫ НАБЛЮДАТЕЛЯ (core/observer-clock.js, выкладка 148): опора цикла — прыжок или
+       прозвучавший назначенный звонок. Ждём открытия — звоним в открытие; но если
+       назначенный звонок раньше, он перезапустит цикл, и окно откроется через 3:33 после
+       него. Окно открыто или прошло — следующее откроется после назначенного звонка. */
+    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs });
+    let когда = 0;
+    if (часы.phase === 'cooldown') {
+        когда = часы.nextNamed && часы.nextNamed < часы.opens ? часы.nextNamed + cooldownMs : часы.opens;
+    } else if (часы.phase !== 'never' && часы.nextNamed) {
+        когда = часы.nextNamed + cooldownMs;
+    }
+    if (!когда) return null;
 
-    const at = new Date(last + cooldownMs);
+    const at = new Date(когда);
     if (at.getTime() <= now.getTime()) return null;
 
     return underQuiet(at, quiet)
@@ -682,15 +693,15 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
        Теперь час стоит всегда — до открытия это будущее время, пока окно
        открыто — то, когда оно открылось («после 00:23», сейчас 01:00), и это
        тот же вид строки, что у Архитектора. Окно закрылось — прочерк. */
+    /* Наблюдатель — часы Наблюдателя (core/observer-clock.js): тот же расчёт, что у таймера
+       в «Пространстве» и в «Режиме будильника». Опоры нет — окно открыто с самого начала;
+       окно открыто — час, когда открылось; иначе ближайший срок (открытие или звонок). */
     const наблюдатель = миг => {
         if (!observerOn) return '';
-        if (!прыгал) return 'now';
-        // Окно открыто сейчас — час, когда оно открылось
-        if (миг >= откроется && миг < откроется + windowMs) return timeNow(new Date(откроется));
-
-        const окно = миг < откроется ? new Date(откроется) : null;
-        const ближайший = раньше(окно, следующий(named.window, миг));
-        return ближайший ? срок(ближайший, миг) : '';
+        const часы = observerClock({ lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs });
+        if (часы.phase === 'never') return 'now';
+        if (часы.phase === 'open') return timeNow(new Date(часы.opens));
+        return часы.next ? срок(new Date(часы.next), миг) : '';
     };
 
     /* Границы, на которых текст может измениться: время каждого живого
@@ -726,6 +737,14 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
         const завтрашний = atToday(hhmm, базаЗавтра);
         if (сегодня) границы.add(сегодня.getTime());
         if (завтрашний) границы.add(завтрашний.getTime());
+    }
+    // Назначенный звонок Наблюдателя перезапускает цикл: окно откроется и закроется после него
+    if (observerOn && named.window) {
+        for (const опора of [atToday(named.window, now), atToday(named.window, базаЗавтра)]) {
+            if (!опора) continue;
+            границы.add(опора.getTime() + cooldownMs);
+            границы.add(опора.getTime() + cooldownMs + windowMs);
+        }
     }
     границы.add(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0).getTime());
 

@@ -902,6 +902,24 @@
 
 .qm-root .qm-chron-section:last-child { margin-bottom: 0; }
 
+/* Табы периода и «Сброс» над сводкой (выкладка 148): сегменты в одну строку, выбранный — золотой */
+.qm-root .qm-stats-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px 0; }
+.qm-root .qm-stats-tabs {
+    display: flex; flex: 1; min-width: 0; padding: 3px; gap: 3px;
+    border: 1px solid var(--qm-border); border-radius: 12px;
+}
+.qm-root .qm-stats-tab {
+    flex: 1; min-width: 0; padding: 7px 4px; border: 0; border-radius: 9px; background: transparent;
+    color: var(--qm-gold); opacity: .75; font: 600 12px var(--qm-font-head); letter-spacing: .3px;
+    text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+.qm-root .qm-stats-tab[aria-pressed="true"] { opacity: 1; background: rgba(227, 199, 124, .16); }
+.qm-root .qm-stats-reset {
+    flex: none; padding: 8px 12px; border: 1px solid var(--qm-border); border-radius: 12px;
+    background: transparent; color: var(--qm-gold); font: 600 12px var(--qm-font-head); cursor: pointer;
+}
+.qm-root .qm-stats-since { margin: -6px 0 10px 0; font-size: 12px; opacity: .7; }
+
 .qm-root .qm-chron-head {
     margin: 0 0 10px 0;
     font-family: var(--qm-font-head);
