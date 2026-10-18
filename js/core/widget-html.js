@@ -20,7 +20,8 @@ const экран = текст => String(текст ?? '').replace(/[&<>"]/g, c =
 const значок = имя => `<span class="wg-ico">${WIDGET_ICONS[имя]}</span>`;
 
 /* Слова вида: свои надписи человека, а где их нет — стандартные из словаря. */
-function слова(стиль, ключ, look, перевод) {
+/** Слова вида (заголовок, подписи, кнопки, дни) — и для подсказок в окне «Установить виджет». */
+export function widgetWords(стиль, ключ, look, перевод) {
     const слово = к => перевод(`widgets.w.${к}`);
     const своё = (поле, обычное) => стиль[поле] || обычное;
     const дни = перевод('widgets.days').split(',').map(д => д.trim());
@@ -68,7 +69,7 @@ function срокHtml(текст) {
  */
 export function widgetHtml(формат, стиль, дата, сроки, перевод) {
     const look = resolveLook(стиль, дата);
-    const слово = слова(стиль, формат.key, look, перевод);
+    const слово = widgetWords(стиль, формат.key, look, перевод);
     const золото = look.gold;
 
     const alpha = (стиль.alpha ?? (формат.fill ? DEFAULT_ALPHA.fill : DEFAULT_ALPHA.neon)) / 100;

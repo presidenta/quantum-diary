@@ -24,7 +24,7 @@ import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
     FORMATS, CHAKRAS, DEFAULT_ALPHA, normalizeStyle, resolveLook
 } from './core/widgets.js';
-import { widgetHtml, applyWidgetVars } from './core/widget-html.js';
+import { widgetHtml, widgetWords, applyWidgetVars } from './core/widget-html.js';
 
 const $ = id => document.getElementById(id);
 
@@ -135,7 +135,7 @@ function нарисоватьФорму() {
     $('widgetsAlphaLabel').textContent = t('widgets.alpha', { n: процент });
 
     // Пустое поле — стандартная надпись; она же видна подсказкой
-    const слово = слова(normalizeStyle({}), вид.key, look);
+    const слово = widgetWords(normalizeStyle({}), вид.key, look, t);
     for (const [поле, значение, подсказка] of [
         ['widgetsTitle', стиль.title, слово.title],
         ['widgetsSubtitle', стиль.subtitle, слово.sub],
