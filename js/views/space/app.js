@@ -1521,6 +1521,8 @@ export class QuantumApp {
 
         this.currentChosenText = this.doorDisplayName(slot);
         this.currentDoorId = this.doorIds[slot] || null;
+        // Дверь выбрана — суперпозиция пройдена, окно закрыто
+        this.rememberJump();
         document.getElementById('txt-s3-chosen-reality').innerText = this.currentChosenText;
         this.updateSpeedUI();
         this.showScreen('screen-3');
@@ -1703,6 +1705,23 @@ export class QuantumApp {
         this._sparkRaf = requestAnimationFrame(step);
     }
 
+    /* ПРЫЖОК СОВЕРШЁН: С ЭТОГО МИГА ОКНО ЗАКРЫТО, СЛЕДУЮЩЕЕ — ЧЕРЕЗ 3 Ч 33 МИН.
+
+       Владелец 18.10.2026: «прошёл суперпозицию — и сразу опять звонок, что окно открыто». Прыжок
+       записывался только сохранением записи в дневник в самом конце; выбрал дверь и закрыл — для
+       часов Наблюдателя прыжка не было, окно оставалось открытым и звало снова. Теперь прыжок —
+       уже выбор двери (onDoorChosen), а запись в дневник лишь передвигает его на свой миг.
+
+       Расписание переставляется сразу, не дожидаясь ухода из приложения: иначе телефон позвонил
+       бы по старому сроку. */
+    rememberJump() {
+        localStorage.setItem('last_quantum_jump_time', Date.now().toString());
+        this.notifications.resetSnooze();
+        this.windowTriggered = false;
+        this.hideOpportunityModal();
+        planReminders().catch(err => console.warn('[напоминания]', err));
+    }
+
     saveDiaryEntry() {
         const trace = document.getElementById('input-s4-diary').value.trim();
 
@@ -1724,13 +1743,7 @@ export class QuantumApp {
         });
 
         localStorage.setItem('quantum_akashi_chronicles', JSON.stringify(this.history));
-        localStorage.setItem('last_quantum_jump_time', Date.now().toString());
-        this.notifications.resetSnooze();
-
-        /* Прыжок сдвинул следующее окно на 3 часа 33 минуты вперёд —
-           переставляем системный будильник сразу, не дожидаясь ухода из
-           приложения. Иначе телефон позвонил бы по старому сроку. */
-        planReminders().catch(err => console.warn('[напоминания]', err));
+        this.rememberJump();
 
         document.getElementById('input-s4-diary').value = '';
         // Запись ушла в хроники — слова гаснут вместе с ней
@@ -2053,11 +2066,16 @@ export class QuantumApp {
                     // показывает её showOpportunityModal — прятать нечего
                     if (disp) disp.innerText = this.t('windowOpen');
 
-                    if (!this.windowTriggered) {
-                        this.windowTriggered = true;
+                    /* Окно и перезвон — один раз на каждое открытие окна, а не на каждый запуск
+                       приложения: прошивка закрывает его по нескольку раз за минуту, и человек
+                       слышал «окно открыто» снова и снова (владелец 18.10.2026). */
+                    const показано = Number(localStorage.getItem('quantum_window_shown')) === часы.opens;
+                    if (!this.windowTriggered && !показано) {
+                        localStorage.setItem('quantum_window_shown', String(часы.opens));
                         this.showOpportunityModal();
                         this.notifications.triggerQuantumWindowNotification();
                     }
+                    this.windowTriggered = true;
                 } else {
                     // Окно пропущено, цикл сбрасывается
                     localStorage.setItem('last_quantum_jump_time', Date.now().toString());
