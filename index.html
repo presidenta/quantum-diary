@@ -659,14 +659,6 @@
       <button type="button" class="alarm-logs" id="alarmLogs" data-i18n="alarm.logs">Логи</button>
     </div>
 
-    <!-- ЖИВОЙ ТАЙМЕР НАБЛЮДАТЕЛЯ (выкладка 148, ТЗ владельца 18.10.2026): тот же расчёт, что у
-         таймера в «Пространстве», плашки и виджетов (core/observer-clock.js). Слева — обратный
-         отсчёт, справа — до чего он. Пересчитывается сразу при правке часа, до «Сохранить». -->
-    <div class="alarm-clock" id="alarmClock" role="timer" aria-live="off">
-      <span class="alarm-clock-time" id="alarmClockTime">--:--:--</span>
-      <span class="alarm-clock-note" id="alarmClockNote"></span>
-    </div>
-
     <label class="quiet-switch">
       <input type="checkbox" name="on" id="alarmOn">
       <span data-i18n="alarm.active">Режим активности: звонить будильником</span>
@@ -686,6 +678,15 @@
          закреплена проверкой — в выкладке 111 их уже путали местами. -->
     <div class="alarm-section" id="alarmWindowSection">
       <span class="alarm-name" id="alarmWindowName" data-i18n="alarm.on">Окно возможностей — Наблюдатель метавселенной</span>
+      <!-- ЖИВОЙ ТАЙМЕР НАБЛЮДАТЕЛЯ (выкладки 148–149, ТЗ владельца 18.10.2026): тот же расчёт, что у
+           таймера в «Пространстве», плашки и виджетов (core/observer-clock.js). Стоит в разделе
+           Наблюдателя под его названием и выглядит как строка ниже: слева отсчёт в поле, как у
+           часа, справа — до чего он, в поле, как у выбора режима. Пересчитывается сразу при
+           правке часа, до «Сохранить». -->
+      <div class="alarm-row alarm-clock" id="alarmClock" role="timer" aria-live="off">
+        <span class="alarm-clock-time" id="alarmClockTime">--:--:--</span>
+        <span class="alarm-clock-note" id="alarmClockNote"></span>
+      </div>
       <div class="alarm-row">
         <input name="windowAt" id="alarmWindowAt" type="time" aria-labelledby="alarmWindowName">
         <select class="alarm-mode" id="alarmWindowMode" aria-labelledby="alarmWindowName">

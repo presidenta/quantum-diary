@@ -452,17 +452,21 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
    терять нельзя — в выкладке 111 их уже путали местами. */
 .alarm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .alarm-head h2 { margin: 0; }
-/* Живой таймер Наблюдателя в «Режиме будильника» — плашка как у таймера на финальном экране:
-   чёрная пластина с золотым кантом, цифры золотом сайта */
-.alarm-clock {
-  display: flex; align-items: center; gap: 14px; margin: 12px 0 4px; padding: 12px 16px;
-  border: 2px solid transparent; border-radius: 14px; background: var(--pult-plate-dark);
-}
+/* Живой таймер Наблюдателя в «Режиме будильника» (выкладка 149): строка как у часа и режима
+   под ней — слева отсчёт в поле того же вида, что поле часа, справа пояснение в поле того же
+   вида, что выбор режима. Цифры — золотом сайта, чтобы таймер отличался от того, что вводят. */
 .alarm-clock-time {
-  font: 700 26px var(--serif, Georgia, serif); font-variant-numeric: tabular-nums; letter-spacing: .02em;
-  color: var(--pult-text, #E3C77C); flex: none;
+  flex: 0 0 118px; width: 118px; min-height: 48px; padding: 10px 12px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-strong); border-radius: 12px; background: var(--bg);
+  font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--pult-text, #E3C77C);
 }
-.alarm-clock-note { font-size: 13px; line-height: 1.3; color: var(--muted, #a89fb2); }
+.alarm-clock-note {
+  flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 6px 10px; box-sizing: border-box;
+  display: flex; align-items: center;
+  border: 1px solid var(--line-strong, #3a3545); border-radius: 12px; background: #0b0a0f;
+  color: var(--ink); font-size: 14px; line-height: 1.25;
+}
 /* Временная кнопка: ведёт в окно «Логи», которое потом уйдёт целиком */
 .alarm-logs {
   padding: 6px 12px; border: 1px solid var(--line-strong, #3a3545); border-radius: 10px;
