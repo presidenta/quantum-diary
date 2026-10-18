@@ -211,6 +211,20 @@ export async function takeAlarmTarget() {
     }
 }
 
+/* Уйти в фон: час из панели виджета применён, человек возвращается на рабочий стол
+   (выкладка 147). Нет плагина или старый файл приложения — остаёмся, ничего страшного. */
+export async function moveToBack() {
+    const QA = alarmPlugin();
+    if (!QA || typeof QA.moveToBack !== 'function') return false;
+    try {
+        const ответ = await QA.moveToBack();
+        return !!(ответ && ответ.moved);
+    } catch (err) {
+        console.error('[reminders] не удалось уйти в фон:', err);
+        return false;
+    }
+}
+
 /* ПРИЛОЖЕНИЕ УЖЕ БЫЛО ОТКРЫТО, А ЦЕЛЬ ПОЯВИЛАСЬ.
  *
  * takeAlarmTarget спрашивают при запуске и при возвращении на экран
@@ -805,7 +819,7 @@ export async function openAppSettings() {
    часам дня ({from, text}, см. guardFrames в reminder-rules.js), а
    settingsLabel и homeLabel — надписи на двух её кнопках. Нет кадров —
    страж покажет запасной text. */
-export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel, widgets }) {
+export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel, widgets, named }) {
     const QA = alarmPlugin();
     if (!QA || typeof QA.setGuard !== 'function') return false;
 
@@ -818,7 +832,9 @@ export async function setGuard({ on, title, text, frames, settingsLabel, homeLab
             settingsLabel: settingsLabel || '',
             homeLabel: homeLabel || '',
             // Слова виджетов рабочего стола на языке человека (core/widgets.js, widgetTexts)
-            widgets: widgets && typeof widgets === 'object' ? widgets : {}
+            widgets: widgets && typeof widgets === 'object' ? widgets : {},
+            // Часы «Режима будильника» — для строки «Время звонков» в панели виджета (выкладка 147)
+            named: named && typeof named === 'object' ? named : {}
         });
         return true;
     } catch (err) {

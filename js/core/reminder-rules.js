@@ -606,14 +606,28 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
 
    НАБЛЮДАТЕЛЬ — окно возможностей: открывается через cooldownMs после
    последнего прыжка и держится windowMs. Прыжка ещё не было — окно открыто
-   (так же показывает его таймер в «Пространстве вариантов»). Окно прошло
-   незамеченным — пусто: цикл начнётся заново, когда человек откроет
-   приложение, и какой будет следующий срок, сейчас неизвестно.
+   (так же показывает его таймер в «Пространстве вариантов»).
+
+   НАЗНАЧЕННЫЕ ЧАСЫ (выкладка 147, options.named). Владелец 18.10.2026 поставил
+   в «Режиме будильника» Наблюдателю 16:00, сохранил — и «нигде не
+   отобразилось»: звонок на 16:00 стоял, а плашка и виджеты писали прочерк, потому
+   что считали только окно от прыжка и моменты дня. Названный час — тоже звонок
+   этого направления, поэтому срок — ближайшее из вычисленного и названного:
+   у Наблюдателя — открытие окна или его час, у Архитектора — момент дня или его
+   час. Прочерк остаётся, только когда направление выключено или не известно
+   никакого часа.
+
+   ДЕНЬ ПРИ ВРЕМЕНИ. Срок не сегодня (относительно кадра) пишется с днём:
+   значение «ЧЧ:ММ+1» — «завтра после ЧЧ:ММ» (guardTerm). Названный час
+   ежедневный, завтрашние моменты — на завтра, поэтому дальше «завтра» срок не
+   уходит. В полночь кадр сменяется, и «завтра» снимается само.
 
    @returns {{from: number, architect: string, observer: string}[]}
             по возрастанию from; у первого from равен 0 — «с самого начала» */
+const СУТКИ_МС = 24 * 60 * 60 * 1000;
+
 export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
-    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true, tomorrow = [] } = options;
+    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true, tomorrow = [], named = {} } = options;
 
     const список = Array.isArray(moments) ? moments : [];
     const завтра = Array.isArray(tomorrow) ? tomorrow : [];
@@ -624,20 +638,41 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
     const прыгал = Number.isFinite(last) && last > 0;
     const откроется = last + cooldownMs;
 
+    /* Срок словами для кадра: «ЧЧ:ММ», а если он на следующий день после кадра — «ЧЧ:ММ+1». */
+    const срок = (когда, миг) => {
+        const день = new Date(миг);
+        день.setHours(0, 0, 0, 0);
+        return когда.getTime() >= день.getTime() + СУТКИ_МС ? `${timeNow(когда)}+1` : timeNow(когда);
+    };
+    /* Ближайший приход ежедневного часа «ЧЧ:ММ» после мига (наступивший час — уже завтра). */
+    const следующий = (hhmm, миг) => {
+        if (!hhmm) return null;
+        const когда = atToday(hhmm, new Date(миг));
+        if (!когда) return null;
+        if (когда.getTime() <= миг) когда.setDate(когда.getDate() + 1);
+        return когда;
+    };
+    const раньше = (a, b) => (!a ? b : !b ? a : (a.getTime() <= b.getTime() ? a : b));
+
     const архитектор = миг => {
         if (!architectOn) return '';
         const время = timeNow(new Date(миг));
+        // Идущий момент подсвечен на главном экране — он и есть срок
+        const день = сегодняшний(миг) ? список : завтра;
+        const опора = сегодняшний(миг) ? now : базаЗавтра;
+        const идёт = activeMoment(день, время);
+        if (идёт) return идёт.at;
 
-        if (сегодняшний(миг)) {
-            const момент = activeMoment(список, время) || nextMoment(список, время);
-            if (момент) return момент.at;
+        let ближайший = null;
+        const момент = nextMoment(день, время);
+        if (момент) ближайший = atToday(момент.at, опора);
+        else if (сегодняшний(миг)) {
             // Сегодня моментов больше нет — первый живой момент завтрашнего дня
             const первый = nextMoment(завтра, '');
-            return первый ? первый.at : '';
+            if (первый) ближайший = atToday(первый.at, базаЗавтра);
         }
-        // Кадр уже завтрашний (после полуночи) — расписание завтрашней заготовки
-        const момент = activeMoment(завтра, время) || nextMoment(завтра, время);
-        return момент ? момент.at : '';
+        ближайший = раньше(ближайший, следующий(named.moments, миг));
+        return ближайший ? срок(ближайший, миг) : '';
     };
 
     /* ВО ВРЕМЯ ОТКРЫТОГО ОКНА ПИШЕМ ЧАС, КОГДА ОНО ОТКРЫЛОСЬ, А НЕ «СЕЙЧАС».
@@ -650,8 +685,12 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
     const наблюдатель = миг => {
         if (!observerOn) return '';
         if (!прыгал) return 'now';
-        if (миг < откроется + windowMs) return timeNow(new Date(откроется));
-        return '';
+        // Окно открыто сейчас — час, когда оно открылось
+        if (миг >= откроется && миг < откроется + windowMs) return timeNow(new Date(откроется));
+
+        const окно = миг < откроется ? new Date(откроется) : null;
+        const ближайший = раньше(окно, следующий(named.window, миг));
+        return ближайший ? срок(ближайший, миг) : '';
     };
 
     /* Границы, на которых текст может измениться: время каждого живого
@@ -680,6 +719,15 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
         границы.add(откроется);
         границы.add(откроется + windowMs);
     }
+    // Назначенные часы сегодня и завтра (прошёл — следующий) и полночь (снимается «завтра»)
+    for (const hhmm of [named.window, named.moments]) {
+        if (!hhmm) continue;
+        const сегодня = atToday(hhmm, now);
+        const завтрашний = atToday(hhmm, базаЗавтра);
+        if (сегодня) границы.add(сегодня.getTime());
+        if (завтрашний) границы.add(завтрашний.getTime());
+    }
+    границы.add(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0).getTime());
 
     const порядок = [...границы]
         .filter(миг => миг > now.getTime())
@@ -732,7 +780,9 @@ export function guardText(кадр, translate) {
 export function guardTerm(значение, translate) {
     if (значение === 'now') return translate('guard.now');
     if (!значение) return translate('guard.none');
-    return translate('guard.after', { time: значение });
+    // «ЧЧ:ММ+1» — срок на завтра (guardFrames): время пишется с днём
+    const [time, завтра] = String(значение).split('+');
+    return translate(завтра ? 'guard.afterTomorrow' : 'guard.after', { time });
 }
 
 /* ДЕНЬ, КОТОРЫЙ ЕЩЁ СЕГОДНЯШНИЙ.

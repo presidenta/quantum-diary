@@ -23,7 +23,7 @@ import { initWidgets, openWidgets } from './widgets-ui.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
-  takeAlarmTarget, pendingAlarms, askBatteryFreedom, openOverlaySettings,
+  takeAlarmTarget, moveToBack, pendingAlarms, askBatteryFreedom, openOverlaySettings,
   forgetAlarmTrace, openAppSettings, openAutostart, onOpenTarget, shareText
 } from './core/reminders.js';
 import {
@@ -797,6 +797,18 @@ function закрытьОкнаНастроек(кроме) {
   }
 }
 
+const ПОЛЯ_ЧАСА = { window: 'windowAt', moments: 'momentsAt' };
+
+async function применитьЧасИзВиджета(правка) {
+  const [поле, час] = правка.split('=');
+  if (!ПОЛЯ_ЧАСА[поле] || !/^\d{2}:\d{2}$/.test(час || '')) return;
+
+  const alarm = await loadAlarm();
+  await saveAlarm({ ...alarm, [ПОЛЯ_ЧАСА[поле]]: час });
+  await quietChanged();
+  await moveToBack();
+}
+
 async function открытьПоЗвонку() {
   const цель = await takeAlarmTarget();
   if (!цель) return;
@@ -806,6 +818,16 @@ async function открытьПоЗвонку() {
 
   if (цель === 'alarm') {
     await openAlarmDialog();
+    return;
+  }
+
+  /* НОВЫЙ ЧАС ИЗ ПАНЕЛИ ВИДЖЕТА: «alarmAt:window=16:30» или «alarmAt:moments=08:02»
+     (выкладка 147). Запоминаем его ровно так же, как «Сохранить» в «Режиме будильника»:
+     saveAlarm переставляет звонки, плашку и виджеты, quietChanged пересобирает день
+     под названный час. Потом уходим в фон — человек остаётся на рабочем столе и видит,
+     как виджет переставился. */
+  if (цель.startsWith('alarmAt:')) {
+    await применитьЧасИзВиджета(цель.slice('alarmAt:'.length));
     return;
   }
 

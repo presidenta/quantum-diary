@@ -224,6 +224,9 @@ export function widgetTexts(translate) {
         modeChakra: слово('modeChakra'),
         sheetMore: слово('sheetMore'),
         sheetDone: слово('sheetDone'),
+        sheetTime: слово('sheetTime'),
+        sheetRefresh: слово('sheetRefresh'),
+        sheetOff: слово('sheetOff'),
         days: translate('widgets.days').split(',').map(д => д.trim())
     };
 }

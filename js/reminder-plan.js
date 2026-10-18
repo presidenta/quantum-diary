@@ -202,7 +202,8 @@ function guardFramesFor(now, alarm, день, заготовка = {}) {
             // Выключенное направление времени не имеет — на плашке прочерк
             architectOn: alarm.momentsMode !== 'off',
             observerOn: alarm.windowMode !== 'off',
-            tomorrow: заготовка.завтра?.moments
+            tomorrow: заготовка.завтра?.moments,
+            named: назначенныеЧасы(alarm)
         }).map(кадр => ({
             from: кадр.from,
             text: guardText(кадр, t),
@@ -213,6 +214,18 @@ function guardFramesFor(now, alarm, день, заготовка = {}) {
         console.warn('[напоминания] текст плашки не посчитался:', err);
         return [];
     }
+}
+
+/* ЧАСЫ, НАЗНАЧЕННЫЕ ЧЕЛОВЕКОМ В «РЕЖИМЕ БУДИЛЬНИКА» — для кадров плашки и виджетов: это
+   тоже звонки направлений, и срок на плашке обязан их видеть (выкладка 147). Выключенный
+   режим или выключенное направление часа не даёт — так же, как не ставит и звонка. */
+function назначенныеЧасы(alarm) {
+    const настройка = normalizeAlarm(alarm);
+    if (!настройка.on) return {};
+    return {
+        window: настройка.windowMode === 'off' ? '' : настройка.windowAt,
+        moments: настройка.momentsMode === 'off' ? '' : настройка.momentsAt
+    };
 }
 
 /* ЗАГОТОВКИ СЕГОДНЯШНЕГО И ЗАВТРАШНЕГО ДНЯ — те же, по которым горизонт ставит звонки
@@ -300,7 +313,9 @@ export async function planReminders() {
         settingsLabel: t('guard.settings'),
         homeLabel: t('guard.home'),
         // Слова виджетов рабочего стола: они рисуются, когда приложение закрыто
-        widgets: widgetTexts(t)
+        widgets: widgetTexts(t),
+        // Часы «Режима будильника» — для строки «Время звонков» в панели виджета
+        named: назначенныеЧасы(alarm)
     });
 
     /* Направление выключено совсем — в план оно не попадает, а его ключи
