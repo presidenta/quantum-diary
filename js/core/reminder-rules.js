@@ -309,7 +309,13 @@ export function normalizeAlarm(raw) {
         guardOn: src.guardOn !== false,
 
         windowAt: время(src.windowAt),
-        momentsAt: время(src.momentsAt)
+        momentsAt: время(src.momentsAt),
+
+        /* Когда час Наблюдателя назначен (мс). Нужен часам Наблюдателя: назначенный час
+           следует за циклом, только если он уже прозвенел ПОСЛЕ того, как его назначили
+           (cycleNamedHour в core/observer-clock.js), — иначе автоматика затёрла бы час,
+           который человек только что поставил на вечер. */
+        windowSetAt: Number(src.windowSetAt) > 0 ? Number(src.windowSetAt) : 0
     };
 }
 

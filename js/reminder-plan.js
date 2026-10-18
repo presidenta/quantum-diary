@@ -33,6 +33,7 @@ import {
 import { widgetTexts } from './core/widgets.js';
 import { provisionalDay } from './core/quantum.js';
 import { todayKey, addDays } from './core/dates.js';
+import { cycleNamedHour } from './core/observer-clock.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
 import { CONFIG } from './views/space/config.js';
@@ -92,10 +93,27 @@ export const ALARM_DEFAULT = Object.freeze({ on: true });
 /** Режим будильника, как его задал человек. */
 export async function loadAlarm() {
     try {
-        return запомнитьЧас(normalizeAlarm(await getMeta(ALARM_KEY)));
+        return запомнитьЧас(await следоватьЦиклу(normalizeAlarm(await getMeta(ALARM_KEY))));
     } catch {
         return { ...ALARM_DEFAULT };
     }
+}
+
+/* ЧАС НАБЛЮДАТЕЛЯ СЛЕДУЕТ ЗА ЦИКЛОМ (выкладка 157, правило — cycleNamedHour в
+   core/observer-clock.js). Применяется при каждом чтении режима — его читают и расписание, и
+   окно «Режим будильника», и окно виджетов, — поэтому переехавший час сразу видят все: поле в
+   настройках, панель на столе, плашка, виджеты и таймеры. Переезд записывается с отметкой
+   «назначен сейчас»: следующий раз час переедет уже после своего нового звонка. */
+async function следоватьЦиклу(alarm, now = Date.now()) {
+    if (!alarm.on || alarm.windowMode === 'off') return alarm;
+    const новый = cycleNamedHour({
+        named: alarm.windowAt, setAt: alarm.windowSetAt, lastJump: lastJumpTime(), now,
+        cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs
+    });
+    if (!новый) return alarm;
+    const следующий = { ...alarm, windowAt: новый, windowSetAt: now };
+    await setMeta(ALARM_KEY, следующий);
+    return следующий;
 }
 
 /* НАЗНАЧЕННЫЙ ЧАС НАБЛЮДАТЕЛЯ — В ПАМЯТИ ДЛЯ ТАЙМЕРОВ (выкладка 148). Таймеры тикают каждую
@@ -115,7 +133,12 @@ export function observerNamedHour() {
 
 /** Сохранить режим будильника и сразу переставить расписание под него. */
 export async function saveAlarm(value) {
-    const alarm = запомнитьЧас(normalizeAlarm(value));
+    // Человек назначил другой час Наблюдателя — запомнить когда: до его звонка он не переедет
+    const прежний = normalizeAlarm(await getMeta(ALARM_KEY).catch(() => null));
+    const новый = normalizeAlarm(value);
+    if (новый.windowAt !== прежний.windowAt) новый.windowSetAt = Date.now();
+    else if (!новый.windowSetAt) новый.windowSetAt = прежний.windowSetAt;
+    const alarm = запомнитьЧас(новый);
     await setMeta(ALARM_KEY, alarm);
     await planReminders();
     return alarm;

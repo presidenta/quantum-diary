@@ -97,6 +97,31 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
     return { phase: now < closes ? 'open' : 'missed', anchor: опора, opens, closes, nextNamed, next: nextNamed };
 }
 
+/* ЧАС НАБЛЮДАТЕЛЯ СЛЕДУЕТ ЗА ЦИКЛОМ (выкладка 157).
+
+   Владелец 18.10.2026: «везде должно быть одинаковое время». В «Режиме будильника» стоял
+   назначенный час 17:30, а плашка и виджеты — «после 21:14»: звонок в 17:30 прозвенел, потом был
+   прыжок в 17:41, и цикл ушёл дальше. По ТЗ («таймер сбрасывается и пересчитывает следующее окно,
+   время мгновенно транслируется везде») назначенный час после своего звонка переезжает на
+   открытие следующего окна — и в настройках то же время, что на виджете.
+
+   Переезжает, только если он уже прозвенел ПОСЛЕ того, как его назначили (setAt): час, который
+   человек только что поставил на вечер, ещё не звонил и остаётся, как поставлен. И только пока
+   окно впереди (cooldown): открытое или прошедшее окно часа не даёт.
+
+   @returns {string} новый час «ЧЧ:ММ» или '' — оставить как есть */
+export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs }) {
+    if (!named) return '';
+    const прозвучал = lastNamedAt(named, now);
+    if (!прозвучал || прозвучал < setAt) return '';
+
+    const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs });
+    if (часы.phase !== 'cooldown') return '';
+    const открытие = new Date(часы.opens);
+    const час = `${String(открытие.getHours()).padStart(2, '0')}:${String(открытие.getMinutes()).padStart(2, '0')}`;
+    return час === named ? '' : час;
+}
+
 /** «ЧЧ:ММ:СС» до мига или от мига (по модулю): для таймеров обратного отсчёта. */
 export function countdownText(ms) {
     const всего = Math.max(0, Math.floor(Math.abs(ms) / 1000));
