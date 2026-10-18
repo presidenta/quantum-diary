@@ -227,6 +227,7 @@ export function widgetTexts(translate) {
         sheetTime: слово('sheetTime'),
         sheetRefresh: слово('sheetRefresh'),
         sheetOff: слово('sheetOff'),
+        sheetNamed: слово('sheetNamed'),
         days: translate('widgets.days').split(',').map(д => д.trim())
     };
 }
