@@ -36,6 +36,7 @@ import { todayKey, addDays } from './core/dates.js';
 import { cycleNamedHour } from './core/observer-clock.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
+import { publishPref, prefValue, prefMissing, takeRemotePrefs } from './prefs.js';
 import { CONFIG } from './views/space/config.js';
 
 /* ТИХИЙ ЧАС.
@@ -140,6 +141,7 @@ export async function saveAlarm(value) {
     else if (!новый.windowSetAt) новый.windowSetAt = прежний.windowSetAt;
     const alarm = запомнитьЧас(новый);
     await setMeta(ALARM_KEY, alarm);
+    await publishPref('alarm', alarm);      // и на остальные устройства (выкладка 158)
     await planReminders();
     return alarm;
 }
@@ -195,8 +197,54 @@ export async function loadQuiet() {
 export async function saveQuiet(value) {
     const quiet = normalizeQuiet(value);
     await setMeta(QUIET_KEY, quiet);
+    await publishPref('quiet', quiet);
     await planReminders();
     return quiet;
+}
+
+/* НАСТРОЙКИ С ДРУГИХ УСТРОЙСТВ (выкладка 158, хранение — prefs.js). Зовётся после каждой
+   удачной синхронизации. Принимает пришедшее: режим будильника и тихий час — как есть (их
+   сохранил человек на другом устройстве, правка там позже здешней), последний прыжок — если он
+   позже здешнего. Отдаёт своё, чего на сервере нет: режим и тихий час, настроенные до этой
+   выкладки, — только когда их там точно нет (сервер знает prefs, а записи нет); прыжок —
+   когда здешний позже. Что-то приняли — расписание, плашка и виджеты пересчитываются.
+
+   @param {string[]} known  виды, что знает сервер
+   @returns {Promise<boolean>} приняли ли что-нибудь */
+export async function syncPrefs(known) {
+    if (!known.includes('prefs')) return false;
+    const пришло = await takeRemotePrefs();
+    if ('alarm' in пришло) await setMeta(ALARM_KEY, запомнитьЧас(normalizeAlarm(пришло.alarm)));
+    if ('quiet' in пришло) await setMeta(QUIET_KEY, normalizeQuiet(пришло.quiet));
+    const прыжок = Number(пришло.observer?.lastJump) || 0;
+    const принятПрыжок = прыжок > lastJumpTime();
+    if (принятПрыжок) запомнитьПрыжок(прыжок);
+
+    for (const [key, ключБазы] of [['alarm', ALARM_KEY], ['quiet', QUIET_KEY]]) {
+        const своё = prefMissing(key) && await getMeta(ключБазы);
+        if (своё) await publishPref(key, своё);
+    }
+    await отдатьПрыжок();
+
+    const принято = 'alarm' in пришло || 'quiet' in пришло || принятПрыжок;
+    if (принято) await planReminders();
+    return принято;
+}
+
+/* Последний прыжок — на остальные устройства, если здесь он позже, чем на сервере. Время
+   прыжка только растёт (прыжок, сброс пропущенного окна, «отложить» — всё «сейчас» или позже),
+   поэтому спор решает больший. */
+async function отдатьПрыжок() {
+    const здесь = lastJumpTime();
+    if (здесь > (Number(prefValue('observer')?.lastJump) || 0)) await publishPref('observer', { lastJump: здесь });
+}
+
+function запомнитьПрыжок(миг) {
+    try {
+        localStorage.setItem('last_quantum_jump_time', String(миг));
+    } catch {
+        /* приватный режим браузера — прыжок останется на сервере */
+    }
 }
 
 /* Разрешение и канал спрашиваем один раз за запуск, а не на каждую
@@ -334,6 +382,8 @@ export async function publishDesktopWidget(now = new Date()) {
  * @returns {Promise<boolean>} поставлено ли хоть одно напоминание
  */
 export async function planReminders() {
+    // Прыгнули здесь — остальные устройства должны узнать (prefs.js); сбой не держит расписание
+    await отдатьПрыжок().catch(err => console.warn('[настройки] прыжок не ушёл:', err));
     // В браузере ставить нечего — но окну виджета на компьютере нужны свежие сроки
     if (!isNative()) {
         await publishDesktopWidget();

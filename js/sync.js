@@ -13,16 +13,45 @@ let running = null;
 let onStatus = () => {};
 let onData = () => {};
 let onAuthLost = () => {};
+let onSynced = () => {};
+let onWakeAt = () => 0;
+let wakeTimer = null;
 
-export function initSync({ status, data, authLost }) {
+/* ВИДЫ, КОТОРЫЕ ЗНАЕТ СЕРВЕР (выкладка 158). Новый вид (настройки prefs) появляется в
+   приложении раньше, чем владелец обновит сервер. Сервер отвечает записями всех своих видов —
+   по ответу и видно, какие он знает. Неизвестный вид не отправляется: иначе его записи
+   навсегда остались бы «не ушедшими», и синхронизация крутилась бы без конца. Пока ответа
+   не было, новым видом считается только то, что добавлено после сервера с этим списком. */
+const SERVER_KINDS = 'serverKinds';
+const NEWER_KINDS = ['prefs'];
+
+async function knownKinds() {
+  const known = await getMeta(SERVER_KINDS);
+  return Array.isArray(known) ? KINDS.filter(k => known.includes(k)) : KINDS.filter(k => !NEWER_KINDS.includes(k));
+}
+
+/**
+ * @param {object} p
+ * @param {(s: string) => void} p.status
+ * @param {() => void} p.data        с сервера пришло новое
+ * @param {() => void} [p.authLost]
+ * @param {(kinds: string[]) => void} [p.synced]  синхронизация удалась; kinds — виды, что знает сервер
+ * @param {() => number} [p.wakeAt]  когда спросить сервер ещё раз без повода (миг, мс; 0 — не
+ *        спрашивать). Только приложению для компьютера: его окно спрятано в трей и на вкладку не
+ *        возвращается, а виджетам на столе нужны правки с телефона. Не опрос по таймеру: один
+ *        будильник до ближайшего события, после каждой синхронизации ставится заново
+ */
+export function initSync({ status, data, authLost, synced, wakeAt }) {
   onStatus = status;
   onData = data;
   onAuthLost = authLost || (() => {});
+  onSynced = synced || (() => {});
   if (!API_BASE) { onStatus('local'); return; }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') syncNow();
   });
   window.addEventListener('online', () => syncNow());
+  onWakeAt = wakeAt || (() => 0);
   syncNow();
 }
 
@@ -61,8 +90,15 @@ const strip = ({ dirty, ...rest }) => rest;
 export function syncNow() {
   if (!API_BASE) return Promise.resolve(false);
   clearTimeout(timer);
-  running ??= run().finally(() => { running = null; });
+  running ??= run().finally(() => { running = null; armWake(); });
   return running;
+}
+
+/* Один будильник синхронизации до мига, который назвал wakeAt (см. initSync). */
+function armWake() {
+  clearTimeout(wakeTimer);
+  const at = Number(onWakeAt()) || 0;
+  if (at > 0) wakeTimer = setTimeout(syncNow, Math.max(1000, at - Date.now()));
 }
 
 async function run() {
@@ -71,8 +107,9 @@ async function run() {
   if (!navigator.onLine) { onStatus('offline'); return false; }
   onStatus('syncing');
   try {
+    const kinds = await knownKinds();
     const sent = await dirtyRecords();
-    const changes = Object.fromEntries(KINDS.map(k => [k, sent[k].map(strip)]));
+    const changes = Object.fromEntries(kinds.map(k => [k, sent[k].map(strip)]));
     const cursor = (await getMeta('cursor')) || 0;
 
     let result;
@@ -92,17 +129,24 @@ async function run() {
       return false;
     }
 
-    const fresh = await merge(sent, result);
-    await setMeta('cursor', result.cursor);
+    const known = KINDS.filter(k => Array.isArray(result.changes[k]));
+    const fresh = await merge(sent, result, known, kinds);
+    /* Сервер только что узнал новый вид — его записи, сделанные раньше (другим устройством),
+       могли остаться позади курсора: прежняя версия приложения получала их и выбрасывала.
+       Один раз забрать всё заново; слияние повторы пропускает. */
+    const learned = known.some(k => !kinds.includes(k));
+    await setMeta('cursor', learned ? 0 : result.cursor);
+    await setMeta(SERVER_KINDS, known);
     if (result.rejected.length) console.warn('[sync] сервер отклонил записи:', result.rejected);
     onStatus('synced');
     // Перерисовываем, только если с сервера пришло новое, а не эхо своих правок:
     // лишняя перерисовка может съесть нажатие, пришедшееся на этот момент
-    if (fresh) onData();
+    if (fresh) await onData();
+    try { await onSynced(known); } catch (err) { console.warn('[sync] после синхронизации:', err); }
 
-    // Пока шёл запрос, могли появиться новые правки
+    // Пока шёл запрос, могли появиться новые правки (и сервер мог узнать новый вид)
     const pending = await dirtyRecords();
-    if (KINDS.some(k => pending[k].length)) scheduleSync();
+    if (learned || known.some(k => pending[k].length)) scheduleSync();
 
     // Единственный путь, после которого известно, что лежит на сервере
     return true;
@@ -114,13 +158,16 @@ async function run() {
 }
 
 /* Слияние: побеждает более поздняя правка. Отправленная запись становится «чистой»,
-   только если её не успели снова изменить на телефоне, пока шёл запрос. */
-async function merge(sent, result) {
+   только если её не успели снова изменить на телефоне, пока шёл запрос. kinds — виды,
+   которые знает сервер, sentKinds — которые в этот раз отправлены. */
+async function merge(sent, result, kinds, sentKinds) {
   const local = await loadAll();
   let fresh = 0;
-  for (const kind of KINDS) {
+  for (const kind of kinds) {
     const byId = new Map(local[kind].map(r => [r.id, r]));
-    const sentAt = new Map(sent[kind].map(r => [r.id, r.updatedAt]));
+    // Чистыми становятся только отправленные: вид, который сервер узнал лишь этим ответом,
+    // ещё не уходил, и его записи остаются «не ушедшими» до следующего раза
+    const sentAt = new Map((sentKinds.includes(kind) ? sent[kind] : []).map(r => [r.id, r.updatedAt]));
     const updates = [];
 
     for (const r of result.changes[kind]) {

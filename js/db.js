@@ -12,10 +12,11 @@
 export const KINDS = [
   'sectors', 'goals', 'goalVersions', 'entries', 'assessments',
   'tasks', 'notes', 'memorableDates',         // ежедневник, версия базы 2
-  'money'                                     // деньги, версия базы 3
+  'money',                                    // деньги, версия базы 3
+  'prefs'                                     // настройки на все устройства, версия базы 4 (prefs.js)
 ];
 const DB_NAME = 'PlannerDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise = null;
 

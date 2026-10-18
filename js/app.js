@@ -30,7 +30,7 @@ import {
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
-  loadAlarm, saveAlarm, alarmState
+  loadAlarm, saveAlarm, alarmState, syncPrefs
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
 import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
@@ -882,6 +882,23 @@ async function открытьПоЗвонку() {
 }
 
 let syncStarted = false;
+
+/* КОГДА ПРИЛОЖЕНИЮ ДЛЯ КОМПЬЮТЕРА СПРОСИТЬ СЕРВЕР (выкладка 158). Владелец 18.10.2026: не
+   каждые 15 секунд — «сработал звонок — тогда полное обновление, или раз в час; главное, чтобы
+   не грузило память». Поэтому — когда на виджете наступает следующий срок (звонок, открытие
+   окна, смена момента: кадры, что кладёт publishDesktopWidget), чуть погодя, а если сроков
+   долго нет — через час. Таймер всегда один. */
+const ЧАС_МС = 60 * 60 * 1000;
+const ПОСЛЕ_СРОКА_МС = 5 * 1000;
+
+function следующийСрокНаСтоле(сейчас = Date.now()) {
+    let срок = сейчас + ЧАС_МС;
+    try {
+        const кадры = JSON.parse(localStorage.getItem('kvant-desktop-widget') || '{}').frames || [];
+        for (const к of кадры) if (к.from > сейчас && к.from + ПОСЛЕ_СРОКА_МС < срок) срок = к.from + ПОСЛЕ_СРОКА_МС;
+    } catch { /* сроков нет — через час */ }
+    return срок;
+}
 let targetListening = false;
 
 async function start() {
@@ -894,7 +911,12 @@ async function start() {
     initSync({
       status: s => { $('syncStatus').textContent = STATUS_KEY[s] ? t(STATUS_KEY[s]) : ''; },
       data: async () => { await reload(); changed(); },
-      authLost: showGate
+      authLost: showGate,
+      // Настройки с других устройств: час Наблюдателя, тихий час, последний прыжок (выкладка 158)
+      synced: async known => { if (await syncPrefs(known)) changed(); },
+      // Приложение для компьютера спрятано в трей и на вкладку не возвращается: правки с
+      // телефона виджеты на столе получают к следующему сроку на виджете или раз в час
+      wakeAt: navigator.userAgent.includes('KvantDesktop/') ? следующийСрокНаСтоле : undefined
     });
   } else if (syncStarted) {
     // После повторного входа start() зовётся снова, а обработчики событий
