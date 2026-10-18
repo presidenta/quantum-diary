@@ -12,3 +12,12 @@
 html.wd-app, .wd-app.wd-body { background: transparent; }
 .wd-app .wd { padding: 0; -webkit-app-region: drag; }
 .wd-app .wg-btn, .wd-app .wg-gear { -webkit-app-region: no-drag; }
+
+/* Крестик «Закрыть» в углу — виден при наведении мыши на виджет */
+.wd-close {
+  position: fixed; top: 6px; right: 6px; z-index: 5; width: 24px; height: 24px; padding: 0;
+  display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(227, 199, 124, .7); background: rgba(10, 8, 6, .85); color: #E3C77C;
+  font: 700 16px/1 sans-serif; opacity: 0; transition: opacity .15s; -webkit-app-region: no-drag;
+}
+.wd-app:hover .wd-close, .wd-close:focus-visible { opacity: 1; }

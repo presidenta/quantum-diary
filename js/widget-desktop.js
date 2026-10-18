@@ -25,9 +25,23 @@ const ключ = параметры.get('f');
 /* В приложении для компьютера (desktop/, Electron, выкладка 152) окно виджета без рамки и с
    прозрачным фоном: виджет лежит прямо на рабочем столе и тянется за любое место, кроме
    кнопок (стили .wd-app в widget-desktop.css). */
-if (параметры.get('app') === 'desktop') {
+const вПриложении = параметры.get('app') === 'desktop';
+if (вПриложении) {
     document.documentElement.classList.add('wd-app');
     document.body.classList.add('wd-app');
+}
+
+/* КРЕСТИК «ЗАКРЫТЬ» (владелец 18.10.2026: «обязательно кнопку закрыть на виджете»). Только в
+   приложении: у окна в браузере своя рамка с крестиком. Появляется при наведении мыши, чтобы
+   не мешать виджету; закрытый так виджет приложение снимает со стола насовсем (вернуть — в меню
+   у часов). Кнопка вне корня виджета: перерисовка её не стирает. */
+const закрыть = вПриложении ? document.createElement('button') : null;
+if (закрыть) {
+    закрыть.type = 'button';
+    закрыть.className = 'wd-close';
+    закрыть.textContent = '×';
+    закрыть.addEventListener('click', () => window.close());
+    document.body.appendChild(закрыть);
 }
 const формат = FORMATS.find(ф => ф.key === ключ) || FORMATS.find(ф => ф.key === 'hud');
 
@@ -58,6 +72,7 @@ function нарисовать() {
         new Date(), сроки, перевод);
     applyWidgetVars(корень);
     document.documentElement.lang = язык;
+    if (закрыть) закрыть.title = закрыть.ariaLabel = перевод('widgets.closeWidget');
     document.title = `${перевод('widgets.format.' + формат.key)} · Квант`;
 }
 

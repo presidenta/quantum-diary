@@ -177,6 +177,8 @@
   text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .wg-value small { font-size: .8em; opacity: .85; }
+/* Срок без времени («окно открыто») — мельче цифр, чтобы влезал в карточку целиком */
+.wg-value .wg-value-word { font-size: .62em; white-space: normal; line-height: 1.15; }
 .wg-value b { font-size: 1.25em; }
 .wg-a .wg-value { color: var(--wg-valueA); }
 .wg-b .wg-value { color: var(--wg-valueB); }
