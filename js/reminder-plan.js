@@ -123,10 +123,17 @@ async function следоватьЦиклу(alarm, now = Date.now()) {
    секунду и ждать хранилища не могут, а считать им надо по тем же часам Наблюдателя, что и
    плашке (core/observer-clock.js). Обновляется при каждом чтении и сохранении режима. */
 let часНаблюдателя = '';
+let часНаблюдателяНазначен = 0;
 
 function запомнитьЧас(alarm) {
     часНаблюдателя = назначенныеЧасы(alarm).window || '';
+    часНаблюдателяНазначен = Number(alarm.windowSetAt) || 0;
     return alarm;
+}
+
+/** Когда назначен час Наблюдателя (мс), для таймеров: назначенный вручную вытесняет окно от прыжка. */
+export function observerNamedSetAt() {
+    return часНаблюдателяНазначен;
 }
 
 /** Назначенный час Наблюдателя «ЧЧ:ММ» или '' — для таймеров обратного отсчёта. */
@@ -135,11 +142,13 @@ export function observerNamedHour() {
 }
 
 /** Сохранить режим будильника и сразу переставить расписание под него. */
-export async function saveAlarm(value) {
-    // Человек назначил другой час Наблюдателя — запомнить когда: до его звонка он не переедет
+export async function saveAlarm(value, { windowTouched = false } = {}) {
+    // Человек назначил другой час Наблюдателя — запомнить когда: до его звонка он не переедет, а на
+    // экран он попадает сразу (core/observer-clock.js, РУЧНОЙ ЧАС). windowTouched — час выбран явно
+    // (панель виджета), даже если он совпал с прежним: выбор человека — тоже назначение.
     const прежний = normalizeAlarm(await getMeta(ALARM_KEY).catch(() => null));
     const новый = normalizeAlarm(value);
-    if (новый.windowAt !== прежний.windowAt) новый.windowSetAt = Date.now();
+    if (новый.windowAt !== прежний.windowAt || (windowTouched && новый.windowAt)) новый.windowSetAt = Date.now();
     else if (!новый.windowSetAt) новый.windowSetAt = прежний.windowSetAt;
     const alarm = запомнитьЧас(новый);
     await setMeta(ALARM_KEY, alarm);
@@ -311,7 +320,9 @@ function guardFramesFor(now, alarm, день, заготовка = {}, quiet = �
             tomorrow: заготовка.завтра?.moments,
             named: назначенныеЧасы(alarm),
             // Окно, попавшее в тихий час, — с её концом (core/observer-clock.js, выкладка 160)
-            quiet
+            quiet,
+            // Час, назначенный вручную, сразу на экране, даже если он позже окна (выкладка 164)
+            windowSetAt: alarm.windowSetAt
         }).map(кадр => ({
             from: кадр.from,
             text: guardText(кадр, t),
@@ -479,6 +490,7 @@ export async function planReminders() {
         windowMs: CONFIG.timing.opportunityWindowMs,
         // Назначенный звонок Наблюдателя перезапускает цикл (core/observer-clock.js)
         named: назначенныеЧасы(alarm).window || '',
+        windowSetAt: alarm.windowSetAt,
         quiet,
         off: modeOf(KEY_WINDOW, alarm) === 'off'
     });

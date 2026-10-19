@@ -94,6 +94,8 @@ export function nextNamedAt(hhmm, миг) {
  * @param {number} p.cooldownMs через сколько после опоры открывается окно
  * @param {number} p.windowMs   сколько окно держится
  * @param {{on: boolean, from: string, until: string}} [p.quiet] тихий час: окно в нём — с его концом
+ * @param {number} [p.setAt]    когда час Наблюдателя назначили вручную, мс (0 — не знаем): назначенное
+ *                              после последней опоры и позже расчётного окна — ближайший срок, см. РУЧНОЙ ЧАС
  * @returns {{phase: 'never'|'cooldown'|'open'|'missed', anchor: number, opens: number,
  *            closes: number, nextNamed: number, next: number}}
  *   phase  — never: опоры нет (не было ни прыжка, ни звонка) — окно открыто с начала;
@@ -101,7 +103,7 @@ export function nextNamedAt(hhmm, миг) {
  *   next   — ближайший срок Наблюдателя после мига (открытие окна или назначенный звонок),
  *            0 — неизвестен (окно открыто или прошло, а часа не назначено).
  */
-export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null }) {
+export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null, setAt = 0 }) {
     const прыжок = Number(lastJump) > 0 ? Number(lastJump) : 0;
     const опора = Math.max(прыжок, lastNamedAt(named, now));
     const nextNamed = nextNamedAt(named, now);
@@ -111,6 +113,23 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
     }
     const opens = afterQuiet(опора + cooldownMs, quiet);
     const closes = opens + windowMs;
+
+    /* РУЧНОЙ ЧАС ПЕРЕНОСИТСЯ НА ЭКРАН СРАЗУ (выкладка 164). Владелец 19.10.2026 в 20:21: окно
+       открылось в 19:12, он назначил Наблюдателю 21:00 — а на виджете осталось «после 19:12».
+       Расчёт брал «что раньше» из назначенного часа и окна от прыжка, и час позже окна терялся.
+       Но назначенный вручную час — решение человека: «время переносится на экран автоматически, и
+       с него начинается отсчёт следующего звонка; а если тихий час — считает после 6 утра».
+       Поэтому час, назначенный ПОСЛЕ последней опоры цикла (прыжка или прозвучавшего звонка) и
+       позже расчётного открытия, вытесняет это открытие: ближайший срок — он сам; прозвенел —
+       опора переезжает на него, окно откроется через cooldownMs (с учётом тихого часа). Прыжок
+       после назначения или сам звонок снимают правило: цикл снова идёт от последней опоры. */
+    if (named && Number(setAt) > опора && nextNamed > opens) {
+        const открытие = afterQuiet(nextNamed + cooldownMs, quiet);
+        return {
+            phase: 'cooldown', anchor: nextNamed, opens: открытие, closes: открытие + windowMs,
+            nextNamed, next: nextNamed, manual: true
+        };
+    }
 
     if (now < opens) {
         const next = nextNamed && nextNamed < opens ? nextNamed : opens;

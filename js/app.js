@@ -30,7 +30,7 @@ import {
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
-  loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet
+  loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet, observerNamedHour, observerNamedSetAt
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext, momentIdOfKey } from './core/reminder-rules.js';
 import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
@@ -810,8 +810,10 @@ function показатьЧасыНаблюдателя() {
   const включено = $('alarmOn').checked && $('alarmWindowMode').value !== 'off';
   const named = включено ? $('alarmWindowAt').value : '';
   const now = Date.now();
+  // Час в поле изменён, но ещё не сохранён — для таймера он «назначен только что»
+  const назначен = named === observerNamedHour() ? observerNamedSetAt() : now;
   const часы = observerClock({
-    lastJump: Number(localStorage.getItem('last_quantum_jump_time')) || 0, named, now,
+    lastJump: Number(localStorage.getItem('last_quantum_jump_time')) || 0, named, now, setAt: назначен,
     cooldownMs: SPACE_CONFIG.timing.jumpCooldownMs, windowMs: SPACE_CONFIG.timing.opportunityWindowMs,
     // Окно в тихий час — с её концом, как у плашки и звонка (выкладка 160)
     quiet: observerQuiet()
@@ -912,7 +914,7 @@ async function применитьЧасИзВиджета(правка) {
   if (!ПОЛЯ_ЧАСА[поле] || !/^\d{2}:\d{2}$/.test(час || '')) return;
 
   const alarm = await loadAlarm();
-  await saveAlarm({ ...alarm, [ПОЛЯ_ЧАСА[поле]]: час });
+  await saveAlarm({ ...alarm, [ПОЛЯ_ЧАСА[поле]]: час }, { windowTouched: поле === 'window' });
   await quietChanged();
   await moveToBack();
 }

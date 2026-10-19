@@ -567,7 +567,7 @@ export function ringsAsAlarm(key, alarm) {
    Тихий час в это число больше не входит. Он не снимает напоминание, а
    глушит его: приходит беззвучная плашка (разбор у momentPlan выше). */
 export function windowPlan(lastJump, now = new Date(), options = {}) {
-    const { cooldownMs = 0, windowMs = 0, quiet = null, off = false, named = '' } = options;
+    const { cooldownMs = 0, windowMs = 0, quiet = null, off = false, named = '', windowSetAt = 0 } = options;
 
     // Наблюдатель выключен совсем: окно не ставится, а прежнее снимает
     // вызывающий (reminder-plan.js кладёт ключ в снятие, когда окна нет)
@@ -579,7 +579,7 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
        него. Окно открыто или прошло — следующее откроется после назначенного звонка. */
     /* Тихий час (выкладка 160): окно, попавшее в тишину, открывается с её концом и звонит
        будильником утром, а не беззвучной плашкой посреди ночи. */
-    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs, quiet });
+    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs, quiet, setAt: windowSetAt });
     let когда = 0;
     if (часы.phase === 'cooldown') {
         когда = часы.nextNamed && часы.nextNamed < часы.opens ? afterQuiet(часы.nextNamed + cooldownMs, quiet) : часы.opens;
@@ -659,7 +659,7 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
 const СУТКИ_МС = 24 * 60 * 60 * 1000;
 
 export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
-    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true, tomorrow = [], named = {}, quiet = null } = options;
+    const { cooldownMs = 0, windowMs = 0, architectOn = true, observerOn = true, tomorrow = [], named = {}, quiet = null, windowSetAt = 0 } = options;
 
     const список = Array.isArray(moments) ? moments : [];
     const завтра = Array.isArray(tomorrow) ? tomorrow : [];
@@ -731,7 +731,9 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
        идущего момента: следующий момент, после последнего — первый утренний завтра. */
     const наблюдатель = миг => {
         if (!observerOn) return '';
-        const часы = observerClock({ lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs, quiet });
+        const часы = observerClock({
+            lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs, quiet, setAt: windowSetAt
+        });
         if (часы.phase === 'open') return timeNow(new Date(часы.opens));
         if (часы.phase === 'cooldown' || часы.next) return срок(new Date(часы.next), миг);
         return ближайшийЗвонок(миг);
