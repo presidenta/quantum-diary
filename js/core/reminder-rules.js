@@ -40,6 +40,20 @@ export function baseKey(key) {
     return match ? match[1] : String(key);
 }
 
+/* КУДА ВЕСТИ ПО ЗВОНКУ НА МОМЕНТ (выкладка 163). Ключ реального момента — «moment-<id>»: по
+   нажатию «Прожить» открывается именно он. Заготовки на завтра («moment-next-…») и названный час
+   моментов своего id не имеют — тогда просто «moments»: приложение само выберет ближайший. */
+export function momentIdOfKey(key) {
+    const k = String(key);
+    if (!k.startsWith(KEY_MOMENT) || k.startsWith(KEY_MOMENT + 'next-')) return '';
+    return k.slice(KEY_MOMENT.length);
+}
+
+export const momentTarget = key => {
+    const id = momentIdOfKey(key);
+    return id ? `moment:${id}` : 'moments';
+};
+
 /* Про окно возможностей это напоминание или про момент дня.
    Нужно экрану: по нажатию на уведомление открывается своя вкладка. */
 export const isWindowKey = key => {

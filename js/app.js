@@ -16,7 +16,7 @@ import { initUpdate } from './update.js';
 import { initPasswordEyes } from './password-eye.js';
 import { initWheel, renderWheelView, openAssess } from './views/wheel.js';
 import { initDay, renderDay } from './views/day.js';
-import { initQuantum, renderQuantum, loadQuantum, quietChanged } from './views/quantum.js';
+import { initQuantum, renderQuantum, loadQuantum, quietChanged, openMomentLive } from './views/quantum.js';
 import { observerClock, countdownText } from './core/observer-clock.js';
 import { CONFIG as SPACE_CONFIG } from './views/space/config.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
@@ -32,7 +32,7 @@ import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
   loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet
 } from './reminder-plan.js';
-import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
+import { minutesOfDay, normalizeAlarm, isWindowKey, atNext, momentIdOfKey } from './core/reminder-rules.js';
 import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
 import { logEvent, readJournal } from './core/web-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
@@ -946,8 +946,19 @@ async function открытьПоЗвонку() {
     return;
   }
 
-  go('quantum');
-  openQuantumPart(цель === 'space' ? 'space' : 'moments');
+  /* ЗВОНОК НА МОМЕНТ — СРАЗУ ЖИВОЙ ЭКРАН ЭТОГО МОМЕНТА (выкладка 163). «moment:<номер>» — свой
+     момент звонка; «moments» — назначенный час моментов: идущий сейчас или ближайший. Прежде
+     открывалась лишь вкладка со списком, и владелец 19.10.2026 «нажал „Прожить“ — и ничего не
+     происходит». «home» (кнопка «Главный кабинет» на плашке) по-прежнему только вкладка. */
+  await go('quantum');
+  if (цель === 'space') {
+    openQuantumPart('space');
+    return;
+  }
+  openQuantumPart('moments');
+  if (цель === 'moments' || цель.startsWith('moment:')) {
+    openMomentLive(цель.startsWith('moment:') ? цель.slice('moment:'.length) : '');
+  }
 }
 
 let syncStarted = false;
@@ -1030,11 +1041,16 @@ async function start() {
      По нажатию на уведомление открываем ту вкладку, о которой оно: окно
      возможностей живёт в «Пространстве вариантов», моменты — в соседней.
      Иначе человек попадал бы туда, где был в прошлый раз. */
-  initReminders(key => {
-    go('quantum');
+  initReminders(async key => {
+    await go('quantum');
     // Про окно это напоминание или про момент — решает ключ: назначенное
     // человеком время приходит со своим, и сравнение со строкой его не ловило
-    openQuantumPart(isWindowKey(key) ? 'space' : 'moments');
+    if (isWindowKey(key)) {
+      openQuantumPart('space');
+      return;
+    }
+    openQuantumPart('moments');
+    openMomentLive(momentIdOfKey(key));
   });
 
   /* ПРИШЛИ ПО ЗВОНКУ — ОТКРЫВАЕМ ТО, РАДИ ЧЕГО ПОЗВАЛИ.

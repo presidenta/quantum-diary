@@ -8,6 +8,10 @@
    восемь на вытянутой руке с телефоном это долго, и люди отпускали раньше. */
 export const HOLD_SECONDS = 3;
 
+/* Сколько секунд экран залит цветом дня после удержания. Было 5 — владелец 19.10.2026 попросил
+   вдвое дольше и без надписей: только цвет на весь экран. */
+export const CHROMO_SECONDS = 10;
+
 /* СКОЛЬКО ЖИВЁТ МОМЕНТ.
 
    Сигнал приходит в случайную минуту и ждёт человека сорок минут. Не застал —
@@ -97,6 +101,23 @@ export function activeMoment(moments, nowHHMM, windowMinutes = MOMENT_WINDOW_MIN
 export function missedMoments(moments, nowHHMM, windowMinutes = MOMENT_WINDOW_MINUTES) {
   const now = toMinutes(nowHHMM);
   return moments.filter(m => !m.doneAt && !isOff(m) && now - toMinutes(m.at) >= windowMinutes);
+}
+
+/* КАКОЙ МОМЕНТ ПРОЖИВАТЬ, КОГДА ЧЕЛОВЕКА ПОЗВАЛИ ЗВОНКОМ (выкладка 163).
+
+   Владелец 19.10.2026: «нажимаю на звонок — и должен сразу открыться момент, который проживаем; а
+   меня перекинуло на главный экран». Звонок знает свой момент (wantedId) — он и открывается, даже
+   если сорокаминутное окно уже вышло: человек нажал «Прожить» позже, но звали его именно на этот.
+   Звонок на назначенный час моментов («alarm-next-moments») своего момента не знает — тогда идущий
+   сейчас, а если такого нет — ближайший впереди. Все прожиты, погашены или ушли в прошлое — null:
+   показывать нечего, остаётся список. */
+export function momentToLive(moments, wantedId, nowHHMM) {
+  const список = Array.isArray(moments) ? moments : [];
+  const живые = список.filter(m => !m.doneAt && !isOff(m));
+  return (wantedId && живые.find(m => m.id === wantedId))
+    || activeMoment(список, nowHHMM)
+    || nextMoment(список, nowHHMM)
+    || null;
 }
 
 export const nextMoment = (moments, nowHHMM) =>

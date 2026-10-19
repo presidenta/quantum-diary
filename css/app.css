@@ -882,9 +882,8 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 26px; padding: 0 34px; text-align: center;
 }
-.q-chromo-day { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.9); }
-.q-chromo-text { margin: 0; font-size: 20px; line-height: 1.5; color: #FFFFFF; font-weight: 500; }
-.q-chromo-close { background: rgba(10,10,12,.86); border-color: transparent; color: #FFFFFF; }
+/* Без надписей и кнопок: только цвет на весь экран (выкладка 163); касание закрывает раньше срока */
+.q-chromo { cursor: pointer; }
 
 /* Счётчик в нижней панели — метка на иконке, а не третья строка под подписью */
 .bottom-nav button { position: relative; }
@@ -900,6 +899,44 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
 .q-image { max-width: 220px; max-height: 220px; border-radius: 16px; border: 1px solid var(--line-strong); object-fit: contain; }
 .q-practice-title { margin: 0; font-family: var(--serif); font-size: 22px; font-weight: 600; }
 .q-audio { width: 100%; max-width: 320px; height: 44px; }
+/* Рисунки практик: мудра утром, выдох с опущенными плечами вечером (выкладка 163, web/js/views/quantum-figures.js).
+   Контур золотой, заливка тёмная; движение выключается у тех, кто просил меньше анимации. */
+.q-fig { width: min(60vw, 240px); height: auto; flex: none; overflow: hidden; }
+.q-fig-line { stroke: var(--gold); }
+.q-fig-dark { stroke: #0B0A0E; }
+.q-fig-dark-fill { fill: #0B0A0E; }
+.q-fig-dot { fill: var(--gold-bright); }
+.q-fig-crease { stroke: var(--gold); opacity: .45; }
+.q-fig-spark { transform-box: fill-box; transform-origin: center; animation: q-spark 2.6s ease-in-out infinite; }
+@keyframes q-spark { 0%, 100% { opacity: .4; transform: scale(.75); } 50% { opacity: 1; transform: scale(1.25); } }
+.q-fig-body { animation: q-shoulders 9s ease-in-out infinite; }
+@keyframes q-shoulders {
+  0% { transform: translateY(0); }
+  38% { transform: translateY(-15px); }
+  48% { transform: translateY(-15px); }
+  88% { transform: translateY(9px); }
+  100% { transform: translateY(0); }
+}
+.q-fig-breath path { opacity: 0; animation: q-breath 9s ease-in-out infinite; }
+.q-fig-breath-2 { animation-delay: .3s !important; }
+.q-fig-breath-3 { animation-delay: .6s !important; }
+@keyframes q-breath {
+  0%, 46% { opacity: 0; transform: translateY(0); }
+  62% { opacity: .9; }
+  92% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .q-fig-body, .q-fig-spark, .q-fig-breath path { animation: none; }
+  .q-fig-breath path { opacity: .7; }
+}
+.q-cue { margin: 0; font-family: var(--serif); font-size: 24px; line-height: 1.3; color: var(--gold-bright); }
+.q-howto { margin: 0; max-width: 320px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.q-live-close {
+  position: absolute; top: 14px; right: 14px; width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--line-strong); background: rgba(10, 10, 12, .8); color: var(--ink);
+  font-size: 24px; line-height: 1; cursor: pointer; z-index: 2;
+}
 .q-timer { display: flex; align-items: center; gap: 14px; }
 .q-timer-left { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 30px; font-weight: 700; color: var(--gold-bright); font-variant-numeric: tabular-nums; }
 

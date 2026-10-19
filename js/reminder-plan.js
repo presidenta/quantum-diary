@@ -26,7 +26,7 @@ import {
     hasAlarmMode, alarmFullScreen, alarmOverlay, setGuard, pendingAlarms
 } from './core/reminders.js';
 import {
-    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT,
+    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT, momentTarget,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf, lateUntil,
     guardFrames, guardText, guardTerm, namedHorizon, anchorHours, freshDay, orphanKeys
 } from './core/reminder-rules.js';
@@ -514,7 +514,8 @@ export async function planReminders() {
         title: t('reminder.moment.title'),
         body: t('reminder.moment.body'),
         openLabel: поКлючу.get(item.key)?.title || t('alarm.openMoment'),
-        openTarget: 'moments'
+        // Звонок знает свой момент — «Прожить» открывает именно его (выкладка 163)
+        openTarget: momentTarget(item.key)
     }));
 
     if (window) {

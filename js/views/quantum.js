@@ -10,9 +10,10 @@ import { state, t, $, h, fill, changed } from '../store.js';
 import { API_BASE } from '../config.js';
 import { getMeta, setMeta } from '../db.js';
 import {
-  HOLD_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot, isOff, liveMoments,
-  livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil, localDay, retime
+  HOLD_SECONDS, CHROMO_SECONDS, colorOfDay, arcanaRoman, arcanaKey, groupBySlot, isOff, liveMoments,
+  livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil, localDay, retime, momentToLive
 } from '../core/quantum.js';
+import { mudraSvg, shouldersSvg } from './quantum-figures.js';
 import { todayKey } from '../core/dates.js';
 import { localMedia, warmUp } from '../core/media.js';
 import { request } from '../core/net.js';
@@ -25,6 +26,24 @@ import { DAY_RULE } from '../core/quantum.js';
 let wakeTimer = null;
 let holdTimer = null;
 let holdCount = 0;
+
+/* Момент, который открыли звонком (выкладка 163): показывается живым, даже если его окно вышло или
+   время ещё не пришло. Держим номер, а не сам момент: день перезагружают, объекты меняются. */
+let forcedId = null;
+
+/* Идёт конец удержания: знак бесконечности и цветной экран ведёт finishHold, и перерисовка раздела
+   (а она случается от любой правки) не вправе стереть их посреди показа. */
+let finishing = false;
+
+/** Открыть живой экран момента по звонку. wantedId пуст — идущий сейчас или ближайший (momentToLive). */
+export function openMomentLive(wantedId = '') {
+  const day = state.quantum;
+  if (!day) return false;
+  const moment = momentToLive(day.moments, wantedId, timeNow());
+  forcedId = moment ? moment.id : null;
+  renderQuantum();
+  return Boolean(moment);
+}
 
 /* ---------- Связь с сервером ---------- */
 
@@ -199,6 +218,9 @@ function warmUpToday(day) {
    Экран в этом случае ведёт finishHold — он сам решает, что показать дальше. */
 async function markDone(moment, { redraw = true } = {}) {
   moment.doneAt = new Date().toISOString();
+  if (moment.id === forcedId) forcedId = null;
+  // Прожитый момент больше не звонит: снимаем его будильник (выкладка 163 — прожили раньше срока)
+  planReminders().catch(err => console.warn('[напоминания]', err));
   if (redraw) renderQuantum();
   changed();
   saveQuantumCache();   // отметка переживёт закрытие приложения без сети
@@ -341,17 +363,41 @@ async function toggleOff(moment) {
 /* Живая часть: то, ради чего всё. Утром и вечером — короткий экран с якорем,
    днём — блуждающая кнопка, которую надо удержать восемь секунд. */
 function renderLive(active, day) {
+  if (finishing) return;          // конец удержания ведёт finishHold
   const live = $('quantumLive');
   stopPracticeTimers();           // старые таймеры не должны тикать за кадром
-  if (!active) { live.hidden = true; live.replaceChildren(); return; }
+
+  // Открытый звонком момент главнее идущего по времени; прожитый или погашенный — забывается
+  const forced = forcedId
+    ? day.moments.find(m => m.id === forcedId && !m.doneAt && !isOff(m))
+    : null;
+  if (forcedId && !forced) forcedId = null;
+
+  const moment = forced || active;
+  if (!moment) { live.hidden = true; live.replaceChildren(); return; }
   live.hidden = false;
 
-  if (active.slot === 'day') {
-    renderWanderButton(live, active, day);
+  if (moment.slot === 'day') {
+    renderWanderButton(live, moment, day);
   } else {
-    const anchor = active.slot === 'morning' ? 'quantum.doneMudra' : 'quantum.doneBreath';
-    live.replaceChildren(practiceScreen(active, anchor));
+    const anchor = moment.slot === 'morning' ? 'quantum.doneMudra' : 'quantum.doneBreath';
+    live.replaceChildren(practiceScreen(moment, anchor));
   }
+
+  // Звонком открыли — из практики можно выйти, не отмечая момент прожитым
+  if (forced) {
+    live.append(h('button', {
+      type: 'button', class: 'q-live-close', text: '×', 'aria-label': t('quantum.liveClose'),
+      onclick: () => { forcedId = null; renderQuantum(); }
+    }));
+  }
+}
+
+/* Рисунок практики из готовой строки SVG (web/js/views/quantum-figures.js). */
+function figure(svg) {
+  const box = h('div', { class: 'q-fig-box' });
+  box.innerHTML = svg;
+  return box;
 }
 
 /* Практика целиком задана сервером: заголовок, картинка, запись голоса,
@@ -359,6 +405,22 @@ function renderLive(active, day) {
    Ничего из этого здесь не зашито: что прислали, то и показываем. */
 function practiceScreen(moment, anchorKey) {
   const parts = [];
+  /* Своё у человека главнее общего: специалист настраивает текст и запись на каждую фазу дня
+     (кабинет администратора → Квантовый кабинет). Так же выбирает их finishHold. */
+  const mine = state.quantum?.settings?.slots?.[moment.slot] || {};
+
+  /* УТРОМ — МУДРА, ВЕЧЕРОМ — ВЫДОХ С ОПУЩЕННЫМИ ПЛЕЧАМИ (выкладка 163, просьба владельца
+     19.10.2026): на экране рисунок, как сложить пальцы и что сделать телом, а под ним то, что
+     человек хочет услышать или прочитать. */
+  if (moment.slot === 'morning') {
+    parts.push(figure(mudraSvg()));
+    parts.push(h('p', { class: 'q-cue', text: t('quantum.mudraName') }));
+    parts.push(h('p', { class: 'q-howto', text: t('quantum.mudraHow') }));
+  } else if (moment.slot === 'evening') {
+    parts.push(figure(shouldersSvg()));
+    parts.push(h('p', { class: 'q-cue', text: t('quantum.breathCue') }));
+    parts.push(h('p', { class: 'q-howto', text: t('quantum.breathThink') }));
+  }
 
   /* Картинка и звук берутся с устройства: политика страницы не пропускает
      чужой адрес в src, да и в метро его было бы не скачать. Пока файл ищется
@@ -377,14 +439,16 @@ function practiceScreen(moment, anchorKey) {
   }
   if (moment.title) parts.push(h('p', { class: 'q-practice-title', text: moment.title }));
 
-  parts.push(h('p', { class: 'q-said', text: moment.text || t(anchorKey) }));
-  parts.push(h('p', { class: 'q-anchor', text: t(anchorKey) }));
+  parts.push(h('p', { class: 'q-said', text: mine.text || moment.text || t(anchorKey) }));
+  // Подсказка про мудру или выдох уже есть над текстом — повторять её здесь незачем
+  if (!figureShown(moment)) parts.push(h('p', { class: 'q-anchor', text: t(anchorKey) }));
 
-  if (moment.audioUrl) {
+  const audioUrl = mine.audioUrl || moment.audioUrl;
+  if (audioUrl) {
     // Звук не играет сам: это решение человека, а не приложения
     const audio = h('audio', { class: 'q-audio', controls: true, preload: 'none', hidden: true });
     parts.push(audio);
-    localMedia(moment.audioUrl).then(src => {
+    localMedia(audioUrl).then(src => {
       if (!src) return;
       audio.src = src;
       audio.hidden = false;
@@ -399,6 +463,8 @@ function practiceScreen(moment, anchorKey) {
 
   return h('div', { class: 'q-overlay q-practice' }, ...parts);
 }
+
+const figureShown = moment => moment.slot === 'morning' || moment.slot === 'evening';
 
 /* Таймер практики. Тикает раз в секунду и только пока практика открыта:
    закрыли экран — таймер снимается вместе с ним. */
@@ -555,6 +621,9 @@ async function playMoment(moment) {
 }
 
 async function finishHold(moment, day) {
+  finishing = true;
+  // Страховка: что бы ни случилось с показом, через положенное время раздел снова рисуется
+  setTimeout(() => { finishing = false; }, 1400 + CHROMO_SECONDS * 1000 + 1000);
   // Вибрация только после явного жеста человека и не везде есть мотор
   try { navigator.vibrate?.(200); } catch { /* нет мотора — не беда */ }
   playMoment(moment);
@@ -565,7 +634,10 @@ async function finishHold(moment, day) {
     h('span', { class: 'q-infinity', text: '∞' }),
     h('p', { class: 'q-said', text: mine.text || moment.text || t('quantum.closed') })));
 
-  await markDone(moment, { redraw: false });
+  /* Отметка уходит на сервер сама, а цветной экран не ждёт ответа: на медленной связи знак
+     бесконечности висел до ответа сервера и цвет не показывался вовсе (выкладка 163). Локально
+     момент уже прожит (doneAt), и сервер узнает о нём при следующем открытии дня. */
+  markDone(moment, { redraw: false }).catch(err => console.warn('[момент] отметка не ушла:', err));
   setTimeout(() => showChromo(day), 1400);
 }
 
@@ -580,19 +652,22 @@ function showChromo(day) {
   const mine = state.quantum?.settings?.weekday || {};
   const live = $('quantumLive');
   live.hidden = false;
-  const screen = h('div', { class: 'q-chromo' },
-    h('p', { class: 'q-chromo-day', text: `${t(colour.nameKey)} · ${colour.chakra}` }),
-    h('p', { class: 'q-chromo-text', text: mine.text || t('quantum.warrior') }),
-    h('button', {
-      type: 'button', class: 'btn q-chromo-close', text: t('quantum.found'),
-      onclick: () => { live.hidden = true; renderQuantum(); }
-    }));
+
+  /* ТОЛЬКО ЦВЕТ (выкладка 163). Владелец 19.10.2026: «на экране не должно быть никаких надписей,
+     только цвет на весь экран, и вдвое дольше». Ни названия цвета, ни текста, ни кнопки: касанием
+     экран закрывается раньше срока. Цвет — персональный от специалиста, иначе цвет чакры дня
+     (по дню недели; с понедельника красный). Фраза «найди этот цвет вокруг» осталась в словаре. */
+  const закрыть = () => {
+    if (live.firstChild !== screen) return;
+    finishing = false;
+    live.hidden = true;
+    renderQuantum();
+  };
+  const screen = h('div', { class: 'q-chromo', onclick: закрыть, 'aria-label': t(colour.nameKey) });
   screen.style.setProperty('background', mine.color || colour.color);
   live.replaceChildren(screen);
 
-  setTimeout(() => {
-    if (live.firstChild === screen) { live.hidden = true; renderQuantum(); }
-  }, 5000);
+  setTimeout(закрыть, CHROMO_SECONDS * 1000);
 }
 
 /* Пробуждение к следующему моменту: один таймер вместо опроса.
