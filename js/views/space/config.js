@@ -40,17 +40,17 @@ export const CONFIG = {
         ru: [
             { label: "Мои эмоции", words: ["радость", "спокойствие", "волнение", "страх", "восторг", "благодарность", "уверенность", "предвкушение", "эйфория", "тишина"] },
             { label: "Ощущаю физически", words: ["тепло", "жар", "мурашки", "расслабление", "холод", "трепет", "расширение", "сжатие", "лёгкость", "покалывание"] },
-            { label: "В теле сейчас я чувствую", words: ["в ногах", "в руках", "в животе", "в плечах", "в горле", "в голове"] }
+            { label: "В теле сейчас я чувствую", words: ["в ногах", "в руках", "в животе", "в плечах", "в горле", "в голове", "в спине", "в груди"] }
         ],
         en: [
             { label: "My emotions", words: ["joy", "calm", "excitement", "fear", "delight", "gratitude", "confidence", "anticipation", "euphoria", "stillness"] },
             { label: "I feel physically", words: ["warmth", "heat", "goosebumps", "relaxation", "cold", "thrill", "expansion", "contraction", "lightness", "tingling"] },
-            { label: "In my body right now I feel", words: ["in my legs", "in my hands", "in my stomach", "in my shoulders", "in my throat", "in my head"] }
+            { label: "In my body right now I feel", words: ["in my legs", "in my hands", "in my stomach", "in my shoulders", "in my throat", "in my head", "in my back", "in my chest"] }
         ],
         uk: [
             { label: "Мої емоції", words: ["радість", "спокій", "хвилювання", "страх", "захват", "вдячність", "впевненість", "передчуття", "ейфорія", "тиша"] },
             { label: "Відчуваю фізично", words: ["тепло", "жар", "мурашки", "розслаблення", "холод", "трепет", "розширення", "стиснення", "легкість", "поколювання"] },
-            { label: "У тілі зараз я відчуваю", words: ["у ногах", "у руках", "у животі", "у плечах", "у горлі", "у голові"] }
+            { label: "У тілі зараз я відчуваю", words: ["у ногах", "у руках", "у животі", "у плечах", "у горлі", "у голові", "у спині", "у грудях"] }
         ]
     },
 

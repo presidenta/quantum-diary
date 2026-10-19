@@ -34,6 +34,7 @@ import {
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
 import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
+import { publishPref, prefValue } from './prefs.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
@@ -415,11 +416,12 @@ function alarmFromForm() {
    стоит и прозвонит, серый — нет (подробно — у звонокСтоит ниже). Слова стоят
    рядом с цветом, а не вместо него: цвет не прочитать вслух и не разглядеть
    дальтонику. */
-/* КАК БУДИЛЬНИК (выкладка 160). Владелец 18.10.2026: «время, на которое наведён будильник, —
-   значком будильника и зелёным, пока оно ещё должно прозвонить; прозвонило — серым». «Завтра
-   в 08:00» тоже ещё прозвонит — зелёное. Серое — звонка на этот час в телефоне нет: прозвенел и
-   не переставлен, или час изменён и ещё не сохранён. На телефоне сверяется со списком того, что
-   реально стоит (стоящиеЗвонки, из showAlarmPending); в браузере звонков нет — по настройке. */
+/* КАК БУДИЛЬНИК (выкладки 160–161). Владелец 18.10.2026: «время, на которое наведён будильник, —
+   значком будильника и зелёным, пока оно ещё должно прозвонить; прозвонило — серым». Зелёное —
+   «сегодня в…»: звонок сегодня впереди и (на телефоне) стоит в системе; сегодня прошло — серое
+   «завтра в…» (19.10.2026 владелец увидел зелёное «назначено 12:00» в 16:26 и счёл ошибкой). На
+   телефоне сверяется со списком того, что реально стоит (стоящиеЗвонки, из showAlarmPending):
+   час изменён и не сохранён — тоже серый. В браузере звонков нет — по настройке. */
 let стоящиеЗвонки = null;
 
 function звонокСтоит(поле, at) {
@@ -441,7 +443,7 @@ function showAlarmStates(alarm) {
     const at = atNext(hhmm);
     const сегодня = at && at.getDate() === new Date().getDate();
 
-    строка.classList.add(at && звонокСтоит(поле, at) ? 'is-ahead' : 'is-passed');
+    строка.classList.add(сегодня && звонокСтоит(поле, at) ? 'is-ahead' : 'is-passed');
     строка.textContent = сегодня
       ? t('alarm.setFor', { at: hhmm })
       : t('alarm.passed', { at: hhmm });
@@ -493,7 +495,7 @@ async function showAlarmPending() {
   $('alarmListBox').hidden = true;
   $('alarmAutostart').hidden = true;
   $('alarmAutostartNote').hidden = true;
-  if (!isNative()) return;
+  if (!isNative()) { показатьЖурналТелефона(); return; }
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
@@ -647,6 +649,44 @@ async function showAlarmPending() {
     $('alarmList').textContent = formatPending(alarms);
     $('alarmListBox').hidden = false;
   }
+}
+
+/* ЖУРНАЛ ТЕЛЕФОНА НА КОМПЬЮТЕРЕ (выкладка 161). Владелец 19.10.2026 открыл «Логи» на компьютере
+   и увидел пустое окно: журнал звонков ведёт нативная часть телефона, на компьютере звонков нет.
+   Телефон кладёт тот же текст, что отправляет кнопкой «Отправить журнал», в общие настройки
+   (prefs.js, ключ journal) — при каждом открытии приложения и окна «Логи»; компьютер показывает
+   его с отметкой, когда телефон его положил. */
+const ЖУРНАЛ_ЗНАКОВ = 19000;
+
+async function журналНаСервер() {
+  if (!isNative()) return;
+  try {
+    await showAlarmPending();
+    let текст = journalText();
+    // Предел записи на сервере — 20 000 знаков: начало (что стоит, телефон) и свежий конец журнала
+    if (текст.length > ЖУРНАЛ_ЗНАКОВ) текст = `${текст.slice(0, 2000)}
+…
+${текст.slice(-(ЖУРНАЛ_ЗНАКОВ - 2100))}`;
+    await publishPref('journal', { text: текст, at: Date.now() });
+  } catch (err) {
+    console.warn('[журнал] не ушёл на сервер:', err);
+  }
+}
+
+function показатьЖурналТелефона() {
+  const журнал = prefValue('journal');
+  if (!журнал?.text) {
+    $('alarmPending').textContent = t('alarm.phoneJournalNone');
+    return;
+  }
+  $('alarmPending').textContent = t('alarm.phoneJournalAt', {
+    at: new Intl.DateTimeFormat(state.language, {
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(журнал.at))
+  });
+  $('alarmJournal').textContent = журнал.text;
+  $('alarmJournalBox').hidden = false;
+  $('alarmJournalShare').hidden = false;
 }
 
 /* ВСЁ, ЧТО ВИДНО В ОКНЕ «ЛОГИ», ОДНИМ ТЕКСТОМ.
@@ -947,6 +987,7 @@ async function start() {
     renderUser();
     await loadQuantum();     // счётчик моментов нужен сразу, на любом экране
     renderNav();
+    журналНаСервер();        // журнал телефона — для «Логов» на компьютере (выкладка 161)
   }
 
   /* СИСТЕМНЫЕ НАПОМИНАНИЯ.
@@ -1189,6 +1230,7 @@ async function boot() {
   $('alarmLogs').addEventListener('click', async () => {
     await showAlarmPending();
     $('alarmLogDialog').showModal();
+    await журналНаСервер();
   });
 
   for (const id of ['alarmOn', 'alarmGuard', 'alarmWindowMode', 'alarmMomentsMode',
@@ -1253,6 +1295,11 @@ async function boot() {
     showAlarmTrouble().catch(err => console.warn('[будильник]', err.message));
     // И про усыпление тоже: человек мог вернуться именно оттуда
     showAlarmPending().catch(err => console.warn('[будильник]', err.message));
+  });
+
+  // Журнал телефона — на сервер для «Логов» на компьютере: каждый раз, как приложение открыли
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') журналНаСервер();
   });
 
   /* ПРОВЕРОЧНЫЙ ЗВОНОК.

@@ -228,6 +228,7 @@ export function widgetTexts(translate) {
         sheetRefresh: слово('sheetRefresh'),
         sheetOff: слово('sheetOff'),
         sheetNamed: слово('sheetNamed'),
+        sheetNamedTomorrow: слово('sheetNamedTomorrow'),
         days: translate('widgets.days').split(',').map(д => д.trim())
     };
 }
