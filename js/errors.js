@@ -10,6 +10,7 @@
 
 import { API_BASE } from './config.js';
 import { getMeta } from './db.js';
+import { logEvent } from './core/web-journal.js';
 
 const MAX_REPORTS = 5;          // один зациклившийся экран не должен завалить сервер
 const KEY = 'planner.errorsSent';
@@ -26,6 +27,12 @@ function recent() {
 }
 
 async function report(message, stack) {
+  /* В журнал устройства — всегда, до любых отказов ниже (нет сервера, нет входа, лимит отчётов):
+     журнал компьютера нужен, чтобы увидеть ошибки именно там, где они случились (выкладка 162).
+     Первая строка стека — место ошибки. */
+  const место = String(stack || '').split('\n').map(s => s.trim()).find(s => s.startsWith('at ')) || '';
+  logEvent('E', { m: `${String(message || '')}${место ? ` ${место}` : ''}` });
+
   if (!API_BASE || sentThisSession >= MAX_REPORTS) return;
   const short = String(message || '').slice(0, 500);
   if (!short.trim() || seen.has(short)) return;      // одно и то же — один раз

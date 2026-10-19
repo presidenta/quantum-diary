@@ -1,6 +1,7 @@
 import { API_BASE } from './config.js';
 import { request } from './core/net.js';
 import { KINDS, dirtyRecords, putRecords, getMeta, setMeta, loadAll } from './db.js';
+import { logEvent } from './core/web-journal.js';
 
 /* Синхронизация без опроса по таймеру: при запуске, после правки (с паузой
    в полторы секунды, чтобы пачка правок ушла одним запросом), при возвращении
@@ -124,6 +125,7 @@ async function run() {
       // Сессия больше не действует (администратор заблокировал, или вышел срок) —
       // правки остаются помеченными dirty и дождутся следующего входа этой же записью
       await setMeta('token', null);
+      logEvent('AUTH', { m: 'HTTP 401' });
       onStatus('idle');
       onAuthLost();
       return false;
@@ -141,7 +143,7 @@ async function run() {
     onStatus('synced');
     // Перерисовываем, только если с сервера пришло новое, а не эхо своих правок:
     // лишняя перерисовка может съесть нажатие, пришедшееся на этот момент
-    if (fresh) await onData();
+    if (fresh) { logEvent('S', { n: fresh }); await onData(); }
     try { await onSynced(known); } catch (err) { console.warn('[sync] после синхронизации:', err); }
 
     // Пока шёл запрос, могли появиться новые правки (и сервер мог узнать новый вид)
@@ -152,6 +154,7 @@ async function run() {
     return true;
   } catch (err) {
     console.warn('[sync] не удалось:', err.message);
+    logEvent('S✗', { m: err.message });
     onStatus(navigator.onLine ? 'error' : 'offline');
     return false;
   }

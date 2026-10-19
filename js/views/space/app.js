@@ -18,6 +18,7 @@ import {
    значит, он же и переставляет напоминание, когда это время меняется. */
 import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerQuiet } from '../../reminder-plan.js';
 import { observerClock, countdownText } from '../../core/observer-clock.js';
+import { logEvent } from '../../core/web-journal.js';
 
 /* Языки раздела — те же и в том же порядке, что в Ежедневнике.
    Название языка пишется на нём самом, поэтому переводить его не нужно. */
@@ -1715,6 +1716,7 @@ export class QuantumApp {
        Расписание переставляется сразу, не дожидаясь ухода из приложения: иначе телефон позвонил
        бы по старому сроку. */
     rememberJump() {
+        logEvent('⤴');
         localStorage.setItem('last_quantum_jump_time', Date.now().toString());
         this.notifications.resetSnooze();
         this.windowTriggered = false;
@@ -2074,6 +2076,7 @@ export class QuantumApp {
                     const показано = Number(localStorage.getItem('quantum_window_shown')) === часы.opens;
                     if (!this.windowTriggered && !показано) {
                         localStorage.setItem('quantum_window_shown', String(часы.opens));
+                        logEvent('◎', { a: часы.opens });
                         this.showOpportunityModal();
                         this.notifications.triggerQuantumWindowNotification();
                     }

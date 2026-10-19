@@ -34,7 +34,7 @@ import {
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext } from './core/reminder-rules.js';
 import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
-import { publishPref, prefValue } from './prefs.js';
+import { logEvent, readJournal } from './core/web-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
@@ -495,7 +495,7 @@ async function showAlarmPending() {
   $('alarmListBox').hidden = true;
   $('alarmAutostart').hidden = true;
   $('alarmAutostartNote').hidden = true;
-  if (!isNative()) { показатьЖурналТелефона(); return; }
+  if (!isNative()) { показатьЖурналКомпьютера(); return; }
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
@@ -651,42 +651,53 @@ async function showAlarmPending() {
   }
 }
 
-/* ЖУРНАЛ ТЕЛЕФОНА НА КОМПЬЮТЕРЕ (выкладка 161). Владелец 19.10.2026 открыл «Логи» на компьютере
-   и увидел пустое окно: журнал звонков ведёт нативная часть телефона, на компьютере звонков нет.
-   Телефон кладёт тот же текст, что отправляет кнопкой «Отправить журнал», в общие настройки
-   (prefs.js, ключ journal) — при каждом открытии приложения и окна «Логи»; компьютер показывает
-   его с отметкой, когда телефон его положил. */
-const ЖУРНАЛ_ЗНАКОВ = 19000;
+/* ЖУРНАЛ КОМПЬЮТЕРА (выкладка 162). Владелец 19.10.2026: «на компьютере ведётся свой журнал, на
+   телефоне свой, они идут параллельно; где запущено приложение, там и ведутся ошибки». Телефон
+   по-прежнему показывает журнал нативной части (showAlarmPending выше). Здесь — то же окно и тот
+   же вид строк (core/alarm-journal.js) для браузера и приложения для компьютера: события самого
+   компьютера (core/web-journal.js — ошибки, синхронизация, сроки виджетов), а вместо списка
+   звонков — то, что сейчас показывают виджеты по часам. Звонков на компьютере нет, и телефонных
+   записей здесь тоже нет: у каждого устройства свой журнал. */
+let версияСборки = '';
 
-async function журналНаСервер() {
-  if (!isNative()) return;
-  try {
-    await showAlarmPending();
-    let текст = journalText();
-    // Предел записи на сервере — 20 000 знаков: начало (что стоит, телефон) и свежий конец журнала
-    if (текст.length > ЖУРНАЛ_ЗНАКОВ) текст = `${текст.slice(0, 2000)}
-…
-${текст.slice(-(ЖУРНАЛ_ЗНАКОВ - 2100))}`;
-    await publishPref('journal', { text: текст, at: Date.now() });
-  } catch (err) {
-    console.warn('[журнал] не ушёл на сервер:', err);
-  }
-}
+function показатьЖурналКомпьютера() {
+  const вПриложении = navigator.userAgent.includes('KvantDesktop/');
+  const где = t(вПриложении ? 'alarm.webWhereApp' : 'alarm.webWhereBrowser');
+  const время = ms => (ms ? new Intl.DateTimeFormat(state.language, {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+  }).format(new Date(ms)) : '—');
 
-function показатьЖурналТелефона() {
-  const журнал = prefValue('journal');
-  if (!журнал?.text) {
-    $('alarmPending').textContent = t('alarm.phoneJournalNone');
-    return;
-  }
-  $('alarmPending').textContent = t('alarm.phoneJournalAt', {
-    at: new Intl.DateTimeFormat(state.language, {
-      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-    }).format(new Date(журнал.at))
+  $('alarmPending').textContent = t('alarm.webTitle', { where: где });
+
+  const тихо = observerQuiet();
+  $('alarmDevice').textContent = t('alarm.webDevice', {
+    release: версияСборки || '—',
+    net: t(navigator.onLine ? 'alarm.webOnline' : 'alarm.webOffline'),
+    server: t(state.serverDown ? 'alarm.webServerDown' : 'alarm.webServerUp'),
+    jump: время(Number(localStorage.getItem('last_quantum_jump_time')) || 0),
+    named: observerNamedHour() || '—',
+    quiet: тихо?.on ? `${тихо.from}–${тихо.until}` : t('alarm.quietOff')
   });
-  $('alarmJournal').textContent = журнал.text;
+  $('alarmDevice').hidden = false;
+
+  const журнал = readJournal();
+  $('alarmJournal').textContent = журнал.length ? formatJournal(журнал) : t('alarm.webEmpty');
+  $('alarmJournalHint').textContent = t('alarm.webHint');
   $('alarmJournalBox').hidden = false;
   $('alarmJournalShare').hidden = false;
+
+  // Что показывают виджеты по часам: те же кадры, что кладёт приложение виджетам (publishDesktopWidget)
+  let кадры = [];
+  try {
+    кадры = JSON.parse(localStorage.getItem('kvant-desktop-widget') || '{}').frames || [];
+  } catch { /* кадров нет */ }
+  if (кадры.length) {
+    const чч = ms => new Date(ms).toTimeString().slice(0, 5);
+    $('alarmListTitle').textContent = t('alarm.webListTitle');
+    $('alarmList').textContent = кадры.slice(0, 40)
+      .map(к => `${к.from ? чч(к.from) : t('alarm.webNow')}  ${к.architect} | ${к.observer}`).join('\n');
+    $('alarmListBox').hidden = false;
+  }
 }
 
 /* ВСЁ, ЧТО ВИДНО В ОКНЕ «ЛОГИ», ОДНИМ ТЕКСТОМ.
@@ -708,7 +719,7 @@ function journalText() {
     ...строка('alarmStep'),
     ...строка('alarmTrace'),
     ...(виден('alarmJournal') ? ['', 'Журнал:', $('alarmJournal').textContent.trim()] : []),
-    ...(виден('alarmList') ? ['', 'Стоит в системе:', $('alarmList').textContent.trim()] : [])
+    ...(виден('alarmList') ? ['', $('alarmListTitle').textContent.trim(), $('alarmList').textContent.trim()] : [])
   ].join('\n');
 }
 
@@ -959,7 +970,24 @@ function следующийСрокНаСтоле(сейчас = Date.now()) {
 }
 let targetListening = false;
 
+/* «Квант» открыт — первая строка журнала компьютера; версию читаем у сайта (а не из кода: так
+   она та, что реально загружена). Один раз на загрузку страницы, а не на каждый повторный вход. */
+let открытоЗаписано = false;
+
+async function записатьОткрытие() {
+  if (открытоЗаписано) return;
+  открытоЗаписано = true;
+  try {
+    версияСборки = String((await (await fetch('version.json')).json()).release || '');
+  } catch { /* версия не обязательна */ }
+  const где = navigator.userAgent.includes('KvantDesktop/') ? 'desktop' : 'browser';
+  logEvent('START', { m: `${версияСборки || '?'} · ${где}` });
+  window.addEventListener('online', () => logEvent('NET', { m: 'online' }));
+  window.addEventListener('offline', () => logEvent('NET', { m: 'offline' }));
+}
+
 async function start() {
+  if (!isNative()) записатьОткрытие();
   await reload();
   /* Сервер не отвечает — синхронизацию не заводим вовсе. Иначе она сама
      обнаружит отсутствие входа и покажет экран входа, который в этом
@@ -987,7 +1015,6 @@ async function start() {
     renderUser();
     await loadQuantum();     // счётчик моментов нужен сразу, на любом экране
     renderNav();
-    журналНаСервер();        // журнал телефона — для «Логов» на компьютере (выкладка 161)
   }
 
   /* СИСТЕМНЫЕ НАПОМИНАНИЯ.
@@ -1230,7 +1257,6 @@ async function boot() {
   $('alarmLogs').addEventListener('click', async () => {
     await showAlarmPending();
     $('alarmLogDialog').showModal();
-    await журналНаСервер();
   });
 
   for (const id of ['alarmOn', 'alarmGuard', 'alarmWindowMode', 'alarmMomentsMode',
@@ -1276,7 +1302,16 @@ async function boot() {
      это чтение, а не правка настроек, и улики должны остаться. Отправляет сам человек,
      выбрав, куда (окно «Поделиться»). */
   $('alarmJournalShare').addEventListener('click', async () => {
-    await shareText(journalText());
+    if (isNative()) { await shareText(journalText()); return; }
+    // На компьютере «Поделиться» нет — текст уходит в буфер обмена
+    const кнопка = $('alarmJournalShare');
+    try {
+      await navigator.clipboard.writeText(journalText());
+      кнопка.textContent = t('alarm.journalCopied');
+      setTimeout(() => { кнопка.textContent = t('alarm.journalShare'); }, 2000);
+    } catch (err) {
+      console.warn('[журнал] не скопировался:', err);
+    }
   });
 
   // «Автозапуск»: отсчёт заново, как и у настроек приложения выше
@@ -1295,11 +1330,6 @@ async function boot() {
     showAlarmTrouble().catch(err => console.warn('[будильник]', err.message));
     // И про усыпление тоже: человек мог вернуться именно оттуда
     showAlarmPending().catch(err => console.warn('[будильник]', err.message));
-  });
-
-  // Журнал телефона — на сервер для «Логов» на компьютере: каждый раз, как приложение открыли
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') журналНаСервер();
   });
 
   /* ПРОВЕРОЧНЫЙ ЗВОНОК.

@@ -37,6 +37,7 @@ import { cycleNamedHour } from './core/observer-clock.js';
 import { state, t } from './store.js';
 import { getMeta, setMeta } from './db.js';
 import { publishPref, prefValue, prefMissing, takeRemotePrefs } from './prefs.js';
+import { logEvent } from './core/web-journal.js';
 import { CONFIG } from './views/space/config.js';
 
 /* ТИХИЙ ЧАС.
@@ -243,7 +244,10 @@ export async function syncPrefs(known) {
     await отдатьПрыжок();
 
     const принято = 'alarm' in пришло || 'quiet' in пришло || принятПрыжок;
-    if (принято) await planReminders();
+    if (принято) {
+        logEvent('⇄', { m: Object.keys(пришло).join(', ') });
+        await planReminders();
+    }
     return принято;
 }
 
@@ -380,16 +384,31 @@ export async function publishDesktopWidget(now = new Date()) {
         const день = freshDay(state.quantum, todayKey(now));
         const quiet = await loadQuiet();
         const кадры = guardFramesFor(now, alarm, день, await заготовки(now, quiet, alarm), quiet);
+        const кадрыВиджетам = кадры.map(к => ({ from: к.from, architect: к.architect, observer: к.observer }));
         localStorage.setItem('kvant-desktop-widget', JSON.stringify({
             at: now.getTime(),
             lang: state.language,
-            frames: кадры.map(к => ({ from: к.from, architect: к.architect, observer: к.observer }))
+            frames: кадрыВиджетам
         }));
+        записатьСрокиВиджетам(кадрыВиджетам, now.getTime());
         return true;
     } catch (err) {
         console.warn('[виджет на компьютере] сроки не положились:', err);
+        logEvent('V✗', { m: err?.message || String(err) });
         return false;
     }
+}
+
+/* В журнал компьютера — только когда сроки виджетам ИЗМЕНИЛИСЬ: расписание переставляется часто,
+   и одинаковые строки вытеснили бы остальное (core/web-journal.js, выкладка 162). */
+function записатьСрокиВиджетам(кадры, now) {
+    try {
+        const подпись = JSON.stringify(кадры.map(к => [к.from, к.architect, к.observer]));
+        if (localStorage.getItem('kvant-widget-frames-sig') === подпись) return;
+        localStorage.setItem('kvant-widget-frames-sig', подпись);
+        const следующий = кадры.find(к => к.from > now);
+        logEvent('V', { n: кадры.length, a: следующий?.from || 0 });
+    } catch { /* журнал не обязателен */ }
 }
 
 /**

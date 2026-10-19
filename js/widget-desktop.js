@@ -15,6 +15,7 @@
 import { FORMATS, normalizeStyle } from './core/widgets.js';
 import { translate } from './core/i18n.js';
 import { widgetHtml, applyWidgetVars } from './core/widget-html.js';
+import { logEvent } from './core/web-journal.js';
 
 const ПЕРЕРИСОВКА_МС = 20 * 1000;
 
@@ -53,6 +54,8 @@ function прочитать(имя) {
     }
 }
 
+let последнееПоказанное = '';
+
 function нарисовать() {
     const данные = прочитать('kvant-desktop-widget');
     const язык = данные?.lang || 'ru';
@@ -67,6 +70,14 @@ function нарисовать() {
     const сроки = кадр
         ? { architect: кадр.architect, observer: кадр.observer }
         : { architect: перевод('widgets.sample.architect'), observer: перевод('widgets.sample.observer') };
+
+    /* Что показывает виджет на столе — в журнал компьютера, когда оно изменилось (выкладка 162):
+       «виджет показывает не то» тогда видно по часам, а не по скриншоту. */
+    const показано = `${сроки.architect} | ${сроки.observer}`;
+    if (показано !== последнееПоказанное) {
+        последнееПоказанное = показано;
+        logEvent('D', { k: формат.key, m: показано });
+    }
 
     корень.innerHTML = widgetHtml(формат, normalizeStyle(прочитать('kvant-desktop-widget-style') || {}),
         new Date(), сроки, перевод);
@@ -86,6 +97,10 @@ function нарисовать() {
     }
     if (событие.target.closest('.wg-btn')) window.open('index.html', 'kvant-app');
 });
+
+// Сбои самого окна виджета — в тот же журнал компьютера
+window.addEventListener('error', e => logEvent('E', { k: формат.key, m: `${e.message || 'ошибка'} (${e.filename || ''}:${e.lineno || 0})` }));
+window.addEventListener('unhandledrejection', e => logEvent('E', { k: формат.key, m: e.reason?.message || String(e.reason) }));
 
 нарисовать();
 setInterval(нарисовать, ПЕРЕРИСОВКА_МС);
