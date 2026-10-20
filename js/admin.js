@@ -25,11 +25,10 @@ import { mediaBox } from './core/media-box.js';
 import { getDoorAudio, saveDoorAudio, deleteDoorAudio } from './views/space/audio.js';
 import { getDoorPhotos, addDoorPhotos, deleteDoorPhotos } from './views/space/photos.js';
 import { initUpdate } from './update.js';
+import { createCabinetEditor, SLOT_NAMES as SLOTS, LANG_CODES as LANGS } from './views/cabinet-editor.js';
 
 const $ = id => document.getElementById(id);
 const KEY = 'planner.adminToken';
-const SLOTS = { morning: 'Утро', day: 'День', evening: 'Вечер', frame: 'Кадр' };
-const LANGS = { ru: 'RU', uk: 'UK', en: 'EN' };
 
 /* ---------- Язык кабинета ----------
 
@@ -311,7 +310,7 @@ async function moveMedia(from, to) {
 }
 
 /* Персональный набор фраз переехал вкладкой в квантовый кабинет —
-   см. renderAssignBlock выше. Отдельный диалог убран вместе с кнопкой. */
+   см. views/cabinet-editor.js (вкладка «Фразы»). Отдельный диалог убран вместе с кнопкой. */
 
 /* ---------- Сбои с устройств ---------- */
 
@@ -433,184 +432,33 @@ boot();
 
 /* ---------- Квантовый кабинет одного человека ----------
 
-   Фазы дня и дни недели настраиваются раздельно, и в каждом блоке — текст,
-   звук и картинка; у дня недели ещё и цвет. Блоки независимы: правка одного
-   уходит на сервер сама по себе и не трогает остальные. Так специалист может
-   настроить только утро и уйти, ничего не «сохраняя целиком».
-
-   Человек со своего телефона сюда не попадает: сервер пускает только роль
-   администратора (ТЗ, раздел про доступ). */
-
-const SLOT_KEYS = [
-  ['morning', 'adm.slotMorning'],
-  ['day', 'adm.slotDay'],
-  ['evening', 'adm.slotEvening'],
-  ['frame', 'adm.slotFrame']
-];
-// 1 — понедельник, как в ISO и в базе (to_char(date, 'ID'))
-const WEEKDAY_KEYS = [
-  ['1', 'adm.mon'], ['2', 'adm.tue'], ['3', 'adm.wed'], ['4', 'adm.thu'],
-  ['5', 'adm.fri'], ['6', 'adm.sat'], ['7', 'adm.sun']
-];
-
-let quantumPerson = null;
-let quantumKind = 'slot';
-let quantumSettings = [];
+   Сам редактор — общий модуль (views/cabinet-editor.js): тот же стоит в разделе администратора на
+   устройстве участника (js/support.js). Здесь ему отдают адреса «своего» человека и блок записи
+   файлов, который есть только на этой странице. */
 
 async function openQuantum(person) {
-  quantumPerson = person;
-  quantumKind = 'slot';
   $('quantumFor').textContent = `${person.displayName} · ${person.email}`;
-  await withBusy(async () => {
-    quantumSettings = await api(`/api/admin/users/${person.id}/quantum/settings`);
+  const editor = createCabinetEditor({
+    t, api,
+    endpoints: {
+      settings: `/api/admin/users/${person.id}/quantum/settings`,
+      phrases: `/api/admin/users/${person.id}/quantum/phrases`
+    },
+    loadLibrary: async () => phrases,
+    /* Тот же блок, что в «Содержании» и в «Настройке Реальностей». Ключ собран из человека, вида
+       настройки и её имени: у каждой фазы и каждого дня недели свои файлы, и они не путаются между
+       собой. Поля со ссылками остаются рядом: ссылка достаётся всем, файл — только этому
+       устройству, и это разные возможности, а не замена одной другой. */
+    extras: (kind, key) => mediaBox(`qs:${person.id}:${kind}:${key}`, {
+      note: 'Запись и снимки сохраняются на этом устройстве. Ссылка выше достаётся всем — места под файлы на сервере пока нет.'
+    }),
+    onError: showError
   });
-  renderQuantumTabs();
-  renderQuantumBlocks();
+  $('quantumEditor').replaceChildren(editor.element);
+  await withBusy(() => editor.load());
   $('quantumDialog').showModal();
 }
 
-function renderQuantumTabs() {
-  $('quantumTabs').querySelectorAll('button').forEach(b =>
-    b.setAttribute('aria-pressed', String(b.dataset.qkind === quantumKind)));
-}
-
-const settingOf = (kind, key) =>
-  quantumSettings.find(x => x.kind === kind && x.key === key) || {};
-
-/* Третья вкладка — персональный набор фраз. Раньше он жил отдельной кнопкой
-   в карточке и путал: снаружи было непонятно, чем «Фразы» отличаются от
-   «Содержания». Это одно и то же про одного человека, поэтому и место одно. */
-async function renderQuantumBlocks() {
-  if (quantumKind === 'phrases') return renderAssignBlock();
-  const keys = quantumKind === 'slot' ? SLOT_KEYS : WEEKDAY_KEYS;
-  $('quantumBlocks').replaceChildren(...keys.map(([key, labelKey]) =>
-    quantumBlock(quantumKind, key, t(labelKey))));
-}
-
-async function renderAssignBlock() {
-  const box = $('quantumBlocks');
-  box.replaceChildren(h('p', { class: 'muted m0', text: t('adm.loading') }));
-  let assigned;
-  try {
-    assigned = new Set(await api(`/api/admin/users/${quantumPerson.id}/quantum/phrases`));
-  } catch {
-    box.replaceChildren(h('p', { class: 'muted m0', text: t('adm.saveFailed') }));
-    return;
-  }
-  if (!phrases.length) {
-    box.replaceChildren(h('p', { class: 'muted m0', text: t('adm.noPhrasesYet') }));
-    return;
-  }
-  box.replaceChildren(
-    h('p', { class: 'muted m0', text: t('adm.assignNote') }),
-    h('ul', { class: 'phrases mt10' }, ...phrases.map(p => h('li', { class: 'phrase' },
-      h('input', {
-        type: 'checkbox', value: p.id, checked: assigned.has(p.id), 'aria-label': p.text,
-        onchange: saveAssigned
-      }),
-      h('div', {},
-        h('span', { class: 'text', text: p.text }),
-        h('span', { class: 'meta', text: `${SLOTS[p.slot]} · ${LANGS[p.language]}` })),
-      h('span', {})))));
-}
-
-// Отметку сохраняем сразу: отдельная кнопка «Сохранить» на списке галочек —
-// лишний шаг, о котором забывают, и набор молча остаётся прежним
-async function saveAssigned() {
-  const ids = [...$('quantumBlocks').querySelectorAll('input:checked')].map(i => i.value);
-  try {
-    await api(`/api/admin/users/${quantumPerson.id}/quantum/phrases`, {
-      method: 'POST', body: JSON.stringify({ phraseIds: ids })
-    });
-  } catch {
-    showError(t('adm.saveFailed'));
-  }
-}
-
-function quantumBlock(kind, key, label) {
-  const value = settingOf(kind, key);
-  const filled = Boolean(value.text || value.color || value.imageUrl || value.audioUrl);
-
-  const field = (name, placeholderKey, type = 'text') => h('label', {},
-    h('span', { text: t(placeholderKey) }),
-    h('input', { type, name, value: value[name] || '' }));
-
-  const body = h('div', { class: 'q-block-body' },
-    h('label', {},
-      h('span', { text: t('adm.text') }),
-      h('textarea', { name: 'text', maxlength: 600, value: value.text || '' })),
-    /* Цвет — только у дня недели: у фазы он берётся из чакры дня.
-
-       Галочка нужна потому, что поле выбора цвета НИКОГДА не бывает пустым:
-       очистить его нельзя, браузер вернёт чёрный. Без галочки «вернуть общий
-       цвет» было бы невозможно — настройка навсегда перекрывала бы чакру. */
-    kind === 'weekday'
-      ? h('div', { class: 'q-color' },
-          h('label', { class: 'q-color-use' },
-            h('input', { type: 'checkbox', name: 'useColor', checked: Boolean(value.color) }),
-            h('span', { text: t('adm.ownColor') })),
-          h('input', { type: 'color', name: 'color', value: value.color || '#2b3a8c' }))
-      : null,
-    field('imageUrl', 'adm.imageUrl', 'url'),
-    field('audioUrl', 'adm.audioUrl', 'url'),
-    /* Тот же блок, что в «Содержании» и в «Настройке Реальностей».
-       Ключ собран из человека, вида настройки и её имени: у каждой фазы
-       и каждого дня недели свои файлы, и они не путаются между собой.
-       Поля со ссылками остаются рядом: ссылка достаётся всем, файл —
-       только этому устройству, и это разные возможности, а не замена
-       одной другой. */
-    mediaBox(`qs:${quantumPerson.id}:${kind}:${key}`, {
-      note: 'Запись и снимки сохраняются на этом устройстве. Ссылка выше достаётся всем — места под файлы на сервере пока нет.'
-    }),
-    h('div', { class: 'q-block-foot' },
-      h('button', {
-        type: 'button', class: 'btn primary',
-        onclick: e => saveBlock(e.target.closest('.q-block'), kind, key)
-      }, h('span', { class: 'gold-cut', text: t('adm.save') })),
-      h('span', { class: 'q-block-said', role: 'status' })));
-
-  return h('details', { class: `q-block ${filled ? 'filled' : ''}`, 'data-key': key },
-    h('summary', {},
-      h('b', { text: label }),
-      h('span', { class: 'q-block-mark', text: filled ? t('adm.configured') : t('adm.notSet') })),
-    body);
-}
-
-async function saveBlock(block, kind, key) {
-  const said = block.querySelector('.q-block-said');
-  const read = name => (block.querySelector(`[name=${name}]`) || {}).value || '';
-  const useColor = block.querySelector('[name=useColor]')?.checked;
-  const payload = {
-    kind, key,
-    text: read('text'),
-    // Галочка снята — цвет не отправляем вовсе: вернётся общий цвет чакры
-    color: kind === 'weekday' && useColor ? read('color') : '',
-    imageUrl: read('imageUrl'),
-    audioUrl: read('audioUrl')
-  };
-  try {
-    const saved = await api(`/api/admin/users/${quantumPerson.id}/quantum/settings`, {
-      method: 'POST', body: JSON.stringify(payload)
-    });
-    // Сервер вернул 204 — настройка стёрта, потому что в ней ничего не осталось
-    quantumSettings = quantumSettings.filter(x => !(x.kind === kind && x.key === key));
-    if (saved) quantumSettings.push(saved);
-    said.textContent = saved ? t('adm.saved') : t('adm.cleared');
-    block.classList.toggle('filled', Boolean(saved));
-    block.querySelector('.q-block-mark').textContent = saved ? t('adm.configured') : t('adm.notSet');
-  } catch (err) {
-    said.textContent = err.status === 400 ? t('adm.checkFields') : t('adm.saveFailed');
-  }
-  setTimeout(() => { said.textContent = ''; }, 4000);
-}
-
-$('quantumTabs').addEventListener('click', e => {
-  const kind = e.target.dataset.qkind;
-  if (!kind) return;
-  quantumKind = kind;
-  renderQuantumTabs();
-  renderQuantumBlocks();
-});
 $('closeQuantum').addEventListener('click', () => $('quantumDialog').close());
 
 /* ---------- Настройки клиента: всё, что было в карточке ----------

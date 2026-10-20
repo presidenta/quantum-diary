@@ -12,6 +12,7 @@
      ими свои имена (см. :root в app.css) -->
 <link rel="stylesheet" href="css/game-tokens.css">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/cabinet-editor.css">
 <link rel="stylesheet" href="css/admin.css">
 <script type="module" src="js/admin.js"></script>
 </head>
@@ -188,15 +189,8 @@
     <h2 data-i18n="adm.quantumCabinet">Квантовый кабинет</h2>
     <p class="muted m0" id="quantumFor"></p>
 
-    <div class="segmented" id="quantumTabs" role="group">
-      <button type="button" data-qkind="slot" aria-pressed="true" data-i18n="adm.phases">Фазы дня</button>
-      <button type="button" data-qkind="weekday" aria-pressed="false" data-i18n="adm.weekdays">Дни недели</button>
-      <button type="button" data-qkind="phrases" aria-pressed="false" data-i18n="adm.phrases">Фразы</button>
-    </div>
-
-    <div id="quantumBlocks" class="q-blocks"></div>
-
-    <p class="muted m0" data-i18n="adm.quantumHint">Пустое поле — остаётся общее. Звук проигрывается на устройстве, когда наступает момент.</p>
+    <!-- Вкладки, блоки и подсказку рисует общий редактор (js/views/cabinet-editor.js) -->
+    <div id="quantumEditor"></div>
     <div class="actions">
       <button type="button" class="btn primary" id="closeQuantum"><span class="gold-cut" data-i18n="adm.done">Готово</span></button>
     </div>

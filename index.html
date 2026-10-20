@@ -50,6 +50,8 @@
      ими свои имена (см. :root в app.css) -->
 <link rel="stylesheet" href="css/game-tokens.css">
 <link rel="stylesheet" href="css/app.css">
+<!-- Редактор квантового кабинета: и на странице админа, и в разделе администратора (выкладка 165) -->
+<link rel="stylesheet" href="css/cabinet-editor.css">
 <!-- Вторая вкладка «Кванта». Идёт последней: берёт имена из app.css,
      своих цветов не заводит, все правила живут внутри .qm-root -->
 <link rel="stylesheet" href="css/space.css">
@@ -412,6 +414,9 @@
       <!-- Виджеты рабочего стола — отдельная кнопка в меню профиля, а не в «Логах»
            (просьба владельца 17.10.2026): там их смотрят, настраивают и ставят. -->
       <button type="button" class="btn" id="widgetsOpen" data-i18n="profile.widgets">Установить виджет</button>
+      <!-- Раздел администратора: стоит у каждого участника, а войти в него может только администратор,
+           введя СВОЙ пароль (js/support.js, выкладка 165) — чтобы настроить этот кабинет и помочь. -->
+      <button type="button" class="btn" id="supportOpen" data-i18n="support.open">Администратор</button>
       <button type="button" class="btn" id="changePassword" hidden data-i18n="password.change">Сменить пароль</button>
       <button type="button" class="btn" id="profileLogout" data-i18n="auth.logout">Выйти</button>
       <button type="button" class="btn danger" id="deleteData" data-i18n="profile.removeApp">Удалить приложение</button>
@@ -615,6 +620,50 @@
       <button value="save" class="btn primary"><span class="gold-cut" data-i18n="common.save">Сохранить</span></button>
     </div>
   </form>
+</dialog>
+
+<!-- ВХОД АДМИНИСТРАТОРА В КАБИНЕТ УЧАСТНИКА (выкладка 165).
+
+     Просит логин и пароль АДМИНИСТРАТОРА, а не участника. Поля нарочно без автозаполнения:
+     устройство чужое, и запоминать на нём пароль администратора нельзя. -->
+<dialog id="supportGateDialog">
+  <form class="sheet" id="supportGateForm" autocomplete="off">
+    <h2 data-i18n="support.gateTitle">Вход администратора</h2>
+    <p class="muted m0" data-i18n="support.gateHint">Этот раздел открывает только администратор — своим паролем. Он нужен, чтобы настроить этот кабинет и помочь пользоваться приложением. Пароль нигде не сохраняется.</p>
+    <label><span data-i18n="support.login">Номер кабинета или почта администратора</span>
+      <input name="login" type="text" required autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore></label>
+    <label><span data-i18n="support.password">Пароль администратора</span>
+      <input name="password" type="password" required autocomplete="new-password" data-lpignore="true" data-1p-ignore></label>
+    <p class="gate-msg" id="supportGateMsg" role="alert"></p>
+    <div class="actions">
+      <button type="button" class="btn" id="supportGateCancel" data-i18n="common.cancel">Отмена</button>
+      <button type="submit" class="btn primary" name="enter"><span class="gold-cut" data-i18n="support.enter">Войти</span></button>
+    </div>
+  </form>
+</dialog>
+
+<!-- РАЗДЕЛ АДМИНИСТРАТОРА: настройка кабинета этого участника и его сбои. Наполняет js/support.js;
+     закрытие окна — выход из режима администратора (сессия закрывается и на сервере). -->
+<dialog id="supportDialog">
+  <div class="sheet wide">
+    <h2 data-i18n="support.panelTitle">Режим администратора</h2>
+    <p class="m0"><b id="supportFor"></b></p>
+    <p class="muted m0" id="supportState"></p>
+    <p class="muted m0" data-i18n="support.note">Режим закрывается сам через 30 минут без действий. Опасные действия с учётной записью — новый пароль, блокировка — остались на странице администратора.</p>
+
+    <h3 class="support-h" data-i18n="adm.quantumCabinet">Квантовый кабинет</h3>
+    <div id="supportEditor"></div>
+
+    <details id="supportErrorsBox" class="support-errors-box">
+      <summary data-i18n="support.errors">Сбои на устройствах этого участника</summary>
+      <ul id="supportErrors" class="support-errors"></ul>
+    </details>
+
+    <p class="gate-msg is-error" id="supportMsg" role="alert"></p>
+    <div class="actions">
+      <button type="button" class="btn primary" id="supportExit"><span class="gold-cut" data-i18n="support.exit">Выйти из режима администратора</span></button>
+    </div>
+  </div>
 </dialog>
 
 <!-- ТИХИЙ ЧАС.

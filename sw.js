@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 164;
+const RELEASE = 165;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -16,7 +16,7 @@ const SHELL = [
      addAll падает целиком, если хоть один отдаёт 404. */
   'manifest-pc.webmanifest', 'js/pc-install.js', 'js/core/pc-install-rules.js',
   'js/app.js', 'js/ios-home.js', 'manifest.webmanifest', 'js/store.js', 'js/db.js', 'js/sync.js', 'js/auth.js', 'js/config.js', 'js/wheel.js', 'js/errors.js', 'js/update.js', 'js/password-eye.js',
-  'js/reminder-plan.js',
+  'js/reminder-plan.js', 'js/support.js', 'js/views/cabinet-editor.js', 'css/cabinet-editor.css',
   // Окно «Установить виджет» (раздел 9.21): модуль, его стили и чистые правила с значками
   'js/widgets-ui.js', 'css/widgets.css', 'js/core/widgets.js', 'js/core/widget-icons.js',
   // Окно виджета на компьютере и общая отрисовка виджета (выкладка 150)

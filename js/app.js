@@ -22,6 +22,7 @@ import { CONFIG as SPACE_CONFIG } from './views/space/config.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 import { initWidgets, openWidgets } from './widgets-ui.js';
+import { initSupport } from './support.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
@@ -1188,6 +1189,7 @@ async function boot() {
   initSpace();
   initSlit();
   initWidgets();
+  initSupport();
 
   // Ежедневная проверка прав и «рубильник». Пока ACCESS_ENABLED = false,
   // этот блок не делает ничего: ни запросов, ни блокировок.
