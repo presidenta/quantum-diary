@@ -14,8 +14,9 @@ import {
   livedCount, plannedCount, activeMoment, nextMoment, timeNow, msUntil, localDay, retime, momentToLive
 } from '../core/quantum.js';
 import { mudraSvg, shouldersSvg } from './quantum-figures.js';
-import { getDoorAudio } from './space/audio.js';
-import { getDoorPhotos } from './space/photos.js';
+import {
+  playMoment, playerControls, stopSound, devicePhotos, releasePhotos
+} from './quantum-sound.js';
 import { todayKey } from '../core/dates.js';
 import { localMedia, warmUp } from '../core/media.js';
 import { request } from '../core/net.js';
@@ -368,7 +369,8 @@ function renderLive(active, day) {
   if (finishing) return;          // конец удержания ведёт finishHold
   const live = $('quantumLive');
   stopPracticeTimers();           // старые таймеры не должны тикать за кадром
-  releaseBlobs();
+  releasePhotos(screenOwner);     // снимки прежнего экрана; новому — свой владелец
+  screenOwner = { urls: [], dead: false };
 
   // Открытый звонком момент главнее идущего по времени; прожитый или погашенный — забывается
   const forced = forcedId
@@ -391,7 +393,7 @@ function renderLive(active, day) {
   if (forced) {
     live.append(h('button', {
       type: 'button', class: 'q-live-close', text: '×', 'aria-label': t('quantum.liveClose'),
-      onclick: () => { forcedId = null; renderQuantum(); }
+      onclick: () => { forcedId = null; stopSound(); renderQuantum(); }
     }));
   }
 }
@@ -446,22 +448,16 @@ function practiceScreen(moment, anchorKey) {
   // Подсказка про мудру или выдох уже есть над текстом — повторять её здесь незачем
   if (!figureShown(moment)) parts.push(h('p', { class: 'q-anchor', text: t(anchorKey) }));
 
-  // Снимки и запись с этого устройства (раздел «Администратор») — поверх ссылок
+  // Снимки с этого устройства (раздел «Администратор») — поверх ссылок
   const photos = h('div', { class: 'q-photos' });
   parts.push(photos);
-
-  // Звук не играет сам: это решение человека, а не приложения
-  const audio = h('audio', { class: 'q-audio', controls: true, preload: 'none', hidden: true });
-  parts.push(audio);
-  const audioUrl = mine.audioUrl || moment.audioUrl;
-  deviceMedia(moment.slot).then(async device => {
-    if (!audio.isConnected) { releaseBlobs(); return; }          // экран уже перерисован
-    for (const src of device.photos) photos.append(h('img', { class: 'q-image', alt: '', src }));
-    const src = device.audioSrc || (audioUrl ? await localMedia(audioUrl) : '');
-    if (!src) return;
-    audio.src = src;
-    audio.hidden = false;
+  const own = screenOwner;
+  devicePhotos(moment.slot, own).then(urls => {
+    for (const src of urls) photos.append(h('img', { class: 'q-image', alt: '', src }));
   });
+
+  // «Воспроизвести» и «Стоп» — на каждом экране практики, всегда (views/quantum-sound.js)
+  parts.push(playerControls(moment));
   if (moment.durationSec > 0) parts.push(practiceTimer(moment.durationSec));
 
   parts.push(h('button', {
@@ -504,29 +500,11 @@ function practiceTimer(seconds) {
 const practiceTimers = [];
 const stopPracticeTimers = () => { while (practiceTimers.length) practiceTimers.pop()(); };
 
-/* ФАЙЛЫ, ДОБАВЛЕННЫЕ В РАЗДЕЛЕ «АДМИНИСТРАТОР» НА ЭТОМ УСТРОЙСТВЕ (выкладка 165, js/support.js).
-   Администратор записывает аудио и добавляет снимки к фазе дня прямо на телефоне участника; лежат они
-   в хранилище устройства под ключом «qs:<участник>:slot:<фаза>». Экраны практики показывают снимки и
-   играют запись оттуда — они главнее ссылки: их добавили нарочно, на этом устройстве, для этого человека.
-   Ссылки на файлы объектов (blob:) освобождаются при следующей отрисовке: иначе они копились бы. */
-let blobUrls = [];
-const releaseBlobs = () => { while (blobUrls.length) URL.revokeObjectURL(blobUrls.pop()); };
-
-async function deviceMedia(slot) {
-  if (!state.me?.id) return { audioSrc: '', photos: [] };
-  const key = `qs:${state.me.id}:slot:${slot}`;
-  const [audio, photos] = await Promise.all([
-    getDoorAudio(key).catch(() => null),
-    getDoorPhotos(key).catch(() => [])
-  ]);
-  const url = blob => { const u = URL.createObjectURL(blob); blobUrls.push(u); return u; };
-  return {
-    audioSrc: audio?.blob ? url(audio.blob) : '',
-    photos: photos.filter(p => p?.blob).map(p => url(p.blob))
-  };
-}
-
-const formatLeft = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
+/* Снимки, добавленные в разделе «Администратор» на этом устройстве (выкладка 165, js/support.js), и запись к
+   ним (views/quantum-sound.js). Адреса снимков принадлежат ЭКРАНУ, который их показывает: убрали экран —
+   освободили (releasePhotos). Прежде они освобождались одним общим списком, и поздно пришедший ответ
+   старого экрана стирал адреса нового: на экране не было ни снимка, ни звука. */
+let screenOwner = { urls: [], dead: false };
 
 /* Кнопка появляется в случайном месте — её нельзя ждать в одной точке.
 
@@ -563,7 +541,7 @@ function renderWanderButton(live, moment, day) {
     h('span', { class: 'q-teleport-hold', text: t('quantum.hold') }));
   button.style.setProperty('left', `${x}%`);
   button.style.setProperty('top', `${y}%`);
-  live.replaceChildren(h('div', { class: 'q-field' }, button));
+  live.replaceChildren(h('div', { class: 'q-field' }, button), h('div', { class: 'q-live-player' }, playerControls(moment)));
 }
 
 function startHold(event, moment, day) {
@@ -621,34 +599,6 @@ function cancelHold() {
   if (!holdTimer) return;
   stopHold();
   renderQuantum();
-}
-
-/* ОЗВУЧКА МОМЕНТА.
-
-   Звук задаёт специалист: либо у самой фразы, либо персонально этому человеку
-   на эту фазу дня. Персональный главнее — он назначен лично.
-
-   Играем ТОЛЬКО ЗДЕСЬ, сразу после восьми секунд удержания, и это не
-   случайность: браузеры глушат звук, который заводится сам, без жеста
-   человека. Удержание кнопки — и есть тот жест. Попытка проиграть запись
-   заранее, «к наступлению момента», кончилась бы тишиной на телефоне и
-   ошибкой в консоли.
-
-   Ничего не загружаем, пока не понадобилось: Audio создаётся в этот миг, а не
-   держится в памяти весь день — телефон должен дожить до вечера. */
-async function playMoment(moment) {
-  const personal = state.quantum?.settings?.slots?.[moment.slot]?.audioUrl;
-  const url = personal || moment.audioUrl;
-  // Запись, добавленная на этом устройстве (раздел «Администратор»), главнее ссылки
-  const device = await deviceMedia(moment.slot);
-  // Берём скачанную копию: в метро по ссылке звук не достать, да и политика
-  // страницы чужой адрес не пропустит
-  const src = device.audioSrc || (url ? await localMedia(url) : '');
-  if (!src) return;
-  try {
-    const sound = new Audio(src);
-    sound.play().catch(() => { /* телефон в беззвучном режиме — это нормально */ });
-  } catch { /* запись не открылась — момент важнее звука */ }
 }
 
 async function finishHold(moment, day) {
