@@ -29,6 +29,8 @@ import { state, t, $, h } from './store.js';
 import { createCabinetEditor } from './views/cabinet-editor.js';
 /* Блок «Записать / Файл / Фото» — тот же, что на странице администратора (core/media-box.js). */
 import { mediaBox } from './core/media-box.js';
+import { getDoorAudio } from './views/space/audio.js';
+import { getDoorPhotos } from './views/space/photos.js';
 
 // Токен и сведения об участнике — только пока открыт раздел
 let session = null;
@@ -130,6 +132,11 @@ function openPanel() {
        (views/quantum.js, deviceMedia): администратор сидит с участником и добавляет файлы прямо на его
        телефоне — там они и будут звучать и показываться. */
     extras: (kind, key) => mediaBox(`qs:${c.id}:${kind}:${key}`, { note: t('support.mediaNote') }),
+    // У какой фазы запись уже есть — видно по отметке блока, не раскрывая его
+    hasMedia: async (kind, key) => {
+      const mediaKey = `qs:${c.id}:${kind}:${key}`;
+      return Boolean(await getDoorAudio(mediaKey)) || (await getDoorPhotos(mediaKey)).length > 0;
+    },
     onError: message => { $('supportMsg').textContent = message; }
   });
   $('supportEditor').replaceChildren(editor.element);

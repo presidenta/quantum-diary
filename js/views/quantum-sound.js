@@ -24,6 +24,7 @@
 
 import { state, t, h } from '../store.js';
 import { localMedia } from '../core/media.js';
+import { reportFailure } from '../errors.js';
 import { getDoorAudio } from './space/audio.js';
 import { getDoorPhotos } from './space/photos.js';
 
@@ -59,6 +60,24 @@ function hideBar() {
   bar = null;
 }
 
+/* ТИП ЗАПИСИ ПО ПЕРВЫМ БАЙТАМ (выкладка 167). Файл, выбранный в проводнике телефона, приходит с пустым или
+   общим типом («application/octet-stream»), и плеер оболочки может отказаться играть его по имени типа,
+   хотя сам файл исправен. Тип определяется по содержимому; известный тип не трогаем. */
+const ОБЩИЕ_ТИПЫ = new Set(['', 'application/octet-stream', 'binary/octet-stream']);
+
+export async function sniffType(blob) {
+  if (!ОБЩИЕ_ТИПЫ.has(blob.type)) return blob.type;
+  const b = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+  const text = (from, to) => String.fromCharCode(...b.slice(from, to));
+  if (text(0, 3) === 'ID3' || (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0)) return 'audio/mpeg';
+  if (text(0, 4) === 'OggS') return 'audio/ogg';
+  if (text(0, 4) === 'RIFF' && text(8, 12) === 'WAVE') return 'audio/wav';
+  if (b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3) return 'audio/webm';
+  if (text(4, 8) === 'ftyp') return 'audio/mp4';
+  if (text(0, 4) === 'fLaC') return 'audio/flac';
+  return blob.type;
+}
+
 /* Что играть для момента: файл с устройства, иначе ссылка (личная от специалиста главнее общей).
    Возвращает { blob } или { url } или null — адрес blob: ещё НЕ создаётся. */
 export async function soundSourceFor(moment) {
@@ -71,38 +90,53 @@ export async function soundSourceFor(moment) {
 }
 
 /**
- * Включить запись момента. Возвращает true, если пошла.
+ * Включить запись момента. Возвращает { ok: true } или { ok: false, reason } — причина нужна экрану и отчёту.
  * Звать из нажатия (кнопка «Воспроизвести») или сразу после удержания: браузер глушит звук без жеста.
  */
 export async function playMoment(moment) {
   const source = await soundSourceFor(moment);
-  if (!source) return false;
+  if (!source) return { ok: false, reason: 'none' };
 
   let src = '';
   let release = () => {};
-  if (source.blob) {
-    src = URL.createObjectURL(source.blob);
-    release = () => URL.revokeObjectURL(src);
-  } else {
-    // Скачанная копия: в метро по ссылке звук не достать
-    src = (await localMedia(source.url)) || '';
+  try {
+    if (source.blob) {
+      const typed = new Blob([source.blob], { type: await sniffType(source.blob) });
+      src = URL.createObjectURL(typed);
+      release = () => URL.revokeObjectURL(src);
+    } else {
+      // Скачанная копия: в метро по ссылке звук не достать
+      src = (await localMedia(source.url)) || '';
+    }
+  } catch (err) {
+    return fail(`запись не открылась: ${err?.name || 'ошибка'}: ${err?.message || ''}`, release);
   }
-  if (!src) { release(); return false; }
+  if (!src) return fail('адрес записи не получен', release);
 
   stopSound();                                   // одна запись на всё приложение
   const audio = new Audio(src);
   current = { audio, release };
   audio.addEventListener('ended', stopSound);
-  audio.addEventListener('error', stopSound);
+  audio.addEventListener('error', () => {
+    reportFailure(`звук: плеер не принял запись (код ${audio.error?.code ?? '?'}: ${audio.error?.message || ''})`);
+    stopSound();
+  });
   showBar();
   try {
     await audio.play();
-  } catch {
-    // Телефон в беззвучном режиме или жест не засчитан — это нормально, панель убирается сама
+  } catch (err) {
+    // Телефон в беззвучном режиме или жест не засчитан — панель убирается сама, причина идёт в сбои
     stopSound();
-    return false;
+    return fail(`play() отклонён: ${err?.name || 'ошибка'}: ${err?.message || ''}`);
   }
-  return true;
+  return { ok: true };
+}
+
+/* Сбой воспроизведения: в журнал сбоев (его видит администратор) и причиной — экрану. */
+function fail(reason, release = () => {}) {
+  release();
+  reportFailure(`звук: ${reason}`);
+  return { ok: false, reason };
 }
 
 /**
@@ -117,17 +151,30 @@ export function playerControls(moment) {
 
   play.addEventListener('click', async () => {
     play.disabled = true;
-    const started = await playMoment(moment);
+    note.textContent = '';
+    const result = await playMoment(moment);
     play.disabled = false;
-    if (!started) note.textContent = t('quantum.soundFailed');
+    if (!result.ok) {
+      note.textContent = result.reason === 'none'
+        ? noSoundText(moment)
+        : `${t('quantum.soundFailed')} (${result.reason})`;
+    }
   });
 
   soundSourceFor(moment).then(source => {
     play.disabled = !source;
     stop.disabled = !source;
-    note.textContent = source ? '' : t('quantum.noSound');
+    note.textContent = source ? '' : noSoundText(moment);
   });
   return box;
+}
+
+/* Почему кнопка серая: запись привязана к ФАЗЕ дня, и у этой фазы своей нет. Говорим, какая это фаза и где
+   её добавить — владелец 20.10.2026 добавил запись к одной фазе, а живой момент был другой, и «ничего не
+   играло». */
+function noSoundText(moment) {
+  const phase = t(`quantum.${moment.slot}`) || moment.slot;
+  return t('quantum.noSoundFor', { phase });
 }
 
 /**

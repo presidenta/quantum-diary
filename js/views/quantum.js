@@ -604,10 +604,13 @@ function cancelHold() {
 async function finishHold(moment, day) {
   finishing = true;
   // Страховка: что бы ни случилось с показом, через положенное время раздел снова рисуется
-  setTimeout(() => { finishing = false; }, 1400 + CHROMO_SECONDS * 1000 + 1000);
+  setTimeout(() => {
+    finishing = false;
+    document.body.classList.remove('q-chromo-on');
+  }, 1400 + CHROMO_SECONDS * 1000 + 1000);
   // Вибрация только после явного жеста человека и не везде есть мотор
   try { navigator.vibrate?.(200); } catch { /* нет мотора — не беда */ }
-  playMoment(moment);
+  playMoment(moment);   // результат не нужен: причина сбоя уйдёт в журнал сбоев сама
 
   const mine = state.quantum?.settings?.slots?.[moment.slot] || {};
   const live = $('quantumLive');
@@ -639,6 +642,8 @@ function showChromo(day) {
      экран закрывается раньше срока. Цвет — персональный от специалиста, иначе цвет чакры дня
      (по дню недели; с понедельника красный). Фраза «найди этот цвет вокруг» осталась в словаре. */
   const закрыть = () => {
+    // Класс снимается при любом исходе, даже если экран уже заменён: иначе панель «Стоп» осталась бы спрятанной
+    document.body.classList.remove('q-chromo-on');
     if (live.firstChild !== screen) return;
     finishing = false;
     live.hidden = true;
@@ -647,6 +652,9 @@ function showChromo(day) {
   const screen = h('div', { class: 'q-chromo', onclick: закрыть, 'aria-label': t(colour.nameKey) });
   screen.style.setProperty('background', mine.color || colour.color);
   live.replaceChildren(screen);
+  /* Запись, начатая после удержания, идёт дальше, а панель «Звучит запись — Стоп» на цветном экране прячется:
+     на нём не должно быть ни надписей, ни кнопок. Панель вернётся, когда экран закроется. */
+  document.body.classList.add('q-chromo-on');
 
   setTimeout(закрыть, CHROMO_SECONDS * 1000);
 }

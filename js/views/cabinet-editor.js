@@ -41,10 +41,13 @@ const TABS = [['slot', 'adm.phases'], ['weekday', 'adm.weekdays'], ['phrases', '
  * @param {{settings: string, phrases: string}} p.endpoints  адреса настроек и набора фраз ЭТОГО человека
  * @param {() => Promise<Array>} p.loadLibrary  библиотека фраз, из которой собирают персональный набор
  * @param {(kind: string, key: string) => (Node|null)} [p.extras]  дополнение к блоку (запись файлов)
+ * @param {(kind: string, key: string) => Promise<boolean>} [p.hasMedia]  лежат ли у блока файлы на этом устройстве:
+ *        блок с файлом отмечается «настроено», хотя на сервере у него ничего нет (выкладка 167: владелец не мог
+ *        увидеть, у какой фазы запись уже есть)
  * @param {(message: string) => void} [p.onError]  сообщение об ошибке на странице
  * @returns {{element: HTMLElement, load: () => Promise<void>}}
  */
-export function createCabinetEditor({ t, api, endpoints, loadLibrary, extras = () => null, onError = () => {} }) {
+export function createCabinetEditor({ t, api, endpoints, loadLibrary, extras = () => null, hasMedia = async () => false, onError = () => {} }) {
   let kind = 'slot';
   let settings = [];
 
@@ -144,11 +147,24 @@ export function createCabinetEditor({ t, api, endpoints, loadLibrary, extras = (
         }, h('span', { class: 'gold-cut', text: t('adm.save') })),
         h('span', { class: 'q-block-said', role: 'status' })));
 
-    return h('details', { class: `q-block ${filled ? 'filled' : ''}`, 'data-key': key },
+    const node = h('details', { class: `q-block ${filled ? 'filled' : ''}`, 'data-key': key },
       h('summary', {},
         h('b', { text: label }),
         h('span', { class: 'q-block-mark', text: filled ? t('adm.configured') : t('adm.notSet') })),
       body);
+    // Файлы лежат на устройстве, а не на сервере: проверяем отдельно и отмечаем блок, когда они есть
+    hasMedia(k, key).then(has => {
+      if (!has) return;
+      node.dataset.file = '1';
+      markBlock(node, true);
+    }).catch(() => {});
+    return node;
+  }
+
+  // Блок «настроено», если есть настройка на сервере ИЛИ файл на этом устройстве
+  function markBlock(node, on) {
+    node.classList.toggle('filled', on);
+    node.querySelector('.q-block-mark').textContent = on ? t('adm.configured') : t('adm.notSet');
   }
 
   async function save(node, k, key) {
@@ -169,8 +185,7 @@ export function createCabinetEditor({ t, api, endpoints, loadLibrary, extras = (
       settings = settings.filter(x => !(x.kind === k && x.key === key));
       if (saved) settings.push(saved);
       said.textContent = saved ? t('adm.saved') : t('adm.cleared');
-      node.classList.toggle('filled', Boolean(saved));
-      node.querySelector('.q-block-mark').textContent = saved ? t('adm.configured') : t('adm.notSet');
+      markBlock(node, Boolean(saved) || node.dataset.file === '1');
     } catch (err) {
       said.textContent = err.status === 400 ? t('adm.checkFields') : t('adm.saveFailed');
     }

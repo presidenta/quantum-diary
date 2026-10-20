@@ -911,6 +911,7 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 14px; min-hei
   box-shadow: 0 6px 24px rgba(0, 0, 0, .5); font-size: 14px; white-space: nowrap;
 }
 .q-sound-bar .btn { min-height: 40px; padding: 0 16px; }
+body.q-chromo-on .q-sound-bar { display: none; }
 .q-photos:empty { display: none; }
 .q-practice-title { margin: 0; font-family: var(--serif); font-size: 22px; font-weight: 600; }
 .q-audio { width: 100%; max-width: 320px; height: 44px; }

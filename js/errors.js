@@ -72,6 +72,11 @@ function describe(event) {
   return `${event.message || 'ошибка без текста'}${where}`;
 }
 
+/** Сообщить о сбое, который код поймал сам (звук не включился): виден администратору во вкладке «Сбои». */
+export function reportFailure(message, stack) {
+  report(message, stack);
+}
+
 export function watchErrors() {
   window.addEventListener('error', e => {
     // Сбой загрузки картинки или звука — тоже событие error, но не поломка кода
