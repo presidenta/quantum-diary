@@ -842,7 +842,7 @@ export async function openAppSettings() {
    часам дня ({from, text}, см. guardFrames в reminder-rules.js), а
    settingsLabel и homeLabel — надписи на двух её кнопках. Нет кадров —
    страж покажет запасной text. */
-export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel, widgets, named }) {
+export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel, widgets, named, clockBackup }) {
     const QA = alarmPlugin();
     if (!QA || typeof QA.setGuard !== 'function') return false;
 
@@ -857,7 +857,9 @@ export async function setGuard({ on, title, text, frames, settingsLabel, homeLab
             // Слова виджетов рабочего стола на языке человека (core/widgets.js, widgetTexts)
             widgets: widgets && typeof widgets === 'object' ? widgets : {},
             // Часы «Режима будильника» — для строки «Время звонков» в панели виджета (выкладка 147)
-            named: named && typeof named === 'object' ? named : {}
+            named: named && typeof named === 'object' ? named : {},
+            // Резервный будильник в «Часах» телефона: включён, пока явно не выключен (выкладка 169)
+            clockBackup: clockBackup !== false
         });
         return true;
     } catch (err) {

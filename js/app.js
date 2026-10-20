@@ -400,6 +400,7 @@ function alarmFromForm() {
   return {
     on: $('alarmOn').checked,
     guardOn: $('alarmGuard').checked,
+    clockBackup: $('alarmBackup').checked,
     windowMode: $('alarmWindowMode').value,
     momentsMode: $('alarmMomentsMode').value,
     windowAt: $('alarmWindowAt').value,
@@ -849,6 +850,7 @@ async function openAlarmDialog() {
   const alarm = await loadAlarm();
   $('alarmOn').checked = alarm.on;
   $('alarmGuard').checked = alarm.guardOn;
+  $('alarmBackup').checked = alarm.clockBackup;
   $('alarmWindowMode').value = alarm.windowMode;
   $('alarmMomentsMode').value = alarm.momentsMode;
   $('alarmWindowAt').value = alarm.windowAt;
