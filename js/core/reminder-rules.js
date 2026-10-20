@@ -863,7 +863,12 @@ export function freshDay(day, dateKey) {
    Всё, что ставит planReminders: моменты, окно возможностей, названные часы
    и их копии на следующие дни. Проверочные звонки («alarm-test…») сюда не
    входят — их ставит человек кнопкой, и расписание не вправе их снимать. */
+/* Суффикс ключа отложенного звонка (AlarmContract.КЛЮЧ_СНА): отложенный звонок — не часть расписания. */
+export const KEY_SNOOZE_SUFFIX = '~z';
+
 export function isPlannedKey(key) {
+    // Отложенный звонок расписание не переставляет и не снимает как «лишний» (выкладка 168)
+    if (String(key).endsWith(KEY_SNOOZE_SUFFIX)) return false;
     const base = baseKey(key);
     return base === KEY_WINDOW
         || base === KEY_NEXT_WINDOW

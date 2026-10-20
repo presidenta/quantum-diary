@@ -613,8 +613,12 @@ async function поставитьУведомления(LN, items) {
  * раза — человек выключил будильник в профиле, и прежний звонок остался
  * висеть в системе. Снятие лишнего ничего не стоит, пропущенное снятие
  * стоит звонка о том, чего уже нет. */
-export async function cancelKeys(keys) {
-    if (!Array.isArray(keys) || keys.length === 0) return;
+export async function cancelKeys(given) {
+    if (!Array.isArray(given) || given.length === 0) return;
+
+    /* Снимая звонок, снимаем и его отложенную копию («<ключ>~z», выкладка 168): прожитый или погашенный
+       момент не должен прозвонить через десять минут «отложенным». Снятие несуществующего ничего не пишет. */
+    const keys = given.flatMap(key => (String(key).endsWith('~z') ? [key] : [key, `${key}~z`]));
 
     const LN = plugin();
     if (LN) {
