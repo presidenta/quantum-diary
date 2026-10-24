@@ -122,6 +122,10 @@ export const TIME_SOFT = 0.15;
 /* Светлое стекло карточек сроков на красной, синей и сиреневой заливке (выкладка 172):
    доля белого. Та же в drawable/quantum_card_glass.xml (#26FFFFFF) и widgets.css. */
 export const CARD_GLASS = 0.15;
+
+/* Кнопки залитого цвета чакры (выкладка 173): доля белого при белом и при тёмном тексте.
+   Те же числа в WidgetLook.java (ОДИН_ЦВЕТ_БЕЛЫЙ_ТЕКСТ, ОДИН_ЦВЕТ_ТЁМНЫЙ_ТЕКСТ). */
+export const ONE_COLOR = Object.freeze({ white: 0.10, ink: 0.28 });
 export const TIME_MIN_CONTRAST = 3;
 
 /** Цвет, осветлённый шагами по 5% до контраста min с подложкой base. */
@@ -156,11 +160,12 @@ export function buttonColors(look, fill) {
             small: { fill: mix(подложка, '#FFFFFF', 0.08), text: look.soft }
         };
     }
-    if (look.ink && !look.graphite) {
-        return {
-            main: { fill: INK, text: основа },
-            small: { fill: mix(основа, '#FFFFFF', 0.45), text: INK }
-        };
+    // Цвет чакры залитый — всё одним цветом (выкладка 173): кнопка — тот же цвет светлее,
+    // надпись цвета текста; ни чёрной, ни белой кнопки. Те же доли в WidgetLook.одинЦвет
+    if (!look.graphite) {
+        const кнопка = mix(основа, '#FFFFFF', look.ink ? ONE_COLOR.ink : ONE_COLOR.white);
+        const текстКнопки = look.ink ? INK : '#FFFFFF';
+        return { main: { fill: кнопка, text: текстКнопки }, small: { fill: кнопка, text: текстКнопки } };
     }
     return {
         main: { fill: '#FFFFFF', text: mix(основа, '#000000', BUTTON_DARKEN) },
