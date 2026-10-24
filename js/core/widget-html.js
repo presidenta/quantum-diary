@@ -79,7 +79,9 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
     const заливка = look.graphite ? GRAPHITE.base : look.accent;
     const классы = ['wg', `wg-${формат.key.toLowerCase()}`,
         формат.fill ? 'wg-fill' : '', золото ? 'wg-gold' : '', look.graphite ? 'wg-graphite' : '',
-        формат.fill && look.ink && !золото && !look.graphite ? 'wg-ink' : ''].filter(Boolean).join(' ');
+        формат.fill && look.ink && !золото && !look.graphite ? 'wg-ink' : '',
+        // Красный, синий, сиреневый залитые: часы на светлом стекле (выкладка 172)
+        формат.fill && !look.ink && !золото && !look.graphite ? 'wg-glass' : ''].filter(Boolean).join(' ');
 
     /* Блестящие буквы — класс сайта .gold-cut везде в золоте: на тёмной пластине, на слитке и
        на золотых кнопках, как на телефоне и в таблице девяти моментов (выкладка 146). */

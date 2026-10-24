@@ -118,6 +118,10 @@ export const BUTTON_DARKEN = 0.45;
    подложке почти не виден, поэтому сроку добавляется белого ровно столько, чтобы контраст
    с подложкой был не ниже трёх (крупные цифры). Те же числа в WidgetLook.java. */
 export const TIME_SOFT = 0.15;
+
+/* Светлое стекло карточек сроков на красной, синей и сиреневой заливке (выкладка 172):
+   доля белого. Та же в drawable/quantum_card_glass.xml (#26FFFFFF) и widgets.css. */
+export const CARD_GLASS = 0.15;
 export const TIME_MIN_CONTRAST = 3;
 
 /** Цвет, осветлённый шагами по 5% до контраста min с подложкой base. */

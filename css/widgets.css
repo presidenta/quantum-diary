@@ -93,6 +93,11 @@
 }
 .wg-fill .wg-rim { border-color: rgba(255, 255, 255, .4); box-shadow: none; }
 
+/* Цвет чакры залитый: основа насыщенная, без блика (он был только у графита на телефоне —
+   WidgetPaint.подложкаЦветом); у белого текста часы на светлом стекле (выкладка 172) */
+.wg-fill:not(.wg-graphite):not(.wg-gold) .wg-plate { background: var(--wg-fill); }
+.wg-fill.wg-glass { --wg-card: rgba(255, 255, 255, .15); --wg-card-line: rgba(255, 255, 255, .45); }
+
 /* залитый светлым цветом: текст тёмный, кнопка чёрная */
 .wg-fill.wg-ink {
   --wg-text: #14110A; --wg-dim: rgba(20, 17, 10, .72);
