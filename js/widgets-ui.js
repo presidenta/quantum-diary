@@ -22,7 +22,7 @@ import { t } from './store.js';
 import { isNative, widgetList, widgetSave, offerWidget, offerTile } from './core/reminders.js';
 import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
-    FORMATS, CHAKRAS, DEFAULT_ALPHA, normalizeStyle, resolveLook
+    FORMATS, CHAKRAS, DEFAULT_ALPHA, normalizeStyle, resolveLook, widgetAliases, translateOwn
 } from './core/widgets.js';
 import { widgetHtml, widgetWords, applyWidgetVars } from './core/widget-html.js';
 
@@ -141,6 +141,8 @@ function нарисоватьФорму() {
 
     // Пустое поле — стандартная надпись; она же видна подсказкой
     const слово = widgetWords(normalizeStyle({}), вид.key, look, t);
+    // Своя надпись, равная стандартной фразе любого языка, видна в поле так же, как на виджете
+    const таблица = widgetAliases(t);
     for (const [поле, значение, подсказка] of [
         ['widgetsTitle', стиль.title, слово.title],
         ['widgetsSubtitle', стиль.subtitle, слово.sub],
@@ -149,7 +151,7 @@ function нарисоватьФорму() {
     ]) {
         const элемент = $(поле);
         // Поле, в котором человек печатает прямо сейчас, не трогаем: курсор прыгнул бы
-        if (document.activeElement !== элемент) элемент.value = значение;
+        if (document.activeElement !== элемент) элемент.value = translateOwn(значение, таблица);
         элемент.placeholder = подсказка;
     }
 }

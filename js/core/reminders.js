@@ -719,7 +719,7 @@ export async function pendingAlarms() {
         alarms: [], systemNext: 0, batteryUnrestricted: true,
         missed: 0, missedAt: 0, fired: 0, firedAt: 0, step: '', stepAt: 0,
         maker: '', model: '', sdk: 0, guardOn: true, plashkaUp: false, autostartKnown: false,
-        bucket: 0, bgRestricted: false,
+        bucket: 0, bgRestricted: false, apk: 0, clockBackup: true, clockBackupCount: 0,
         journal: []
     };
 
@@ -779,6 +779,12 @@ export async function pendingAlarms() {
                закрытого приложения звонки. */
             bucket: Number(ответ && ответ.bucket) || 0,
             bgRestricted: !!(ответ && ответ.bgRestricted),
+
+            /* Какая сборка стоит (номер выкладки) и страховка в «Часах» (выкладка 171): без них
+               журнал нельзя привязать к сборке. Сборка старше 171 номера не пришлёт — будет «—». */
+            apk: Number(ответ && ответ.apk) || 0,
+            clockBackup: (ответ && ответ.clockBackup) !== false,
+            clockBackupCount: Number(ответ && ответ.clockBackupCount) || 0,
 
             /* Что было, по секундам: поставлен, сработал, подстраховка,
                снят, пропущен, страж встал, приложение смахнули. Счётчики

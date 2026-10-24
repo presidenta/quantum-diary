@@ -501,7 +501,7 @@ async function showAlarmPending() {
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
-    journal } = await pendingAlarms();
+    apk, clockBackup, clockBackupCount, journal } = await pendingAlarms();
   стоящиеЗвонки = alarms;
 
   const час = at => new Intl.DateTimeFormat('ru', {
@@ -627,8 +627,17 @@ async function showAlarmPending() {
       })
       : '';
 
+    /* Какая сборка стоит и заведены ли резервы в «Часах» (выкладка 171): журнал 24.10.2026
+       нельзя было привязать к сборке. Приложение — номер APK, сайт — номер веб-слоя; они
+       расходятся, пока новый APK не поставлен. */
+    const сайт = await номерСайта();
+    const сборка = ' ' + t('alarm.build', {
+      apk: apk || '—', web: сайт || '—',
+      backup: clockBackup ? t('alarm.backupOn', { n: clockBackupCount }) : t('alarm.backupOff')
+    });
+
     $('alarmDevice').textContent =
-      t('alarm.device', { maker, model, sdk, guard: охрана }) + состояние;
+      t('alarm.device', { maker, model, sdk, guard: охрана }) + состояние + сборка;
     $('alarmDevice').hidden = false;
   }
 
@@ -661,6 +670,16 @@ async function showAlarmPending() {
    звонков — то, что сейчас показывают виджеты по часам. Звонков на компьютере нет, и телефонных
    записей здесь тоже нет: у каждого устройства свой журнал. */
 let версияСборки = '';
+
+/* Номер выкладки сайта (version.json); прочитан при открытии — берётся оттуда. */
+async function номерСайта() {
+  if (!версияСборки) {
+    try {
+      версияСборки = String((await (await fetch('version.json', { cache: 'no-store' })).json()).release || '');
+    } catch { /* без сети номер не обязателен */ }
+  }
+  return версияСборки;
+}
 
 function показатьЖурналКомпьютера() {
   const вПриложении = navigator.userAgent.includes('KvantDesktop/');

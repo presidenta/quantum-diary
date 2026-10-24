@@ -22,6 +22,8 @@
    Прозрачность подложки — от 0 (стекло) до 100 (сплошная). Не задана — у неонового
    вида 88, у залитого 100. */
 
+import { LANGUAGES, dictionary } from './i18n.js';
+
 /* Ключи видов — те же, что в WidgetFormat.java. Менять только вместе с ним. */
 export const FORMATS = Object.freeze([
     Object.freeze({ key: 'slim', fill: false, tall: false }),
@@ -73,16 +75,23 @@ export function contrastWithWhite(hex) {
     return contrastRatio(hex, '#FFFFFF');
 }
 
-/* Нужен ли ТЁМНЫЙ текст на заливке этого цвета: белый на нём читается хуже трёх. */
+/* Чернила: тёмный текст на светлых заливках и заливка тёмной кнопки. */
+export const INK = '#14110A';
+
+/* Нужен ли ТЁМНЫЙ текст на заливке этого цвета: тёмный читается на ней лучше белого.
+   Выкладка 171: прежнее правило «белый хуже трёх» на классическом зелёном дало бы белый
+   текст с контрастом 3,2 и тёмную серединку, а владелец просил серединку как раньше. */
 export function needsInk(hex) {
-    return contrastWithWhite(hex) < 3;
+    return contrastRatio(hex, INK) > contrastWithWhite(hex);
 }
 
-/* Семь чакр, понедельник первым. ink — нужен ли тёмный текст на заливке. */
+/* Семь чакр, понедельник первым. ink — нужен ли тёмный текст на заливке.
+   Классические насыщенные цвета (владелец 24.10.2026, набор «А»): тёмно-красный,
+   оранжевый, жёлтый, зелёный, голубой, синий, сиреневый. */
 export const CHAKRAS = Object.freeze([
-    ['#EF4444', 'muladhara'], ['#F97316', 'svadhisthana'], ['#EAB308', 'manipura'],
-    ['#22C55E', 'anahata'], ['#06B6D4', 'vishuddha'], ['#3B82F6', 'ajna'],
-    ['#A855F7', 'sahasrara']
+    ['#C8102E', 'muladhara'], ['#FF6A00', 'svadhisthana'], ['#FFC800', 'manipura'],
+    ['#00A651', 'anahata'], ['#00A3E0', 'vishuddha'], ['#1F47D6', 'ajna'],
+    ['#8E3FD6', 'sahasrara']
 ].map(([hex, name]) => Object.freeze({ hex, name, ink: needsInk(hex) })));
 
 /** Какой день недели: 0 — понедельник … 6 — воскресенье, по часам телефона. */
@@ -103,7 +112,22 @@ export function mix(a, b, k) {
    не ниже 4,5 на любой кнопке любого цвета (проверка — test/vidzhety.test.js). */
 export const BUTTON_TINT = 0.18;
 export const BUTTON_DARKEN = 0.45;
-export const INK = '#14110A';
+
+/* СРОКИ НА НЕОНЕ (выкладка 171). Срок Наблюдателя был цветом дня с 40% белого — на красном
+   выходил розовый (владелец 24.10.2026). Теперь белого 15%. А насыщенный синий на тёмной
+   подложке почти не виден, поэтому сроку добавляется белого ровно столько, чтобы контраст
+   с подложкой был не ниже трёх (крупные цифры). Те же числа в WidgetLook.java. */
+export const TIME_SOFT = 0.15;
+export const TIME_MIN_CONTRAST = 3;
+
+/** Цвет, осветлённый шагами по 5% до контраста min с подложкой base. */
+export function readableOn(hex, base, min = TIME_MIN_CONTRAST) {
+    for (let k = 0; k <= 20; k++) {
+        const цвет = mix(hex, '#FFFFFF', k * 0.05);
+        if (contrastRatio(цвет, base) >= min) return цвет;
+    }
+    return '#FFFFFF';
+}
 
 /**
  * Цвета кнопок вида: главной («В кабинет») и малой («Настройки»), заливка и надпись.
@@ -185,14 +209,21 @@ export function resolveLook(style, date = new Date()) {
     const чакра = s.mode === 'chakra' ? s.chakra : day;
 
     if (s.mode === 'gold') {
-        return { day, chakra: чакра, accent: GOLD.icon, soft: GOLD.text, gold: true, graphite: false, ink: true };
+        return { day, chakra: чакра, accent: GOLD.icon, soft: GOLD.text, timeA: GOLD.icon, timeB: GOLD.text,
+            gold: true, graphite: false, ink: true };
     }
     if (s.mode === 'graphite') {
-        return { day, chakra: чакра, accent: GRAPHITE.text, soft: '#FFFFFF', gold: false, graphite: true, ink: false };
+        return { day, chakra: чакра, accent: GRAPHITE.text, soft: '#FFFFFF', timeA: GRAPHITE.text, timeB: '#FFFFFF',
+            gold: false, graphite: true, ink: false };
     }
 
+    // timeA, timeB — сроки Архитектора и Наблюдателя на неоновом виде (на залитом они цвета текста)
     const { hex, ink } = CHAKRAS[чакра];
-    return { day, chakra: чакра, accent: hex, soft: mix(hex, '#FFFFFF', 0.4), gold: false, graphite: false, ink };
+    return {
+        day, chakra: чакра, accent: hex, soft: mix(hex, '#FFFFFF', 0.4),
+        timeA: readableOn(hex, NEON_BASE), timeB: readableOn(mix(hex, '#FFFFFF', TIME_SOFT), NEON_BASE),
+        gold: false, graphite: false, ink
+    };
 }
 
 /**
@@ -229,6 +260,38 @@ export function widgetTexts(translate) {
         sheetOff: слово('sheetOff'),
         sheetNamed: слово('sheetNamed'),
         sheetNamedTomorrow: слово('sheetNamedTomorrow'),
-        days: translate('widgets.days').split(',').map(д => д.trim())
+        days: translate('widgets.days').split(',').map(д => д.trim()),
+        aliases: widgetAliases(translate)
     };
+}
+
+/* СВОЯ НАДПИСЬ, СОВПАВШАЯ СО СТАНДАРТНОЙ (выкладка 171).
+   Владелец 24.10.2026: на виджетах по-русски «Субквантовая связь», когда остальные слова
+   уже английские. Это своя надпись из поля «Заголовок» (на вертикальных стандартный
+   заголовок — «Хроники Акаши»), а свои надписи не переводятся. Просьба: слова оставить
+   какие есть, но переводить. Поэтому своя надпись, равная стандартной фразе на любом из
+   трёх языков, показывается этой же фразой на языке человека; любая другая — как написана.
+   Таблицу «фраза → перевод» телефон получает вместе со словами (aliases), сравнивает так же:
+   без регистра, лишних пробелов и разницы апострофов (WidgetStore.ключНадписи). */
+export const OWN_TEXT_KEYS = Object.freeze(['titleHud', 'titleWide', 'titleTall', 'subShort', 'architect', 'observer']);
+
+export const ownTextKey = текст => String(текст ?? '').trim().toLowerCase()
+    .replace(/[’ʼ`]/g, "'").replace(/\s+/g, ' ');
+
+/** Стандартные фразы всех языков → эта фраза на языке translate. */
+export function widgetAliases(translate) {
+    const таблица = {};
+    for (const ключ of OWN_TEXT_KEYS) {
+        const перевод = translate(`widgets.w.${ключ}`);
+        for (const { code } of LANGUAGES) {
+            const фраза = dictionary(code)[`widgets.w.${ключ}`];
+            if (фраза) таблица[ownTextKey(фраза)] = перевод;
+        }
+    }
+    return таблица;
+}
+
+/** Своя надпись: стандартная фраза любого языка — на языке человека, иначе как есть. */
+export function translateOwn(текст, aliases) {
+    return (текст && aliases[ownTextKey(текст)]) || текст;
 }

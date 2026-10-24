@@ -11,7 +11,7 @@
    applyWidgetVars ставит их свойствами уже после вставки — это политика пропускает (так же
    сделаны шкалы аналитики в «Пространстве»). */
 
-import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, resolveLook } from './widgets.js';
+import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, resolveLook, widgetAliases, translateOwn } from './widgets.js';
 import { WIDGET_ICONS } from './widget-icons.js';
 
 const экран = текст => String(текст ?? '').replace(/[&<>"]/g, c => (
@@ -23,7 +23,9 @@ const значок = имя => `<span class="wg-ico">${WIDGET_ICONS[имя]}</sp
 /** Слова вида (заголовок, подписи, кнопки, дни) — и для подсказок в окне «Установить виджет». */
 export function widgetWords(стиль, ключ, look, перевод) {
     const слово = к => перевод(`widgets.w.${к}`);
-    const своё = (поле, обычное) => стиль[поле] || обычное;
+    // Своя надпись, равная стандартной фразе любого языка, — на языке человека (выкладка 171)
+    const таблица = widgetAliases(перевод);
+    const своё = (поле, обычное) => translateOwn(стиль[поле], таблица) || обычное;
     const дни = перевод('widgets.days').split(',').map(д => д.trim());
 
     const заголовок = ключ === 'fillWide' ? слово('titleWide')
@@ -31,7 +33,7 @@ export function widgetWords(стиль, ключ, look, перевод) {
 
     // Метка в шапке: у залитого горизонтального — сегодняшний день, как на макете; у остальных
     // одно слово «Активно» (владелец 18.10.2026: «Связь активна» — лишнее, «просто Активно»)
-    const метка = ключ === 'fillWide' ? (стиль.subtitle || дни[look.day])
+    const метка = ключ === 'fillWide' ? своё('subtitle', дни[look.day])
         : своё('subtitle', слово('subShort'));
 
     return {
@@ -132,7 +134,7 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
                 <div class="wg-btns">${низ}</div>`;
     }
 
-    return `<div class="${классы}" data-accent="${look.accent}" data-soft="${look.soft}" data-fill="${заливка}" data-alpha="${alpha}">
+    return `<div class="${классы}" data-accent="${look.accent}" data-soft="${look.soft}" data-time-a="${look.timeA}" data-time-b="${look.timeB}" data-fill="${заливка}" data-alpha="${alpha}">
         <span class="wg-plate"></span><span class="wg-rim"></span>
         <div class="wg-body">${тело}</div></div>`;
 }
@@ -142,6 +144,9 @@ export function applyWidgetVars(узел) {
     for (const виджет of узел.querySelectorAll('.wg[data-accent]')) {
         виджет.style.setProperty('--wg-accent', виджет.dataset.accent);
         виджет.style.setProperty('--wg-soft', виджет.dataset.soft);
+        // Сроки неонового вида (выкладка 171): цвет дня, осветлённый ровно до читаемого
+        виджет.style.setProperty('--wg-time-a', виджет.dataset.timeA);
+        виджет.style.setProperty('--wg-time-b', виджет.dataset.timeB);
         виджет.style.setProperty('--wg-fill', виджет.dataset.fill);
         виджет.style.setProperty('--wg-alpha', виджет.dataset.alpha);
     }

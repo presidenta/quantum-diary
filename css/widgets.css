@@ -12,7 +12,8 @@
 
    Переменные вида (ставятся на .wg):
      --wg-accent  цвет дня (рамка, значки, срок Архитектора)
-     --wg-soft    он же светлее (срок Наблюдателя)
+     --wg-soft    он же светлее (надписи кнопок)
+     --wg-time-a, --wg-time-b  сроки Архитектора и Наблюдателя на неоне (resolveLook: timeA, timeB)
      --wg-fill    цвет заливки у залитых видов
      --wg-alpha   прозрачность подложки 0…1 (рамка и золотая кромка остаются)
    Классы: .wg-fill залитый, .wg-gold золото, .wg-graphite графит, .wg-ink тёмный
@@ -40,8 +41,8 @@
 .wg {
   --wg-text: #E8ECF4;
   --wg-dim: rgba(232, 236, 244, .72);
-  --wg-valueA: var(--wg-accent);
-  --wg-valueB: var(--wg-soft);
+  --wg-valueA: var(--wg-time-a, var(--wg-accent));
+  --wg-valueB: var(--wg-time-b, var(--wg-soft));
   --wg-ico: var(--wg-accent);
   --wg-bar: var(--wg-accent);
   --wg-card: rgba(0, 0, 0, .35);
