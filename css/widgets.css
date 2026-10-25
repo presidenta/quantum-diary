@@ -97,17 +97,16 @@
    WidgetPaint.подложкаЦветом); у белого текста часы на светлом стекле (выкладка 172) */
 .wg-fill:not(.wg-graphite):not(.wg-gold) .wg-plate { background: var(--wg-fill); }
 .wg-fill.wg-glass {
-  /* Красный, синий, сиреневый (выкладка 175): основа — углублённый цвет (--wg-fill, fillColor), карточки,
-     кнопки и метка — сам цвет чакры сплошным, кромка светлая */
-  /* Объём (выкладка 176): сверху 12% белого, книзу сам цвет — как drawable/quantum_card_c*.xml */
-  --wg-card: linear-gradient(180deg, color-mix(in srgb, var(--wg-accent) 88%, #fff 12%), var(--wg-accent));
-  --wg-card-line: rgba(255, 255, 255, .4);
+  /* Красный, синий, сиреневый (выкладки 175, 178): основа — углублённый цвет (--wg-fill, fillColor),
+     карточки, кнопки и метка — сам цвет чакры сплошным */
+  /* Сплошной цвет чакры — как тонировка рисунка quantum_btn_fill на телефоне (выкладка 178) */
+  --wg-card: var(--wg-accent); --wg-card-line: transparent;
   --wg-btn-fill: var(--wg-accent);
   --wg-btn-line: color-mix(in srgb, var(--wg-accent) 55%, #fff 45%);
   --wg-btn-text: #fff;
   --wg-small-fill: var(--wg-btn-fill); --wg-small-line: var(--wg-btn-line); --wg-small-text: #fff;
 }
-.wg-fill.wg-glass .wg-chip { background: var(--wg-accent); border-color: rgba(255, 255, 255, .35); }
+.wg-fill.wg-glass .wg-chip { background: var(--wg-accent); border-color: transparent; }
 
 /* залитый светлым цветом: текст тёмный; кнопки — тот же цвет светлее, полоска — тот же
    цвет темнее, чёрного нет (выкладка 173, ONE_COLOR) */
