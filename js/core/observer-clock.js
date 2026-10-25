@@ -23,8 +23,6 @@
    Чистые функции: время приходит параметром, ничего не читается из хранилища — так
    правило одно и то же в браузере, в тестах и для каждого кадра плашки. */
 
-const МИНУТА_МС = 60 * 1000;
-
 /* «ЧЧ:ММ» в минуты от полуночи; негодное — null. */
 function минутыЧаса(hhmm) {
     const м = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
@@ -34,18 +32,25 @@ function минутыЧаса(hhmm) {
     return ч > 23 || мин > 59 ? null : ч * 60 + мин;
 }
 
-/* Приход часа «ЧЧ:ММ» в тот же день, что миг, в миллисекундах. */
+/* Приход часа «ЧЧ:ММ» в тот же день, что миг, в миллисекундах. Часом по часам (setHours), а не
+   полночь + минуты: в сутки перехода на зимнее время (25.10.2026 — 25 часов) «полночь + 6 ч» — это
+   05:00, и конец тишины, окна и назначенные часы съезжали на час (выкладка 177). */
 function вТотЖеДень(минуты, миг) {
     const день = new Date(миг);
-    день.setHours(0, 0, 0, 0);
-    return день.getTime() + минуты * МИНУТА_МС;
+    день.setHours(Math.floor(минуты / 60), минуты % 60, 0, 0);
+    return день.getTime();
 }
 
 /* ТИХИЙ ЧАС (выкладка 160). Владелец 18.10.2026: прыгнул в 23:03 — и таймер, плашка и звонок
    показали окно в 02:36, посреди тишины 23:00–06:00. «Если тихий час — в это время звонить
    телефон не может, кроме лично наведённого будильника; окно автоматически переходит на утро».
    Окно, которое открылось бы в тихий час, открывается с её концом и держится windowMs оттуда.
-   Назначенный час — личный будильник человека: тишина его не двигает. */
+
+   НАЗНАЧЕННЫЙ ЧАС ТОЖЕ (выкладка 177). Владелец 26.10.2026: «если звонок попадает на тихий час, не
+   звонит вообще ничего и переводится на конец тихого времени — это правило у нас и было». До 177
+   назначенный час считался личным будильником, которого тишина не двигает, и звонок Наблюдателя
+   стоял на 05:00 при тишине до 06:00. Теперь назначенный час, попавший в тишину, звонит с её концом:
+   так его ставит расписание (nextRingPlan, namedHorizon), так считают таймер, плашка и виджеты. */
 
 /** Миг, перенесённый за тихий час: попал в тишину — её конец, иначе как есть. */
 export function afterQuiet(миг, quiet) {
@@ -62,26 +67,35 @@ export function afterQuiet(миг, quiet) {
     return конец.getTime();
 }
 
-/** Последний приход ежедневного часа не позже мига; часа нет — 0. */
-export function lastNamedAt(hhmm, миг) {
+/**
+ * Приходы ежедневного часа вокруг мига — с позавчера до завтра, по возрастанию: raw — сам час в
+ * тот день, at — когда он звонит на самом деле (попал в тихий час — с её концом). Позавчерашний
+ * нужен для тишины через полночь: час 23:30 при тишине 23:00–06:00 звонит назавтра в 06:00.
+ * Часа нет — пустой список.
+ */
+export function namedOccurrences(hhmm, миг, quiet = null) {
     const минуты = минутыЧаса(hhmm);
-    if (минуты === null) return 0;
-    const сегодня = вТотЖеДень(минуты, миг);
-    if (сегодня <= миг) return сегодня;
-    const вчера = new Date(сегодня);
-    вчера.setDate(вчера.getDate() - 1);
-    return вчера.getTime();
+    if (минуты === null) return [];
+    const приходы = [];
+    for (let сдвиг = -2; сдвиг <= 1; сдвиг++) {
+        const день = new Date(вТотЖеДень(минуты, миг));
+        день.setDate(день.getDate() + сдвиг);   // setDate, а не ±сутки: переход на летнее время
+        const raw = день.getTime();
+        приходы.push({ raw, at: afterQuiet(raw, quiet) });
+    }
+    return приходы.sort((a, b) => a.at - b.at);
 }
 
-/** Следующий приход ежедневного часа строго после мига; часа нет — 0. */
-export function nextNamedAt(hhmm, миг) {
-    const минуты = минутыЧаса(hhmm);
-    if (минуты === null) return 0;
-    const сегодня = вТотЖеДень(минуты, миг);
-    if (сегодня > миг) return сегодня;
-    const завтра = new Date(сегодня);
-    завтра.setDate(завтра.getDate() + 1);
-    return завтра.getTime();
+/** Последний приход ежедневного часа не позже мига (с учётом тихого часа); часа нет — 0. */
+export function lastNamedAt(hhmm, миг, quiet = null) {
+    const прошедшие = namedOccurrences(hhmm, миг, quiet).filter(п => п.at <= миг);
+    return прошедшие.length ? прошедшие[прошедшие.length - 1].at : 0;
+}
+
+/** Следующий приход ежедневного часа строго после мига (с учётом тихого часа); часа нет — 0. */
+export function nextNamedAt(hhmm, миг, quiet = null) {
+    const впереди = namedOccurrences(hhmm, миг, quiet).find(п => п.at > миг);
+    return впереди ? впереди.at : 0;
 }
 
 /**
@@ -105,8 +119,8 @@ export function nextNamedAt(hhmm, миг) {
  */
 export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null, setAt = 0 }) {
     const прыжок = Number(lastJump) > 0 ? Number(lastJump) : 0;
-    const опора = Math.max(прыжок, lastNamedAt(named, now));
-    const nextNamed = nextNamedAt(named, now);
+    const опора = Math.max(прыжок, lastNamedAt(named, now, quiet));
+    const nextNamed = nextNamedAt(named, now, quiet);
 
     if (!опора) {
         return { phase: 'never', anchor: 0, opens: 0, closes: 0, nextNamed, next: 0 };
@@ -153,7 +167,7 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
    @returns {string} новый час «ЧЧ:ММ» или '' — оставить как есть */
 export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs, quiet = null }) {
     if (!named) return '';
-    const прозвучал = lastNamedAt(named, now);
+    const прозвучал = lastNamedAt(named, now, quiet);
     if (!прозвучал || прозвучал < setAt) return '';
 
     const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs, quiet });

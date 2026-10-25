@@ -501,7 +501,8 @@ export async function planReminders() {
        Своё у окна возможностей, своё у девяти моментов дня — поля в окне
        «Режим будильника». Пусто — список постановки пуст, а ключ попадает
        в снятие: стёртое время должно уйти и из системы. */
-    const следующие = nextRingPlan(alarm, now);
+    // Назначенный час, попавший в тихий час, звонит с его концом (выкладка 177)
+    const следующие = nextRingPlan(alarm, now, quiet);
 
     /* ГОРИЗОНТ: ЗАВТРАШНИЕ МОМЕНТЫ И ПОВТОР НАЗВАННЫХ ЧАСОВ.
        Без него в системе лежит только остаток сегодняшнего дня: после
@@ -671,7 +672,7 @@ async function горизонт(now, quiet, alarm, настоящий) {
             итог.silence.push(...запасная.silence);
         }
 
-        const названные = namedHorizon(alarm, now);
+        const названные = namedHorizon(alarm, now, undefined, quiet);
         итог.named = названные.ring;
         итог.silence.push(...названные.silence);
         итог.ok = true;

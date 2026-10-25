@@ -11,7 +11,7 @@
    или погашен крестиком, — снять его может только приложение, и только
    если знает, что именно снимать. */
 
-import { observerClock, afterQuiet } from './observer-clock.js';
+import { observerClock, afterQuiet, namedOccurrences, nextNamedAt } from './observer-clock.js';
 import {
     isOff, activeMoment, nextMoment, timeNow, MOMENT_WINDOW_MINUTES
 } from './quantum.js';
@@ -368,10 +368,12 @@ export function atNext(hhmm, now = new Date()) {
  * этот источник не звонит будильником вовсе, и время от него не должно
  * звонить тоже.
  *
- * ТИХИЙ ЧАС ЗДЕСЬ НЕ ДЕЙСТВУЕТ, и это сознательно. Тихий час защищает от
- * того, что приложение назначило само. А этот час человек назвал сам, и
- * промолчать в ответ было бы хуже: он ждёт звонка и не узнает, почему его
- * не было. */
+ * ТИХИЙ ЧАС ДЕЙСТВУЕТ И ЗДЕСЬ (выкладка 177). Прежде назначенный час считался
+ * личным будильником, которого тишина не касается, — и звонок Наблюдателя
+ * стоял на 05:00 при тишине до 06:00. Правило владельца: «если звонок попадает
+ * на тихий час, не звонит вообще ничего, и он переводится на конец тихого
+ * времени». Поэтому час, попавший в тишину, ставится на её конец (а не
+ * снимается: человек его ждёт). */
 /* Сколько минут ПОСЛЕ назначенного часа будильник неприкосновенен.
 
    Зачем защита вообще. Прозвонил первый звонок, человек нажал кнопку,
@@ -390,7 +392,20 @@ export function atNext(hhmm, now = new Date()) {
    Отсюда правило: будущее ставим всегда, бережём только прошедшее. */
 const НЕПРИКОСНОВЕН_МИН = 3;
 
-export function nextRingPlan(alarm, now = new Date()) {
+/* Сколько целых минут прошло от мига до now (как прежнее сравнение «ЧЧ:ММ»: 13:03:59 после 13:00 — три). */
+const прошлоМинут = (миг, now) => Math.floor((now.getTime() - миг) / 60000);
+
+/* Последний прозвучавший и следующий приход назначенного часа (с тихим часом), core/observer-clock.js. */
+function приходыЧаса(hhmm, now, quiet) {
+    const приходы = namedOccurrences(hhmm, now.getTime(), quiet);
+    const прошедшие = приходы.filter(п => п.at <= now.getTime());
+    return {
+        последний: прошедшие.length ? прошедшие[прошедшие.length - 1] : null,
+        следующий: приходы.find(п => п.at > now.getTime()) || null
+    };
+}
+
+export function nextRingPlan(alarm, now = new Date(), quiet = null) {
     const настройка = normalizeAlarm(alarm);
     const ring = [];
     const silence = [];
@@ -399,19 +414,15 @@ export function nextRingPlan(alarm, now = new Date()) {
     const положить = (key, hhmm, разрешено) => {
         if (!разрешено) { silence.push(key); return; }
 
-        /* Час ТОЛЬКО ЧТО прошёл — не трогаем вовсе: ни ставим заново,
+        /* Час ТОЛЬКО ЧТО прозвонил — не трогаем вовсе: ни ставим заново,
            ни снимаем. Пусть доживёт тот, что уже стоит в системе, и не
            уезжает на завтра из-за пересчёта. Будущее сюда не попадает:
-           его надо ставить, а не беречь. */
-        const минуты = minutesOfDay(hhmm);
-        if (минуты !== null) {
-            const сейчас = now.getHours() * 60 + now.getMinutes();
-            const прошло = сейчас - минуты;
-            if (прошло >= 0 && прошло <= НЕПРИКОСНОВЕН_МИН) { keep.push(key); return; }
-        }
+           его надо ставить, а не беречь. «Прозвонил» — с учётом тихого
+           часа: час 05:00 при тишине до 06:00 звонит в 06:00. */
+        const { последний, следующий } = приходыЧаса(hhmm, now, quiet);
+        if (последний && прошлоМинут(последний.at, now) <= НЕПРИКОСНОВЕН_МИН) { keep.push(key); return; }
 
-        const at = atNext(hhmm, now);
-        if (at) ring.push({ key, at });
+        if (следующий) ring.push({ key, at: new Date(следующий.at) });
         else silence.push(key);
     };
 
@@ -453,7 +464,7 @@ export function nextRingPlan(alarm, now = new Date()) {
    копии отсчитываются от него — иначе завтрашний звонок пропал бы. */
 export const ДНЕЙ_ВПЕРЁД = 2;
 
-export function namedHorizon(alarm, now = new Date(), days = ДНЕЙ_ВПЕРЁД) {
+export function namedHorizon(alarm, now = new Date(), days = ДНЕЙ_ВПЕРЁД, quiet = null) {
     const настройка = normalizeAlarm(alarm);
     const ring = [];
     const silence = [];
@@ -466,18 +477,18 @@ export function namedHorizon(alarm, now = new Date(), days = ДНЕЙ_ВПЕРЁ
         // пропустить: поставленные вчера живут в системе сами по себе
         if (!разрешено || минуты === null) { silence.push(...ключи); return; }
 
-        const прошло = now.getHours() * 60 + now.getMinutes() - минуты;
-        const первое = прошло >= 0 && прошло <= НЕПРИКОСНОВЕН_МИН
-            ? atToday(hhmm, now)
-            : atNext(hhmm, now);
+        // Отсчёт — от того же прихода, что у nextRingPlan: только что прозвонивший или следующий
+        const { последний, следующий } = приходыЧаса(hhmm, now, quiet);
+        const первое = последний && прошлоМинут(последний.at, now) <= НЕПРИКОСНОВЕН_МИН ? последний : следующий;
         if (!первое) { silence.push(...ключи); return; }
 
         ключи.forEach((копия, i) => {
             // setDate, а не +24 часа: на переходе на летнее время сутки не
-            // равны 24 часам, и час звонка уехал бы
-            const at = new Date(первое);
-            at.setDate(at.getDate() + i + 1);
-            ring.push({ key: копия, at });
+            // равны 24 часам, и час звонка уехал бы. Копия, попавшая в
+            // тихий час, — с его концом (выкладка 177)
+            const день = new Date(первое.raw);
+            день.setDate(день.getDate() + i + 1);
+            ring.push({ key: копия, at: new Date(afterQuiet(день.getTime(), quiet)) });
         });
     };
 
@@ -682,13 +693,11 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
         день.setHours(0, 0, 0, 0);
         return когда.getTime() >= день.getTime() + СУТКИ_МС ? `${timeNow(когда)}+1` : timeNow(когда);
     };
-    /* Ближайший приход ежедневного часа «ЧЧ:ММ» после мига (наступивший час — уже завтра). */
+    /* Ближайший приход ежедневного часа «ЧЧ:ММ» после мига (наступивший час — уже завтра);
+       попавший в тихий час — с его концом, как его ставит расписание (выкладка 177). */
     const следующий = (hhmm, миг) => {
-        if (!hhmm) return null;
-        const когда = atToday(hhmm, new Date(миг));
-        if (!когда) return null;
-        if (когда.getTime() <= миг) когда.setDate(когда.getDate() + 1);
-        return когда;
+        const когда = hhmm ? nextNamedAt(hhmm, миг, quiet) : 0;
+        return когда ? new Date(когда) : null;
     };
     const раньше = (a, b) => (!a ? b : !b ? a : (a.getTime() <= b.getTime() ? a : b));
 
@@ -770,19 +779,18 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
         границы.add(откроется);
         границы.add(откроется + windowMs);
     }
-    // Назначенные часы сегодня и завтра (прошёл — следующий) и полночь (снимается «завтра»)
+    // Назначенные часы — когда звонят на самом деле (тихий час переносит на конец) — и полночь
     for (const hhmm of [named.window, named.moments]) {
         if (!hhmm) continue;
-        const сегодня = atToday(hhmm, now);
-        const завтрашний = atToday(hhmm, базаЗавтра);
-        if (сегодня) границы.add(сегодня.getTime());
-        if (завтрашний) границы.add(завтрашний.getTime());
+        for (const приход of namedOccurrences(hhmm, now.getTime(), quiet)) границы.add(приход.at);
+        for (const приход of namedOccurrences(hhmm, базаЗавтра.getTime(), quiet)) границы.add(приход.at);
     }
     // Назначенный звонок Наблюдателя перезапускает цикл: окно откроется и закроется после него
     if (observerOn && named.window) {
-        for (const опора of [atToday(named.window, now), atToday(named.window, базаЗавтра)]) {
-            if (!опора) continue;
-            const открытие = afterQuiet(опора.getTime() + cooldownMs, quiet);
+        const опоры = new Set([...namedOccurrences(named.window, now.getTime(), quiet),
+            ...namedOccurrences(named.window, базаЗавтра.getTime(), quiet)].map(п => п.at));
+        for (const опора of опоры) {
+            const открытие = afterQuiet(опора + cooldownMs, quiet);
             границы.add(открытие);
             границы.add(открытие + windowMs);
         }
