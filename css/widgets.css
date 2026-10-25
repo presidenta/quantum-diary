@@ -99,7 +99,9 @@
 .wg-fill.wg-glass {
   /* Красный, синий, сиреневый (выкладка 175): основа — углублённый цвет (--wg-fill, fillColor), карточки,
      кнопки и метка — сам цвет чакры сплошным, кромка светлая */
-  --wg-card: var(--wg-accent); --wg-card-line: rgba(255, 255, 255, .35);
+  /* Объём (выкладка 176): сверху 12% белого, книзу сам цвет — как drawable/quantum_card_c*.xml */
+  --wg-card: linear-gradient(180deg, color-mix(in srgb, var(--wg-accent) 88%, #fff 12%), var(--wg-accent));
+  --wg-card-line: rgba(255, 255, 255, .4);
   --wg-btn-fill: var(--wg-accent);
   --wg-btn-line: color-mix(in srgb, var(--wg-accent) 55%, #fff 45%);
   --wg-btn-text: #fff;
