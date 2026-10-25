@@ -11,7 +11,7 @@
    applyWidgetVars ставит их свойствами уже после вставки — это политика пропускает (так же
    сделаны шкалы аналитики в «Пространстве»). */
 
-import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, resolveLook, widgetAliases, translateOwn } from './widgets.js';
+import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, resolveLook, widgetAliases, translateOwn, fillColor } from './widgets.js';
 import { WIDGET_ICONS } from './widget-icons.js';
 
 const экран = текст => String(текст ?? '').replace(/[&<>"]/g, c => (
@@ -76,7 +76,7 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
     const золото = look.gold;
 
     const alpha = (стиль.alpha ?? (формат.fill ? DEFAULT_ALPHA.fill : DEFAULT_ALPHA.neon)) / 100;
-    const заливка = look.graphite ? GRAPHITE.base : look.accent;
+    const заливка = формат.fill ? fillColor(look) : look.graphite ? GRAPHITE.base : look.accent;
     const классы = ['wg', `wg-${формат.key.toLowerCase()}`,
         формат.fill ? 'wg-fill' : '', золото ? 'wg-gold' : '', look.graphite ? 'wg-graphite' : '',
         формат.fill && look.ink && !золото && !look.graphite ? 'wg-ink' : '',
