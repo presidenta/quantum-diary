@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'self'">
+<meta name="theme-color" content="#1C1E22">
+<title>Квант · настройки виджета</title>
+<!-- НАСТРОЙКИ ОДНОГО ВИДЖЕТА НА КОМПЬЮТЕРЕ (выкладка 182). Шестерёнка на виджете открывает это окно — как
+     лист настроек на телефоне (WidgetSheetActivity): непрозрачность, цвет кружками, «Картинки ▾». Правка
+     сразу видна на виджете: стиль вида лежит в общем хранилище, окно виджета слышит запись. Вид — ?f=hud. -->
+<link rel="stylesheet" href="css/game-tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/widgets.css">
+<link rel="stylesheet" href="css/widget-sheet.css">
+</head>
+<body class="ws-body">
+<main class="ws" id="ws">
+  <header class="ws-head">
+    <div>
+      <h1 class="ws-title" id="wsTitle">Настройки виджета</h1>
+      <span class="muted" id="wsFormat"></span>
+    </div>
+    <button type="button" class="btn" id="wsDone">Готово</button>
+  </header>
+
+  <label class="ws-row">
+    <span id="wsOpacityLabel">Непрозрачность</span>
+    <input type="range" id="wsAlpha" min="0" max="100" step="5">
+    <span class="ws-percent" id="wsPercent"></span>
+  </label>
+
+  <div class="ws-block">
+    <div class="ws-row"><span id="wsColorLabel">Цвет</span><span class="ws-name" id="wsColorName"></span></div>
+    <div class="ws-colors" id="wsColors"></div>
+  </div>
+
+  <div class="wg-picker" id="wsPicker"></div>
+  <p class="muted m0" id="wsNote"></p>
+
+  <button type="button" class="ws-more" id="wsMore">Надписи и другие виды — в приложении</button>
+</main>
+<script type="module" src="js/widget-sheet.js"></script>
+</body>
+</html>

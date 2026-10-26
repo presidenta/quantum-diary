@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 181;
+const RELEASE = 182;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -18,7 +18,8 @@ const SHELL = [
   'js/app.js', 'js/ios-home.js', 'manifest.webmanifest', 'js/store.js', 'js/db.js', 'js/sync.js', 'js/auth.js', 'js/config.js', 'js/wheel.js', 'js/errors.js', 'js/update.js', 'js/password-eye.js',
   'js/reminder-plan.js', 'js/support.js', 'js/views/cabinet-editor.js', 'css/cabinet-editor.css',
   // Окно «Установить виджет» (раздел 9.21): модуль, его стили и чистые правила с значками
-  'js/widgets-ui.js', 'css/widgets.css', 'js/core/widgets.js', 'js/core/widget-icons.js', 'js/core/widget-pictures.js',
+  'js/widgets-ui.js', 'css/widgets.css', 'js/core/widgets.js', 'js/core/widget-icons.js', 'js/core/widget-pictures.js', 'js/core/desktop-widget-store.js', 'js/widget-picker.js',
+  'widget-sheet.html', 'js/widget-sheet.js', 'css/widget-sheet.css',
   // Окно виджета на компьютере и общая отрисовка виджета (выкладка 150)
   'widget.html', 'js/widget-desktop.js', 'css/widget-desktop.css', 'js/core/widget-html.js',
   'js/views/wheel.js', 'js/views/day.js', 'js/views/quantum.js', 'js/views/quantum-sound.js', 'js/views/quantum-slit.js', 'js/views/money.js', 'js/profile.js',

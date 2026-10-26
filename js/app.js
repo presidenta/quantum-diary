@@ -1092,10 +1092,12 @@ async function start() {
 
   /* Шестерёнка окна виджета на компьютере (widget.html, выкладка 150) открывает приложение с
      адресом #widgets — сразу окно «Установить виджет». Метка снимается, чтобы обновление
-     страницы не открывало окно снова. */
-  if (location.hash === '#widgets') {
+     страницы не открывало окно снова. #widgets:<вид> (выкладка 182, «Надписи и другие виды» из окна
+     настроек виджета) — окно сразу на этом виде. */
+  const кВиджетам = /^#widgets(?::(\w+))?$/.exec(location.hash);
+  if (кВиджетам) {
     history.replaceState(null, '', location.pathname + location.search);
-    await openWidgets(0);
+    await openWidgets(кВиджетам[1] || 0);
   }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;

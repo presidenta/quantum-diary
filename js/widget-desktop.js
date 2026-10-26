@@ -9,14 +9,15 @@
    перестановке расписания (publishDesktopWidget в reminder-plan.js). Кадры расписаны по
    часам вперёд: окно само берёт текущий — последний, чей час наступил (то же правило, что у
    AlarmStore.кадрСейчас на телефоне), поэтому сроки переключаются, даже когда приложение
-   закрыто. Стиль — из окна «Установить виджет» (kvant-desktop-widget-style). Правки в
-   приложении окно слышит сразу (событие storage) и перерисовывается. */
+   закрыто. Стиль — свой у каждого вида (core/desktop-widget-store.js, выкладка 182). Правки в
+   приложении и в окне настроек виджета окно слышит сразу (событие storage) и перерисовывается. */
 
 import { FORMATS, normalizeStyle } from './core/widgets.js';
 import { translate } from './core/i18n.js';
 import { widgetHtml, applyWidgetVars } from './core/widget-html.js';
 import { logEvent } from './core/web-journal.js';
 import { PICTURE_STEP_KEY, setPictureStep } from './core/widget-pictures.js';
+import { readDesktopStyle } from './core/desktop-widget-store.js';
 
 const ПЕРЕРИСОВКА_МС = 20 * 1000;
 
@@ -82,7 +83,7 @@ function нарисовать() {
 
     // Шаг картинок «при открытии» кладёт приложение (выкладка 181); его запись будит окно событием storage
     setPictureStep(прочитать(PICTURE_STEP_KEY));
-    корень.innerHTML = widgetHtml(формат, normalizeStyle(прочитать('kvant-desktop-widget-style') || {}),
+    корень.innerHTML = widgetHtml(формат, normalizeStyle(readDesktopStyle(формат.key)),
         new Date(), сроки, перевод);
     applyWidgetVars(корень);
     document.documentElement.lang = язык;
@@ -90,12 +91,18 @@ function нарисовать() {
     document.title = `${перевод('widgets.format.' + формат.key)} · Квант`;
 }
 
-/* Шестерёнка и «Настройки» — окно «Установить виджет» в приложении; кабинет — само приложение.
-   Одно окно приложения на всё: имя «kvant-app», повторное нажатие ведёт в него же. */
+/* ШЕСТЕРЁНКА И «НАСТРОЙКИ» — СВОЁ ОКНО НАСТРОЕК ЭТОГО ВИДЖЕТА (выкладка 182), как лист на телефоне:
+   widget-sheet.html?f=<вид>. Владелец 26.10.2026: «нажимаешь настройку — сбрасывает на основной кабинет».
+   Приложение для компьютера до 1.1 окна настроек не знает (его маршруты — в установщике): там шестерёнка
+   по-прежнему ведёт в меню виджета, пока человек не поставит новый установщик. Кабинет — само приложение. */
+const СТАРАЯ_ОБОЛОЧКА = /KvantDesktop\/1\.0\b/.test(navigator.userAgent);
+const ОКНО_НАСТРОЕК = 'popup,width=400,height=640';
+
 корень.addEventListener('click', событие => {
     const настройки = событие.target.closest('.wg-gear, .wg-btn.alt, .wg-btn.small:not(.mark)');
     if (настройки) {
-        window.open('index.html#widgets', 'kvant-app');
+        if (СТАРАЯ_ОБОЛОЧКА) window.open('index.html#widgets', 'kvant-app');
+        else window.open(`widget-sheet.html?f=${encodeURIComponent(формат.key)}`, `kvant-sheet-${формат.key}`, ОКНО_НАСТРОЕК);
         return;
     }
     if (событие.target.closest('.wg-btn')) window.open('index.html', 'kvant-app');

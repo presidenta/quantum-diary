@@ -1,0 +1,22 @@
+/* Окно настроек одного виджета на компьютере (widget-sheet.html, выкладка 182): как лист настроек на
+   телефоне — тёмный лист, светлый текст, кружки цвета одной строкой, «Картинки ▾» под ними. */
+.ws-body { margin: 0; min-height: 100vh; background: #1C1E22; color: #E8EAED; }
+.ws { box-sizing: border-box; display: grid; gap: 14px; padding: 16px; max-width: 520px; margin: 0 auto; }
+.ws-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ws-title { margin: 0; font-size: 18px; font-weight: 600; }
+.ws-row { display: flex; align-items: center; gap: 10px; }
+.ws-row input[type="range"] { flex: 1; }
+.ws-percent { min-width: 42px; text-align: end; color: #9AA0A6; }
+.ws-name { flex: 1; text-align: end; color: #9AA0A6; font-size: 13px; }
+.ws-block { display: grid; gap: 8px; }
+/* Десять кружков одной строкой; на узком окне переносятся */
+.ws-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.ws-dot { width: 30px; height: 30px; }
+.ws-dot[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, .35); }
+.ws-dot-auto { background: conic-gradient(#C8102E, #FF6A00, #FFC800, #00A651, #00A3E0, #1F47D6, #8E3FD6, #C8102E); }
+.ws-dot-gold { background: linear-gradient(135deg, #F3D375, #AE7D21); }
+.ws-dot-graphite { background: linear-gradient(135deg, #2E3135, #1E2022); border-color: #6B7078; }
+.ws-more {
+  justify-self: start; padding: 4px 0; border: 0; background: none; cursor: pointer;
+  color: var(--gold, #E3C77C); font: inherit; font-weight: 600;
+}

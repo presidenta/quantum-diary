@@ -138,6 +138,27 @@ export function mirrorNow(style, date = new Date(), step = pictureStep()) {
     return одна >= 0 ? одна : dayPicture(day);
 }
 
+/* НАЖАТИЯ В ОКНЕ КАРТИНОК — общие для окна «Установить виджет» и окна настроек виджета на компьютере
+   (выкладка 182); на телефоне то же делают нажатаКартинка и переключитьАвто в WidgetSheetActivity.
+   Возвращают правку стиля (что поменять), а не стиль целиком. */
+
+/** Нажата картинка: без «Авто» — одна на весь день; с «Авто» — отметить или снять (последнюю не снять → null). */
+export function tapPicture(style, id) {
+    if (style?.mode !== 'mirrorRotate') return { mode: 'mirror', mirror: id };
+    const набор = pictureSet(style).map(н => WIDGET_PICTURES[н].id);
+    const новый = набор.includes(id) ? набор.filter(и => и !== id) : [...набор, id];
+    return новый.length ? { mirrors: новый } : null;
+}
+
+/** «Авто»: включить — прежний набор или картинка, что на виджете сейчас; выключить — остаётся показанная. */
+export function toggleAuto(style, date = new Date()) {
+    const картинки = ['mirror', 'mirrorAuto', 'mirrorRotate'].includes(style?.mode);
+    const сейчас = WIDGET_PICTURES[картинки ? mirrorNow(style, date) : dayPicture((date.getDay() + 6) % 7)].id;
+    if (style?.mode === 'mirrorRotate') return { mode: 'mirror', mirror: сейчас };
+    const прежний = Array.isArray(style?.mirrors) ? style.mirrors : [];
+    return { mode: 'mirrorRotate', mirrors: прежний.length ? прежний : [сейчас] };
+}
+
 /** Сколько минут держится каждая картинка в «Авто». */
 export const minutesEach = сколько => Math.floor(DAY_MINUTES / Math.max(1, сколько));
 

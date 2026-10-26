@@ -22,20 +22,21 @@ import { t } from './store.js';
 import { isNative, widgetList, widgetSave, offerWidget, offerTile } from './core/reminders.js';
 import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
-    FORMATS, CHAKRAS, DEFAULT_ALPHA, MIRROR_MODES, normalizeStyle, resolveLook, widgetAliases, translateOwn
+    FORMATS, CHAKRAS, DEFAULT_ALPHA, normalizeStyle, resolveLook, widgetAliases, translateOwn
 } from './core/widgets.js';
-import {
-    WIDGET_PICTURES, EVERY_OPTIONS, PICTURE_STEP_KEY, picturePath, pictureSet, minutesEach, dayPicture, normalizeEvery,
-    setPictureStep
-} from './core/widget-pictures.js';
+import { PICTURE_STEP_KEY, setPictureStep } from './core/widget-pictures.js';
 import { widgetHtml, widgetWords, applyWidgetVars } from './core/widget-html.js';
+import { readDesktopStyle, writeDesktopStyle } from './core/desktop-widget-store.js';
+import { pickerHtml, pickerAction, applySwatches, styleNote } from './widget-picker.js';
 
 const $ = id => document.getElementById(id);
 
 const ПАУЗА_СОХРАНЕНИЯ_МС = 300;
 
-let цель = 0;                   // 0 — новые виджеты, иначе номер стоящего
-let стоящие = [];               // [{id, format, style}]
+/* Цель — что настраиваем: 0 — новые виджеты; на телефоне — номер стоящего виджета, на компьютере — вид
+   окна-виджета (у каждого свой стиль, выкладка 182). */
+let цель = 0;
+let стоящие = [];               // [{id, format, style}]; на компьютере id — вид
 let стили = new Map();          // номер → нормализованный стиль (0 — для новых)
 let сроки = null;               // что сейчас написано на плашке: {architect, observer}
 let таймер = 0;
@@ -102,16 +103,14 @@ const ОКНО_ВИДЖЕТА = {
     slim: [420, 130], hud: [380, 300], week: [380, 330], fillWide: [380, 300], tall: [230, 420], fillTall: [230, 420]
 };
 
+/* Стиль цели — на компьютер: свой ключ у вида, общий у «новых» (core/desktop-widget-store.js). */
 function стильНаКомпьютер() {
-    try {
-        localStorage.setItem('kvant-desktop-widget-style', JSON.stringify(normalizeStyle(стильЦели())));
-    } catch {
-        // Хранилище закрыто (приватное окно) — окно виджета возьмёт вид по умолчанию
-    }
+    writeDesktopStyle(typeof цель === 'string' ? цель : '', normalizeStyle(стильЦели()));
 }
 
 async function открытьНаКомпьютере(ключВида) {
-    стильНаКомпьютер();
+    // Окно получает то, что человек видит в предпросмотре: этот стиль становится стилем вида
+    writeDesktopStyle(ключВида, normalizeStyle(стильЦели()));
     await publishDesktopWidget();
     const [ширина, высота] = ОКНО_ВИДЖЕТА[ключВида] || ОКНО_ВИДЖЕТА.hud;
     window.open(`widget.html?f=${encodeURIComponent(ключВида)}`, `kvant-widget-${ключВида}`,
@@ -133,25 +132,12 @@ function нарисоватьФорму() {
     круги.innerHTML = CHAKRAS.map((ч, i) =>
         `<button type="button" class="wg-swatch" data-chakra="${i}" data-sw="${ч.hex}"
             aria-label="${экран(t(`widgets.chakra.${i}`))}" aria-pressed="${i === стиль.chakra}"></button>`).join('');
-    нарисоватьКартинки(стиль, look);
-    // Цвета и картинки кружков — свойствами: атрибут style, вставленный разметкой, политика страниц отбрасывает
-    for (const круг of document.querySelectorAll('#widgetsSwatches [data-sw], #widgetsPicGrid [data-sw]')) {
-        круг.style.setProperty('--sw', круг.dataset.sw);
-        if (круг.dataset.img) круг.style.setProperty('--sw-img', `url("${круг.dataset.img}")`);
-    }
+    applySwatches(круги);
 
-    const название = t(`widgets.chakra.${look.chakra}`);
-    const набор = pictureSet(стиль);
-    const каждые = normalizeEvery(стиль.every);
-    $('widgetsModeNote').textContent = стиль.mode === 'mirrorRotate'
-        ? (набор.length < 2 ? t('widgets.modeNote.mirrorRotateOne')
-            : каждые === 'open' ? t('widgets.modeNote.mirrorRotateOpen', { n: набор.length })
-            : каждые !== 'auto' ? t('widgets.modeNote.mirrorRotateFixed', { n: набор.length, time: длительность(каждые) })
-            : t('widgets.modeNote.mirrorRotate', { n: набор.length, time: длительность(minutesEach(набор.length)) }))
-        : t(`widgets.modeNote.${стиль.mode}`, {
-            day: t('widgets.days').split(',')[look.day].trim(),
-            chakra: название
-        });
+    // Картинки — за стрелкой: общее окно с окном настроек виджета на компьютере (widget-picker.js)
+    $('widgetsPicker').innerHTML = pickerHtml(стиль, look, t, картинкиОткрыты);
+    applySwatches($('widgetsPicker'));
+    $('widgetsModeNote').textContent = styleNote(стиль, look, t);
 
     const процент = стиль.alpha ?? (вид.fill ? DEFAULT_ALPHA.fill : DEFAULT_ALPHA.neon);
     $('widgetsAlpha').value = String(процент);
@@ -174,78 +160,13 @@ function нарисоватьФорму() {
     }
 }
 
-/* ОКНО КАРТИНОК (выкладка 180). Владелец 26.10.2026: «чтобы настройки не были на пол-экрана — нажимаешь
-   стрелочку, открывается окно, там выбираешь картинки; нажимаешь закрыть — остаются только цвета». Так же
-   устроена панель на рабочем столе (WidgetSheetActivity). Картинки — из каталога core/widget-pictures.js. */
-function нарисоватьКартинки(стиль, look) {
-    const режим = стиль.mode;
-    const набор = pictureSet(стиль);
-    const поКругу = режим === 'mirrorRotate';
-
-    $('widgetsPics').hidden = !картинкиОткрыты;
-    $('widgetsPicsToggle').setAttribute('aria-expanded', String(картинкиОткрыты));
-    $('widgetsPicsArrow').textContent = картинкиОткрыты ? '▴' : '▾';
-    $('widgetsPicsNow').textContent = поКругу ? `${t('widgets.pics.auto')} · ${набор.length}`
-        : режим === 'mirrorAuto' ? t('widgets.pics.byDays')
-        : режим === 'mirror' ? t('widgets.mode.mirror') : '';
-    for (const кнопка of $('widgetsPicModes').querySelectorAll('button')) {
-        кнопка.setAttribute('aria-pressed', String(кнопка.dataset.pic === 'auto' ? поКругу : режим === 'mirrorAuto'));
-    }
-
-    // «Менять» — только при «Авто» (выкладка 181): те же варианты, что на столе
-    const каждые = normalizeEvery(стиль.every);
-    $('widgetsPicEvery').hidden = !картинкиОткрыты || !поКругу;
-    $('widgetsPicEvery').innerHTML = !картинкиОткрыты || !поКругу ? '' :
-        `<span class="muted">${экран(t('widgets.pics.every'))}</span>
-        <div class="wg-every-row">${EVERY_OPTIONS.map(вариант => `<button type="button" class="btn wg-every" data-every="${вариант}"
-            aria-pressed="${вариант === каждые}">${экран(вариант === 'auto' ? t('widgets.pics.everyAuto')
-                : вариант === 'open' ? t('widgets.pics.onOpen') : длительность(вариант))}</button>`).join('')}</div>`;
-
-    // Сетка строится, только пока окно открыто: закрытое не тянет ни одной картинки
-    const отмечены = поКругу ? new Set(набор) : new Set(режим === 'mirror' ? [look.mirror] : []);
-    $('widgetsPicGrid').innerHTML = !картинкиОткрыты ? '' : WIDGET_PICTURES.map((картинка, i) =>
-        `<button type="button" class="wg-swatch wg-swatch-mirror" data-pic-id="${картинка.id}" data-sw="${CHAKRAS[картинка.chakra].hex}"
-            data-img="${picturePath(картинка)}" aria-label="${экран(`${t('widgets.pics')} ${i + 1}`)}" aria-pressed="${отмечены.has(i)}"></button>`).join('');
-}
-
-/* «8 ч», «2 ч 40 мин», «48 мин» — сколько держится каждая картинка при «Авто». */
-function длительность(минуты) {
-    const часы = Math.floor(минуты / 60);
-    const остаток = минуты % 60;
-    return [часы ? `${часы} ${t('widgets.w.unitH')}` : '', остаток ? `${остаток} ${t('widgets.w.unitMin')}` : '']
-        .filter(Boolean).join(' ');
-}
-
-/* Нажата картинка: при «Авто» — отметить или снять её в наборе (последнюю не снять: виджету нужна
-   основа), иначе — одна эта картинка на весь день. Как нажатаКартинка на телефоне. */
-function нажатаКартинка(имя) {
-    const стиль = стильЦели();
-    if (стиль.mode !== 'mirrorRotate') {
-        изменить({ mode: 'mirror', mirror: имя });
-        return;
-    }
-    const набор = pictureSet(стиль).map(н => WIDGET_PICTURES[н].id);
-    const новый = набор.includes(имя) ? набор.filter(и => и !== имя) : [...набор, имя];
-    if (новый.length) изменить({ mirrors: новый });
-}
-
-/* «Авто»: включить — прежний набор, если был, а нет — с картинки, что на виджете сейчас; выключить —
-   остаётся та, что показана сейчас. Как переключитьАвто на телефоне. */
-function переключитьАвто() {
-    const стиль = стильЦели();
-    const look = resolveLook(стиль);
-    const сейчас = WIDGET_PICTURES[MIRROR_MODES.includes(стиль.mode) ? look.mirror : dayPicture(look.day)].id;
-    if (стиль.mode === 'mirrorRotate') изменить({ mode: 'mirror', mirror: сейчас });
-    else изменить({ mode: 'mirrorRotate', mirrors: стиль.mirrors.length ? стиль.mirrors : [сейчас] });
-}
-
 function нарисоватьЦели() {
     const выбор = $('widgetsTarget');
 
     выбор.innerHTML = [`<option value="0">${экран(t('widgets.targetNew'))}</option>`]
-        .concat(стоящие.map(в => `<option value="${в.id}">${экран(t('widgets.targetOne', {
-            format: t(`widgets.format.${в.format}`), n: в.id
-        }))}</option>`)).join('');
+        .concat(стоящие.map(в => `<option value="${в.id}">${экран(typeof в.id === 'string'
+            ? t('widgets.targetDesktop', { format: t(`widgets.format.${в.format}`) })
+            : t('widgets.targetOne', { format: t(`widgets.format.${в.format}`), n: в.id }))}</option>`)).join('');
     выбор.value = String(цель);
     // Выбранного виджета в списке нет (его сняли со стола) — остаются «новые»
     if (!выбор.value) выбор.value = '0';
@@ -310,11 +231,17 @@ export async function openWidgets(номер = 0) {
 
     const список = await widgetList();
     стоящие = список.widgets;
+    /* На компьютере и в браузере (выкладка 182) «стоящие» — шесть видов окон-виджетов, у каждого свой стиль;
+       «новые» — общий стиль. Читаются сохранённые: до 182 окно открывалось с умолчаниями и затирало их. */
+    if (!isNative()) {
+        стоящие = FORMATS.map(ф => ({ id: ф.key, format: ф.key, style: readDesktopStyle(ф.key) }));
+        список.defaults = readDesktopStyle('');
+    }
     // На телефоне — шаг картинок «при открытии» из приложения: предпросмотр показывает то же, что стол
     if (isNative()) setPictureStep(список.pictureStep);
     стили = new Map([[0, normalizeStyle(список.defaults)]]);
     for (const в of стоящие) стили.set(в.id, normalizeStyle(в.style));
-    цель = стоящие.some(в => в.id === номер) ? номер : 0;
+    цель = стоящие.some(в => в.id === номер) ? номер : 0;   // номер на компьютере — вид (#widgets:<вид>)
 
     /* Что сейчас написано на плашке — то и в предпросмотре. Кадров нет (приложение
        в браузере или день не загружен) — образец, чтобы окно не было пустым. */
@@ -358,7 +285,9 @@ export function initWidgets() {
     }
 
     $('widgetsTarget').addEventListener('change', () => {
-        цель = Number($('widgetsTarget').value) || 0;
+        const значение = $('widgetsTarget').value;
+        // На компьютере цель — вид окна-виджета, на телефоне — номер
+        цель = /^\d+$/.test(значение) ? Number(значение) : значение;
         нарисоватьВсё();
     });
 
@@ -372,31 +301,18 @@ export function initWidgets() {
         if (круг) изменить({ chakra: Number(круг.dataset.chakra) });
     });
 
-    // Окно картинок: стрелка открывает и закрывает, «Закрыть» сворачивает (выкладка 180)
-    $('widgetsPicsToggle').addEventListener('click', () => {
-        картинкиОткрыты = !картинкиОткрыты;
-        нарисоватьФорму();
-    });
-    $('widgetsPicsClose').addEventListener('click', () => {
-        картинкиОткрыты = false;
-        нарисоватьФорму();
-    });
-    $('widgetsPicModes').addEventListener('click', событие => {
-        const кнопка = событие.target.closest('button[data-pic]');
-        if (!кнопка) return;
-        if (кнопка.dataset.pic === 'auto') переключитьАвто();
-        else изменить({ mode: 'mirrorAuto' });
-    });
-    $('widgetsPicEvery').addEventListener('click', событие => {
-        const кнопка = событие.target.closest('button[data-every]');
-        if (кнопка) изменить({ every: normalizeEvery(кнопка.dataset.every) });
-    });
-    $('widgetsPicGrid').addEventListener('click', событие => {
-        const картинка = событие.target.closest('button[data-pic-id]');
-        if (картинка) нажатаКартинка(картинка.dataset.picId);
+    // Окно картинок: стрелка, «По дням», «Авто», «Менять», картинки, «Закрыть» (widget-picker.js)
+    $('widgetsPicker').addEventListener('click', событие => {
+        const что = pickerAction(событие, стильЦели(), картинкиОткрыты);
+        if (!что) return;
+        if ('open' in что) {
+            картинкиОткрыты = что.open;
+            нарисоватьФорму();
+        }
+        if (что.patch) изменить(что.patch);
     });
 
-    $('widgetsAlpha').addEventListener('input', () => {
+    $('widgetsAlpha').addEventListener('input', () => {    $('widgetsAlpha').addEventListener('input', () => {
         изменить({ alpha: Number($('widgetsAlpha').value) });
     });
 

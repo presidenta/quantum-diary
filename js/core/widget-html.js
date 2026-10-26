@@ -159,7 +159,11 @@ export function applyWidgetVars(узел) {
         виджет.style.setProperty('--wg-fill', виджет.dataset.fill);
         виджет.style.setProperty('--wg-alpha', виджет.dataset.alpha);
         // Картинка зеркала — свойством, а не атрибутом style (политика безопасности страниц)
-        if (виджет.dataset.photo) виджет.style.setProperty('--wg-photo', `url("${виджет.dataset.photo}")`);
+        /* Полным адресом (выкладка 182): относительный url() из переменной Chrome ищет от файла стилей
+           (css/widgets.css), то есть в css/img/…, — картинки на компьютере и в окне не было видно. */
+        if (виджет.dataset.photo) {
+            виджет.style.setProperty('--wg-photo', `url("${new URL(виджет.dataset.photo, document.baseURI).href}")`);
+        }
         if (виджет.dataset.focus) виджет.style.setProperty('--wg-photo-at', виджет.dataset.focus);
     }
     for (const день of узел.querySelectorAll('[data-color]')) день.style.color = день.dataset.color;
