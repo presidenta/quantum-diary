@@ -312,7 +312,7 @@ export function initWidgets() {
         if (что.patch) изменить(что.patch);
     });
 
-    $('widgetsAlpha').addEventListener('input', () => {    $('widgetsAlpha').addEventListener('input', () => {
+    $('widgetsAlpha').addEventListener('input', () => {
         изменить({ alpha: Number($('widgetsAlpha').value) });
     });
 
