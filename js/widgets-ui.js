@@ -22,8 +22,9 @@ import { t } from './store.js';
 import { isNative, widgetList, widgetSave, offerWidget, offerTile } from './core/reminders.js';
 import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
-    FORMATS, CHAKRAS, MIRRORS, DEFAULT_ALPHA, normalizeStyle, resolveLook, widgetAliases, translateOwn
+    FORMATS, CHAKRAS, DEFAULT_ALPHA, MIRROR_MODES, normalizeStyle, resolveLook, widgetAliases, translateOwn
 } from './core/widgets.js';
+import { WIDGET_PICTURES, picturePath, pictureSet, minutesEach, dayPicture } from './core/widget-pictures.js';
 import { widgetHtml, widgetWords, applyWidgetVars } from './core/widget-html.js';
 
 const $ = id => document.getElementById(id);
@@ -35,6 +36,7 @@ let стоящие = [];               // [{id, format, style}]
 let стили = new Map();          // номер → нормализованный стиль (0 — для новых)
 let сроки = null;               // что сейчас написано на плашке: {architect, observer}
 let таймер = 0;
+let картинкиОткрыты = false;    // окно картинок за стрелкой (выкладка 180), открывается свёрнутым
 
 const экран = текст => String(текст ?? '').replace(/[&<>"]/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -122,27 +124,28 @@ function нарисоватьФорму() {
         кнопка.setAttribute('aria-pressed', String(кнопка.dataset.mode === стиль.mode));
     }
 
-    // Кружки — цвета чакр при «цвете чакры», картинки-зеркала при «одном зеркале» (выкладка 179)
+    // Кружки цветов чакр — при «цвете чакры»
     const круги = $('widgetsSwatches');
-    круги.hidden = стиль.mode !== 'chakra' && стиль.mode !== 'mirror';
-    круги.innerHTML = стиль.mode === 'mirror'
-        ? MIRRORS.map((картинка, i) =>
-            `<button type="button" class="wg-swatch wg-swatch-mirror" data-mirror="${i}" data-sw="${CHAKRAS[i].hex}"
-                data-img="${картинка}" aria-label="${экран(t(`widgets.chakra.${i}`))}" aria-pressed="${i === стиль.mirror}"></button>`).join('')
-        : CHAKRAS.map((ч, i) =>
-            `<button type="button" class="wg-swatch" data-chakra="${i}" data-sw="${ч.hex}"
-                aria-label="${экран(t(`widgets.chakra.${i}`))}" aria-pressed="${i === стиль.chakra}"></button>`).join('');
-    // Цвета кружков — свойствами: атрибут style, вставленный разметкой, политика страниц отбрасывает
-    for (const круг of круги.querySelectorAll('[data-sw]')) {
+    круги.hidden = стиль.mode !== 'chakra';
+    круги.innerHTML = CHAKRAS.map((ч, i) =>
+        `<button type="button" class="wg-swatch" data-chakra="${i}" data-sw="${ч.hex}"
+            aria-label="${экран(t(`widgets.chakra.${i}`))}" aria-pressed="${i === стиль.chakra}"></button>`).join('');
+    нарисоватьКартинки(стиль, look);
+    // Цвета и картинки кружков — свойствами: атрибут style, вставленный разметкой, политика страниц отбрасывает
+    for (const круг of document.querySelectorAll('#widgetsSwatches [data-sw], #widgetsPicGrid [data-sw]')) {
         круг.style.setProperty('--sw', круг.dataset.sw);
         if (круг.dataset.img) круг.style.setProperty('--sw-img', `url("${круг.dataset.img}")`);
     }
 
     const название = t(`widgets.chakra.${look.chakra}`);
-    $('widgetsModeNote').textContent = t(`widgets.modeNote.${стиль.mode}`, {
-        day: t('widgets.days').split(',')[look.day].trim(),
-        chakra: название
-    });
+    const набор = pictureSet(стиль);
+    $('widgetsModeNote').textContent = стиль.mode === 'mirrorRotate'
+        ? (набор.length < 2 ? t('widgets.modeNote.mirrorRotateOne')
+            : t('widgets.modeNote.mirrorRotate', { n: набор.length, time: длительность(minutesEach(набор.length)) }))
+        : t(`widgets.modeNote.${стиль.mode}`, {
+            day: t('widgets.days').split(',')[look.day].trim(),
+            chakra: название
+        });
 
     const процент = стиль.alpha ?? (вид.fill ? DEFAULT_ALPHA.fill : DEFAULT_ALPHA.neon);
     $('widgetsAlpha').value = String(процент);
@@ -163,6 +166,62 @@ function нарисоватьФорму() {
         if (document.activeElement !== элемент) элемент.value = translateOwn(значение, таблица);
         элемент.placeholder = подсказка;
     }
+}
+
+/* ОКНО КАРТИНОК (выкладка 180). Владелец 26.10.2026: «чтобы настройки не были на пол-экрана — нажимаешь
+   стрелочку, открывается окно, там выбираешь картинки; нажимаешь закрыть — остаются только цвета». Так же
+   устроена панель на рабочем столе (WidgetSheetActivity). Картинки — из каталога core/widget-pictures.js. */
+function нарисоватьКартинки(стиль, look) {
+    const режим = стиль.mode;
+    const набор = pictureSet(стиль);
+    const поКругу = режим === 'mirrorRotate';
+
+    $('widgetsPics').hidden = !картинкиОткрыты;
+    $('widgetsPicsToggle').setAttribute('aria-expanded', String(картинкиОткрыты));
+    $('widgetsPicsArrow').textContent = картинкиОткрыты ? '▴' : '▾';
+    $('widgetsPicsNow').textContent = поКругу ? `${t('widgets.pics.auto')} · ${набор.length}`
+        : режим === 'mirrorAuto' ? t('widgets.pics.byDays')
+        : режим === 'mirror' ? t('widgets.mode.mirror') : '';
+    for (const кнопка of $('widgetsPicModes').querySelectorAll('button')) {
+        кнопка.setAttribute('aria-pressed', String(кнопка.dataset.pic === 'auto' ? поКругу : режим === 'mirrorAuto'));
+    }
+
+    // Сетка строится, только пока окно открыто: закрытое не тянет ни одной картинки
+    const отмечены = поКругу ? new Set(набор) : new Set(режим === 'mirror' ? [look.mirror] : []);
+    $('widgetsPicGrid').innerHTML = !картинкиОткрыты ? '' : WIDGET_PICTURES.map((картинка, i) =>
+        `<button type="button" class="wg-swatch wg-swatch-mirror" data-pic-id="${картинка.id}" data-sw="${CHAKRAS[картинка.chakra].hex}"
+            data-img="${picturePath(картинка)}" aria-label="${экран(`${t('widgets.pics')} ${i + 1}`)}" aria-pressed="${отмечены.has(i)}"></button>`).join('');
+}
+
+/* «8 ч», «2 ч 40 мин», «48 мин» — сколько держится каждая картинка при «Авто». */
+function длительность(минуты) {
+    const часы = Math.floor(минуты / 60);
+    const остаток = минуты % 60;
+    return [часы ? `${часы} ${t('widgets.w.unitH')}` : '', остаток ? `${остаток} ${t('widgets.w.unitMin')}` : '']
+        .filter(Boolean).join(' ');
+}
+
+/* Нажата картинка: при «Авто» — отметить или снять её в наборе (последнюю не снять: виджету нужна
+   основа), иначе — одна эта картинка на весь день. Как нажатаКартинка на телефоне. */
+function нажатаКартинка(имя) {
+    const стиль = стильЦели();
+    if (стиль.mode !== 'mirrorRotate') {
+        изменить({ mode: 'mirror', mirror: имя });
+        return;
+    }
+    const набор = pictureSet(стиль).map(н => WIDGET_PICTURES[н].id);
+    const новый = набор.includes(имя) ? набор.filter(и => и !== имя) : [...набор, имя];
+    if (новый.length) изменить({ mirrors: новый });
+}
+
+/* «Авто»: включить — прежний набор, если был, а нет — с картинки, что на виджете сейчас; выключить —
+   остаётся та, что показана сейчас. Как переключитьАвто на телефоне. */
+function переключитьАвто() {
+    const стиль = стильЦели();
+    const look = resolveLook(стиль);
+    const сейчас = WIDGET_PICTURES[MIRROR_MODES.includes(стиль.mode) ? look.mirror : dayPicture(look.day)].id;
+    if (стиль.mode === 'mirrorRotate') изменить({ mode: 'mirror', mirror: сейчас });
+    else изменить({ mode: 'mirrorRotate', mirrors: стиль.mirrors.length ? стиль.mirrors : [сейчас] });
 }
 
 function нарисоватьЦели() {
@@ -275,8 +334,26 @@ export function initWidgets() {
     $('widgetsSwatches').addEventListener('click', событие => {
         const круг = событие.target.closest('button[data-chakra]');
         if (круг) изменить({ chakra: Number(круг.dataset.chakra) });
-        const зеркало = событие.target.closest('button[data-mirror]');
-        if (зеркало) изменить({ mirror: Number(зеркало.dataset.mirror) });
+    });
+
+    // Окно картинок: стрелка открывает и закрывает, «Закрыть» сворачивает (выкладка 180)
+    $('widgetsPicsToggle').addEventListener('click', () => {
+        картинкиОткрыты = !картинкиОткрыты;
+        нарисоватьФорму();
+    });
+    $('widgetsPicsClose').addEventListener('click', () => {
+        картинкиОткрыты = false;
+        нарисоватьФорму();
+    });
+    $('widgetsPicModes').addEventListener('click', событие => {
+        const кнопка = событие.target.closest('button[data-pic]');
+        if (!кнопка) return;
+        if (кнопка.dataset.pic === 'auto') переключитьАвто();
+        else изменить({ mode: 'mirrorAuto' });
+    });
+    $('widgetsPicGrid').addEventListener('click', событие => {
+        const картинка = событие.target.closest('button[data-pic-id]');
+        if (картинка) нажатаКартинка(картинка.dataset.picId);
     });
 
     $('widgetsAlpha').addEventListener('input', () => {

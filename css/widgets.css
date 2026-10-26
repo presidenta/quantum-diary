@@ -35,6 +35,18 @@
 /* Кружки-зеркала (выкладка 179): картинка в круге, кромка цвета её чакры */
 .wg-swatch-mirror { background: var(--sw-img) center / cover no-repeat, var(--sw); border-color: var(--sw); }
 
+/* ---- окно картинок за стрелкой (выкладка 180) ------------------------------------------------ */
+.wg-pics-head {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 2px;
+  background: none; border: 0; border-top: 1px solid var(--line); color: inherit; font: inherit; cursor: pointer;
+}
+.wg-pics-now { flex: 1; text-align: end; color: var(--ink-2); font-size: 13px; }
+.wg-pics-arrow { font-size: 18px; }
+.wg-pics { display: grid; gap: 10px; padding: 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.wg-pics[hidden] { display: none; }
+.wg-pic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); justify-items: center; gap: 8px; }
+.wg-pics-close { justify-self: center; }
+
 /* ---- галерея ---------------------------------------------------------------- */
 .wg-gallery { display: grid; gap: 16px; }
 .wg-item { display: grid; gap: 8px; justify-items: center; }
@@ -277,7 +289,7 @@
 .wg-mirror .wg-plate {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, .5), transparent 32%, transparent 60%, rgba(0, 0, 0, .55)),
-    var(--wg-photo) center / cover no-repeat, #0A0E1A;
+    var(--wg-photo) var(--wg-photo-at, center) / cover no-repeat, #0A0E1A;
 }
 .wg-mirror .wg-rim {
   border: 2.5px solid var(--wg-accent);

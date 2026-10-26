@@ -457,10 +457,22 @@
         <button type="button" data-mode="chakra" aria-pressed="false" data-i18n="widgets.mode.chakra">Цвет чакры</button>
         <button type="button" data-mode="gold" aria-pressed="false" data-i18n="widgets.mode.gold">Золото</button>
         <button type="button" data-mode="graphite" aria-pressed="false" data-i18n="widgets.mode.graphite">Графит</button>
-        <button type="button" data-mode="mirrorAuto" aria-pressed="false" data-i18n="widgets.mode.mirrorAuto">Зеркало по дням</button>
-        <button type="button" data-mode="mirror" aria-pressed="false" data-i18n="widgets.mode.mirror">Зеркало</button>
       </div>
       <div class="wg-swatches" id="widgetsSwatches" hidden></div>
+      <!-- Картинки — за стрелкой (выкладка 180): окно открывается и закрывается, остаются цвета -->
+      <button type="button" class="wg-pics-head" id="widgetsPicsToggle" aria-expanded="false" aria-controls="widgetsPics">
+        <span data-i18n="widgets.pics">Картинки</span>
+        <span class="wg-pics-now" id="widgetsPicsNow"></span>
+        <span class="wg-pics-arrow" id="widgetsPicsArrow" aria-hidden="true">▾</span>
+      </button>
+      <div class="wg-pics" id="widgetsPics" hidden>
+        <div class="segmented wg-modes" id="widgetsPicModes" role="group">
+          <button type="button" data-pic="mirrorAuto" aria-pressed="false" data-i18n="widgets.pics.byDays">По дням</button>
+          <button type="button" data-pic="auto" aria-pressed="false" data-i18n="widgets.pics.auto">Авто</button>
+        </div>
+        <div class="wg-swatches wg-pic-grid" id="widgetsPicGrid"></div>
+        <button type="button" class="btn wg-pics-close" id="widgetsPicsClose"><span data-i18n="widgets.pics.close">Закрыть</span> ▴</button>
+      </div>
       <p class="muted m0" id="widgetsModeNote"></p>
     </div>
 

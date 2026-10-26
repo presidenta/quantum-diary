@@ -13,18 +13,21 @@
      fillWide  — залитый горизонтальный;
      fillTall  — залитый вертикальный.
 
-   ЦВЕТ. Шесть режимов:
+   ЦВЕТ. Семь режимов:
      auto       — семь цветов чакр по дням недели, смена в полночь;
      chakra     — один цвет чакры на все дни (какой — поле chakra);
      gold       — золото сайта;
      graphite   — спокойный графит #1E2022 без неона;
      mirrorAuto — «Зеркало по дням»: основа — картинка владельца, своя на каждый день (выкладка 179);
-     mirror     — «Одно зеркало» на все дни (какое — поле mirror).
+     mirror     — «Одно зеркало» на все дни (какое — поле mirror, имя картинки);
+     mirrorRotate — «Картинки авто»: выбранные (поле mirrors) сменяют друг друга в течение дня (выкладка 180).
+   Сами картинки — в каталоге web/js/core/widget-pictures.js.
 
    Прозрачность подложки — от 0 (стекло) до 100 (сплошная). Не задана — у неонового
    вида 88, у залитого 100. */
 
 import { LANGUAGES, dictionary } from './i18n.js';
+import { WIDGET_PICTURES, picturePath, pictureId, pictureSet, mirrorNow, dayPicture } from './widget-pictures.js';
 
 /* Ключи видов — те же, что в WidgetFormat.java. Менять только вместе с ним. */
 export const FORMATS = Object.freeze([
@@ -36,13 +39,10 @@ export const FORMATS = Object.freeze([
     Object.freeze({ key: 'fillTall', fill: true, tall: true })
 ]);
 
-export const MODES = Object.freeze(['auto', 'chakra', 'gold', 'graphite', 'mirrorAuto', 'mirror']);
+export const MODES = Object.freeze(['auto', 'chakra', 'gold', 'graphite', 'mirrorAuto', 'mirror', 'mirrorRotate']);
 
-/* ЗЕРКАЛА (выкладка 179): семь картинок владельца, по одной на цвет чакры, понедельник первым — красный
-   закат над морем, оранжевые пальмы, жёлтое небо, зелёные джунгли, голубое море, синие горы ночью,
-   сиреневое озеро. Те же файлы лежат в приложении (assets/quantum_mirror, WidgetPaint.ЗЕРКАЛО_ФАЙЛ);
-   замок сверяет их байт в байт. Путь — от корня сайта: так его видят окно и widget.html. */
-export const MIRRORS = Object.freeze(Array.from({ length: 7 }, (_, i) => `img/widget-mirror/mirror-${i}.jpg`));
+/* Основа — картинка: по дням, одна или «Авто» (WidgetLook.зеркальныйРежим). */
+export const MIRROR_MODES = Object.freeze(['mirrorAuto', 'mirror', 'mirrorRotate']);
 
 /* Стекло карточек на зеркале: тёмно-синее, 55% (WidgetLook.ЗЕРКАЛО_СТЕКЛО). Срок Наблюдателя — цвет
    чакры с 70% белого (ЗЕРКАЛО_СРОК_Б), Архитектора и надписи кнопок — белые. */
@@ -212,13 +212,17 @@ export function normalizeStyle(raw = {}) {
     const mode = MODES.includes(raw?.mode) ? raw.mode : 'auto';
 
     const чакра = Math.trunc(Number(raw?.chakra));
-    const зеркало = Math.trunc(Number(raw?.mirror));
+    // Картинки — по имени из каталога; число — стиль выкладки 179 (картинка дня)
+    const зеркало = pictureId(raw?.mirror) ?? WIDGET_PICTURES[dayPicture(0)].id;
+    const набор = Array.isArray(raw?.mirrors) && raw.mirrors.length
+        ? pictureSet({ mirrors: raw.mirrors }).map(н => WIDGET_PICTURES[н].id) : [];
     const alpha = Number(raw?.alpha);
 
     return {
         mode,
         chakra: Number.isFinite(чакра) ? Math.min(6, Math.max(0, чакра)) : 0,
-        mirror: Number.isFinite(зеркало) ? Math.min(MIRRORS.length - 1, Math.max(0, зеркало)) : 0,
+        mirror: зеркало,
+        mirrors: набор,
         alpha: raw?.alpha === undefined || raw?.alpha === null || raw?.alpha === '' || !Number.isFinite(alpha)
             ? null
             : Math.min(100, Math.max(0, Math.round(alpha))),
@@ -239,8 +243,9 @@ export function styleForNative(style, fill = false) {
  * Цвета вида сегодня, как их разрешает WidgetLook.разрешить.
  *
  * @returns {{day:number, chakra:number, accent:string, soft:string, gold:boolean,
- *            graphite:boolean, ink:boolean, mirror?:number}}
- *          ink — нужен ли тёмный текст, если вид залит цветом; mirror — номер картинки-зеркала
+ *            graphite:boolean, ink:boolean, mirror?:number, photo?:string, focus?:number[]}}
+ *          ink — нужен ли тёмный текст, если вид залит цветом; mirror — номер картинки в каталоге,
+ *          photo — её путь, focus — точка обрезки
  */
 export function resolveLook(style, date = new Date()) {
     const s = normalizeStyle(style);
@@ -248,13 +253,15 @@ export function resolveLook(style, date = new Date()) {
     const чакра = s.mode === 'chakra' ? s.chakra : day;
 
     // Зеркало: цвет — чакра картинки, надписи — как у неонового вида (WidgetLook.зеркальный)
-    if (s.mode === 'mirror' || s.mode === 'mirrorAuto') {
-        const номер = s.mode === 'mirror' ? s.mirror : day;
-        const { hex } = CHAKRAS[номер];
+    if (MIRROR_MODES.includes(s.mode)) {
+        const номер = mirrorNow(s, day, date.getHours() * 60 + date.getMinutes());
+        const картинка = WIDGET_PICTURES[номер];
+        const { hex } = CHAKRAS[картинка.chakra];
         return {
-            day, chakra: номер, accent: hex, soft: mix(hex, '#FFFFFF', 0.4),
+            day, chakra: картинка.chakra, accent: hex, soft: mix(hex, '#FFFFFF', 0.4),
             timeA: '#FFFFFF', timeB: mix(hex, '#FFFFFF', MIRROR_TIME_B),
-            gold: false, graphite: false, ink: false, mirror: номер
+            gold: false, graphite: false, ink: false,
+            mirror: номер, photo: picturePath(картинка), focus: картинка.focus
         };
     }
 
@@ -305,6 +312,17 @@ export function widgetTexts(translate) {
         modeChakra: слово('modeChakra'),
         modeMirrorAuto: слово('modeMirrorAuto'),
         modeMirror: слово('modeMirror'),
+        // Окно картинок на столе (выкладка 180)
+        modeMirrorRotate: слово('modeMirrorRotate'),
+        sheetPictures: слово('sheetPictures'),
+        sheetPicByDays: слово('sheetPicByDays'),
+        sheetPicAuto: слово('sheetPicAuto'),
+        sheetClose: слово('sheetClose'),
+        sheetPicHint: слово('sheetPicHint'),
+        sheetPicOne: слово('sheetPicOne'),
+        sheetPicEvery: слово('sheetPicEvery'),
+        unitH: слово('unitH'),
+        unitMin: слово('unitMin'),
         sheetMore: слово('sheetMore'),
         sheetDone: слово('sheetDone'),
         sheetTime: слово('sheetTime'),

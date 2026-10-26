@@ -11,7 +11,7 @@
    applyWidgetVars ставит их свойствами уже после вставки — это политика пропускает (так же
    сделаны шкалы аналитики в «Пространстве»). */
 
-import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, MIRRORS, resolveLook, widgetAliases, translateOwn, fillColor } from './widgets.js';
+import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, resolveLook, widgetAliases, translateOwn, fillColor } from './widgets.js';
 import { WIDGET_ICONS } from './widget-icons.js';
 
 const экран = текст => String(текст ?? '').replace(/[&<>"]/g, c => (
@@ -86,7 +86,9 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
         залит && look.ink && !золото && !look.graphite ? 'wg-ink' : '',
         // Красный, синий, сиреневый залитые: часы — сам цвет чакры (выкладки 175, 178)
         залит && !look.ink && !золото && !look.graphite ? 'wg-glass' : ''].filter(Boolean).join(' ');
-    const картинка = зеркало ? ` data-photo="${MIRRORS[look.mirror]}"` : '';
+    // Точка обрезки картинки (выкладка 180) — как WidgetPictures.Картинка.фокус на телефоне
+    const картинка = зеркало
+        ? ` data-photo="${look.photo}" data-focus="${look.focus.map(д => `${Math.round(д * 100)}%`).join(' ')}"` : '';
 
     /* Блестящие буквы — класс сайта .gold-cut везде в золоте: на тёмной пластине, на слитке и
        на золотых кнопках, как на телефоне и в таблице девяти моментов (выкладка 146). */
@@ -158,6 +160,7 @@ export function applyWidgetVars(узел) {
         виджет.style.setProperty('--wg-alpha', виджет.dataset.alpha);
         // Картинка зеркала — свойством, а не атрибутом style (политика безопасности страниц)
         if (виджет.dataset.photo) виджет.style.setProperty('--wg-photo', `url("${виджет.dataset.photo}")`);
+        if (виджет.dataset.focus) виджет.style.setProperty('--wg-photo-at', виджет.dataset.focus);
     }
     for (const день of узел.querySelectorAll('[data-color]')) день.style.color = день.dataset.color;
 }
