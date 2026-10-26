@@ -11,7 +11,7 @@
    applyWidgetVars ставит их свойствами уже после вставки — это политика пропускает (так же
    сделаны шкалы аналитики в «Пространстве»). */
 
-import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, resolveLook, widgetAliases, translateOwn, fillColor } from './widgets.js';
+import { CHAKRAS, DEFAULT_ALPHA, GOLD, GRAPHITE, MIRROR_DAY_LIGHT, mix, resolveLook, widgetAliases, translateOwn, fillColor } from './widgets.js';
 import { WIDGET_ICONS } from './widget-icons.js';
 
 const экран = текст => String(текст ?? '').replace(/[&<>"]/g, c => (
@@ -131,7 +131,9 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
     } else {
         const неделя = формат.key === 'week'
             ? `<div class="wg-week-strip">${слово.days.map((д, i) => {
-                const цвет = золото ? GOLD.text : CHAKRAS[i].hex;
+                /* На картинке (выкладка 184) — цвет чакры светлее (35% белого): чистый красный или синий
+                   тонет в пёстрой картинке; жирность и тёмный ореол — в css/widgets.css (.wg-mirror). */
+                const цвет = золото ? GOLD.text : зеркало ? mix(CHAKRAS[i].hex, '#FFFFFF', MIRROR_DAY_LIGHT) : CHAKRAS[i].hex;
                 return `<span class="${i === look.day ? 'today' : ''}" data-color="${цвет}">${экран(д)}</span>`;
             }).join('')}</div>` : '';
         const шапка = `<div class="wg-head">${заголовок}<span class="wg-head-end">

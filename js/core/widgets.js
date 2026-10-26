@@ -48,6 +48,8 @@ export const MIRROR_MODES = Object.freeze(['mirrorAuto', 'mirror', 'mirrorRotate
    чакры с 70% белого (ЗЕРКАЛО_СРОК_Б), Архитектора и надписи кнопок — белые. */
 export const MIRROR_GLASS = 'rgba(10, 14, 26, 0.55)';
 export const MIRROR_TIME_B = 0.70;
+/* Буквы недели на картинке (выкладка 184): цвет чакры с 35% белого (WidgetLook.ЗЕРКАЛО_ДЕНЬ_Б). */
+export const MIRROR_DAY_LIGHT = 0.35;
 
 /* Перелив --pult-rim из web/css/app.css: остановки в процентах. Нужен тесту и Java. */
 export const RIM_STOPS = Object.freeze([
