@@ -16,6 +16,7 @@ import { FORMATS, normalizeStyle } from './core/widgets.js';
 import { translate } from './core/i18n.js';
 import { widgetHtml, applyWidgetVars } from './core/widget-html.js';
 import { logEvent } from './core/web-journal.js';
+import { PICTURE_STEP_KEY, setPictureStep } from './core/widget-pictures.js';
 
 const ПЕРЕРИСОВКА_МС = 20 * 1000;
 
@@ -79,6 +80,8 @@ function нарисовать() {
         logEvent('D', { k: формат.key, m: показано });
     }
 
+    // Шаг картинок «при открытии» кладёт приложение (выкладка 181); его запись будит окно событием storage
+    setPictureStep(прочитать(PICTURE_STEP_KEY));
     корень.innerHTML = widgetHtml(формат, normalizeStyle(прочитать('kvant-desktop-widget-style') || {}),
         new Date(), сроки, перевод);
     applyWidgetVars(корень);

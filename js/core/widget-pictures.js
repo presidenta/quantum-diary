@@ -93,19 +93,46 @@ export function pictureSet(style) {
     return [...есть].sort((a, b) => a - b);
 }
 
+/* КАК ЧАСТО МЕНЯТЬ (выкладка 181). Владелец 26.10.2026: «30 мин, 1, 2, 3, 6, 12, 24 ч и „авто“, как сейчас —
+   сутки поровну; и „при открытии“: открыл приложение — картинка на глазах сменилась». Поле every в стиле:
+   'auto' — сутки поровну на выбранные, число — минуты, 'open' — следующая картинка при каждом открытии
+   приложения. Те же варианты — ВАРИАНТЫ_СМЕНЫ в WidgetSheetActivity, чтение — WidgetPictures.каждые. */
+export const EVERY_OPTIONS = Object.freeze(['auto', 30, 60, 120, 180, 360, 720, 1440, 'open']);
+
+/** Интервал из стиля: один из EVERY_OPTIONS; чужое — 'auto'. */
+export function normalizeEvery(значение) {
+    const число = Number(значение);
+    if (значение !== '' && значение !== null && Number.isFinite(число) && EVERY_OPTIONS.includes(число)) return число;
+    return значение === 'open' ? 'open' : 'auto';
+}
+
+/* ШАГ «ПРИ ОТКРЫТИИ»: сколько раз открывали приложение. На телефоне его считает приложение
+   (WidgetStore.шагКартинок, приходит в окно через widgetList), на компьютере — страница (widgets-ui.js,
+   хранится в браузере, окно виджета читает тот же). Здесь — только последнее известное значение. */
+let шаг = 0;
+export const PICTURE_STEP_KEY = 'kvant-picture-step';
+export const pictureStep = () => шаг;
+export function setPictureStep(значение) {
+    const число = Math.trunc(Number(значение));
+    шаг = Number.isFinite(число) && число > 0 ? число : 0;
+}
+
 /**
  * Какая картинка на виджете сейчас (номер в каталоге): «По дням» — картинка дня недели, одна — выбранная,
- * «Авто» — из набора по минуте суток. Тот же расчёт — WidgetPictures.сейчас на телефоне.
- *
- * @param day 0 — понедельник … 6 — воскресенье
- * @param minutes минута суток 0–1439
+ * «Авто» — из набора: сутки поровну, или по кругу каждые N минут местного времени (через полночь круг
+ * не начинается заново), или следующая при каждом открытии. Тот же расчёт — WidgetPictures.сейчас.
  */
-export function mirrorNow(style, day, minutes) {
+export function mirrorNow(style, date = new Date(), step = pictureStep()) {
+    const day = (date.getDay() + 6) % 7;
     if (style?.mode === 'mirrorAuto') return dayPicture(day);
     if (style?.mode === 'mirrorRotate') {
         const набор = pictureSet(style);
-        const м = Math.min(DAY_MINUTES - 1, Math.max(0, Math.trunc(minutes)));
-        return набор[Math.floor(м * набор.length / DAY_MINUTES)];
+        const каждые = normalizeEvery(style.every);
+        if (каждые === 'open') return набор[step % набор.length];
+        const местные = Math.floor(date.getTime() / 60000) - date.getTimezoneOffset();
+        if (каждые !== 'auto') return набор[Math.floor(местные / каждые) % набор.length];
+        const минута = ((местные % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
+        return набор[Math.floor(минута * набор.length / DAY_MINUTES)];
     }
     const одна = pictureIndex(style?.mirror);
     return одна >= 0 ? одна : dayPicture(day);

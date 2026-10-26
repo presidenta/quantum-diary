@@ -46,6 +46,12 @@
 .wg-pics[hidden] { display: none; }
 .wg-pic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); justify-items: center; gap: 8px; }
 .wg-pics-close { justify-self: center; }
+/* «Менять» при «Авто» (выкладка 181): кнопки-интервалы в строку с переносом */
+.wg-pic-every { display: grid; gap: 6px; }
+.wg-pic-every[hidden] { display: none; }
+.wg-every-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.wg-every { padding: 4px 10px; font-size: 13px; }
+.wg-every[aria-pressed="true"] { border-color: var(--gold, #E3C77C); box-shadow: 0 0 0 1px var(--gold, #E3C77C); }
 
 /* ---- галерея ---------------------------------------------------------------- */
 .wg-gallery { display: grid; gap: 16px; }

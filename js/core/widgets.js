@@ -27,7 +27,7 @@
    вида 88, у залитого 100. */
 
 import { LANGUAGES, dictionary } from './i18n.js';
-import { WIDGET_PICTURES, picturePath, pictureId, pictureSet, mirrorNow, dayPicture } from './widget-pictures.js';
+import { WIDGET_PICTURES, picturePath, pictureId, pictureSet, mirrorNow, dayPicture, normalizeEvery } from './widget-pictures.js';
 
 /* Ключи видов — те же, что в WidgetFormat.java. Менять только вместе с ним. */
 export const FORMATS = Object.freeze([
@@ -223,6 +223,8 @@ export function normalizeStyle(raw = {}) {
         chakra: Number.isFinite(чакра) ? Math.min(6, Math.max(0, чакра)) : 0,
         mirror: зеркало,
         mirrors: набор,
+        // Как часто менять картинки при «Авто» (выкладка 181)
+        every: normalizeEvery(raw?.every),
         alpha: raw?.alpha === undefined || raw?.alpha === null || raw?.alpha === '' || !Number.isFinite(alpha)
             ? null
             : Math.min(100, Math.max(0, Math.round(alpha))),
@@ -254,7 +256,7 @@ export function resolveLook(style, date = new Date()) {
 
     // Зеркало: цвет — чакра картинки, надписи — как у неонового вида (WidgetLook.зеркальный)
     if (MIRROR_MODES.includes(s.mode)) {
-        const номер = mirrorNow(s, day, date.getHours() * 60 + date.getMinutes());
+        const номер = mirrorNow(s, date);
         const картинка = WIDGET_PICTURES[номер];
         const { hex } = CHAKRAS[картинка.chakra];
         return {
@@ -321,6 +323,12 @@ export function widgetTexts(translate) {
         sheetPicHint: слово('sheetPicHint'),
         sheetPicOne: слово('sheetPicOne'),
         sheetPicEvery: слово('sheetPicEvery'),
+        // Как часто менять (выкладка 181)
+        sheetPicEveryFixed: слово('sheetPicEveryFixed'),
+        sheetPicOnOpen: слово('sheetPicOnOpen'),
+        sheetChange: слово('sheetChange'),
+        sheetEveryAuto: слово('sheetEveryAuto'),
+        sheetOnOpen: слово('sheetOnOpen'),
         unitH: слово('unitH'),
         unitMin: слово('unitMin'),
         sheetMore: слово('sheetMore'),

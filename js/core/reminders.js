@@ -914,9 +914,10 @@ export async function offerWidget(format = 'hud') {
 /* Какие виджеты стоят на рабочем столе и как оформлены (раздел 9.21).
 
    @returns {Promise<{widgets: {id:number, format:string, style:object}[],
-             defaults: object, canPin: boolean}>} без плагина — пустой ответ */
+             defaults: object, canPin: boolean, pictureStep: number}>} без плагина — пустой ответ;
+             pictureStep — шаг картинок «при открытии» на телефоне (выкладка 181) */
 export async function widgetList() {
-    const пусто = { widgets: [], defaults: {}, canPin: false };
+    const пусто = { widgets: [], defaults: {}, canPin: false, pictureStep: 0 };
     const QA = alarmPlugin();
     if (!QA || typeof QA.widgetList !== 'function') return пусто;
 
@@ -925,7 +926,8 @@ export async function widgetList() {
         return {
             widgets: Array.isArray(ответ && ответ.widgets) ? ответ.widgets : [],
             defaults: (ответ && ответ.defaults) || {},
-            canPin: !!(ответ && ответ.canPin)
+            canPin: !!(ответ && ответ.canPin),
+            pictureStep: Number(ответ && ответ.pictureStep) || 0
         };
     } catch (err) {
         console.error('[reminders] список виджетов не прочитался:', err);

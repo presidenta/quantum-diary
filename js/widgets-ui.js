@@ -24,7 +24,10 @@ import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
     FORMATS, CHAKRAS, DEFAULT_ALPHA, MIRROR_MODES, normalizeStyle, resolveLook, widgetAliases, translateOwn
 } from './core/widgets.js';
-import { WIDGET_PICTURES, picturePath, pictureSet, minutesEach, dayPicture } from './core/widget-pictures.js';
+import {
+    WIDGET_PICTURES, EVERY_OPTIONS, PICTURE_STEP_KEY, picturePath, pictureSet, minutesEach, dayPicture, normalizeEvery,
+    setPictureStep
+} from './core/widget-pictures.js';
 import { widgetHtml, widgetWords, applyWidgetVars } from './core/widget-html.js';
 
 const $ = id => document.getElementById(id);
@@ -139,8 +142,11 @@ function нарисоватьФорму() {
 
     const название = t(`widgets.chakra.${look.chakra}`);
     const набор = pictureSet(стиль);
+    const каждые = normalizeEvery(стиль.every);
     $('widgetsModeNote').textContent = стиль.mode === 'mirrorRotate'
         ? (набор.length < 2 ? t('widgets.modeNote.mirrorRotateOne')
+            : каждые === 'open' ? t('widgets.modeNote.mirrorRotateOpen', { n: набор.length })
+            : каждые !== 'auto' ? t('widgets.modeNote.mirrorRotateFixed', { n: набор.length, time: длительность(каждые) })
             : t('widgets.modeNote.mirrorRotate', { n: набор.length, time: длительность(minutesEach(набор.length)) }))
         : t(`widgets.modeNote.${стиль.mode}`, {
             day: t('widgets.days').split(',')[look.day].trim(),
@@ -185,6 +191,15 @@ function нарисоватьКартинки(стиль, look) {
     for (const кнопка of $('widgetsPicModes').querySelectorAll('button')) {
         кнопка.setAttribute('aria-pressed', String(кнопка.dataset.pic === 'auto' ? поКругу : режим === 'mirrorAuto'));
     }
+
+    // «Менять» — только при «Авто» (выкладка 181): те же варианты, что на столе
+    const каждые = normalizeEvery(стиль.every);
+    $('widgetsPicEvery').hidden = !картинкиОткрыты || !поКругу;
+    $('widgetsPicEvery').innerHTML = !картинкиОткрыты || !поКругу ? '' :
+        `<span class="muted">${экран(t('widgets.pics.every'))}</span>
+        <div class="wg-every-row">${EVERY_OPTIONS.map(вариант => `<button type="button" class="btn wg-every" data-every="${вариант}"
+            aria-pressed="${вариант === каждые}">${экран(вариант === 'auto' ? t('widgets.pics.everyAuto')
+                : вариант === 'open' ? t('widgets.pics.onOpen') : длительность(вариант))}</button>`).join('')}</div>`;
 
     // Сетка строится, только пока окно открыто: закрытое не тянет ни одной картинки
     const отмечены = поКругу ? new Set(набор) : new Set(режим === 'mirror' ? [look.mirror] : []);
@@ -295,6 +310,8 @@ export async function openWidgets(номер = 0) {
 
     const список = await widgetList();
     стоящие = список.widgets;
+    // На телефоне — шаг картинок «при открытии» из приложения: предпросмотр показывает то же, что стол
+    if (isNative()) setPictureStep(список.pictureStep);
     стили = new Map([[0, normalizeStyle(список.defaults)]]);
     for (const в of стоящие) стили.set(в.id, normalizeStyle(в.style));
     цель = стоящие.some(в => в.id === номер) ? номер : 0;
@@ -315,7 +332,26 @@ export async function openWidgets(номер = 0) {
     if (!окно.open) окно.showModal();
 }
 
+/* ОТКРЫТИЕ ПРИЛОЖЕНИЯ НА КОМПЬЮТЕРЕ И В БРАУЗЕРЕ (выкладка 181): каждый показ страницы — шаг картинок
+   «при открытии». Шаг лежит в браузере; окно виджета на компьютере читает его же и перерисовывается сразу
+   (событие storage). На телефоне шаг считает само приложение (WidgetStore), здесь его только читают. */
+function шагПриОткрытии() {
+    if (isNative()) return;
+    try {
+        const шаг = (Number(localStorage.getItem(PICTURE_STEP_KEY)) || 0) + 1;
+        localStorage.setItem(PICTURE_STEP_KEY, String(шаг));
+        setPictureStep(шаг);
+    } catch {
+        // Хранилище закрыто (приватное окно) — картинка просто не сменится
+    }
+}
+
 export function initWidgets() {
+    шагПриОткрытии();
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') шагПриОткрытии();
+    });
+
     $('widgetsOpen').addEventListener('click', () => openWidgets(0));
     for (const id of ['widgetsBack', 'widgetsDone']) {
         $(id).addEventListener('click', () => $('widgetsDialog').close());
@@ -350,6 +386,10 @@ export function initWidgets() {
         if (!кнопка) return;
         if (кнопка.dataset.pic === 'auto') переключитьАвто();
         else изменить({ mode: 'mirrorAuto' });
+    });
+    $('widgetsPicEvery').addEventListener('click', событие => {
+        const кнопка = событие.target.closest('button[data-every]');
+        if (кнопка) изменить({ every: normalizeEvery(кнопка.dataset.every) });
     });
     $('widgetsPicGrid').addEventListener('click', событие => {
         const картинка = событие.target.closest('button[data-pic-id]');
