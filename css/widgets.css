@@ -21,7 +21,9 @@
    ========================================================================== */
 
 .wg-block { display: grid; gap: 8px; }
-.wg-modes button { flex: 1; padding-inline: 4px; font-size: 13px; }
+.wg-modes { flex-wrap: wrap; }
+/* Шесть режимов (выкладка 179) — по три в строку */
+.wg-modes button { flex: 1 1 30%; padding-inline: 4px; font-size: 13px; }
 
 /* ---- выбор цвета чакры ---------------------------------------------------- */
 .wg-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -30,6 +32,8 @@
   background: var(--sw); border: 2px solid rgba(255, 255, 255, .22);
 }
 .wg-swatch[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px var(--sw); }
+/* Кружки-зеркала (выкладка 179): картинка в круге, кромка цвета её чакры */
+.wg-swatch-mirror { background: var(--sw-img) center / cover no-repeat, var(--sw); border-color: var(--sw); }
 
 /* ---- галерея ---------------------------------------------------------------- */
 .wg-gallery { display: grid; gap: 16px; }
@@ -260,3 +264,23 @@
 .wg-gold .wg-sub { color: var(--gold, #E3C77C); }
 .wg-row { border-left: 3px solid var(--wg-bar); padding: 6px 8px; }
 .wg-row .wg-label { font-size: 8px; }
+
+/* ЗЕРКАЛО (выкладка 179): основа — картинка владельца, сверху и снизу мягкое затемнение, кромка цвета
+   чакры; карточки — тёмное стекло 62% (как тонировка на телефоне), надписи — как у неонового вида. */
+.wg-mirror {
+  --wg-card: rgba(10, 14, 26, .55); --wg-card-line: rgba(255, 255, 255, .12);
+  /* Кнопки «прорезаны» в картинке: лёгкое стекло, кромка цвета чакры, надпись белая (кнопкаЗеркало) */
+  --wg-btn-fill: rgba(10, 14, 26, .4); --wg-btn-line: var(--wg-accent); --wg-btn-text: #fff;
+  --wg-small-fill: rgba(10, 14, 26, .3); --wg-small-line: var(--wg-accent); --wg-small-text: #fff;
+  --wg-valueA: #fff; --wg-valueB: var(--wg-time-b);
+}
+.wg-mirror .wg-plate {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .5), transparent 32%, transparent 60%, rgba(0, 0, 0, .55)),
+    var(--wg-photo) center / cover no-repeat, #0A0E1A;
+}
+.wg-mirror .wg-rim {
+  border: 2.5px solid var(--wg-accent);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4), 0 0 10px color-mix(in srgb, var(--wg-accent) 35%, transparent);
+}
+.wg-mirror .wg-chip { background: rgba(10, 14, 26, .55); }

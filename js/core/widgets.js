@@ -13,11 +13,13 @@
      fillWide  — залитый горизонтальный;
      fillTall  — залитый вертикальный.
 
-   ЦВЕТ. Четыре режима:
-     auto      — семь цветов чакр по дням недели, смена в полночь;
-     chakra    — один цвет чакры на все дни (какой — поле chakra);
-     gold      — золото сайта;
-     graphite  — спокойный графит #1E2022 без неона.
+   ЦВЕТ. Шесть режимов:
+     auto       — семь цветов чакр по дням недели, смена в полночь;
+     chakra     — один цвет чакры на все дни (какой — поле chakra);
+     gold       — золото сайта;
+     graphite   — спокойный графит #1E2022 без неона;
+     mirrorAuto — «Зеркало по дням»: основа — картинка владельца, своя на каждый день (выкладка 179);
+     mirror     — «Одно зеркало» на все дни (какое — поле mirror).
 
    Прозрачность подложки — от 0 (стекло) до 100 (сплошная). Не задана — у неонового
    вида 88, у залитого 100. */
@@ -34,7 +36,18 @@ export const FORMATS = Object.freeze([
     Object.freeze({ key: 'fillTall', fill: true, tall: true })
 ]);
 
-export const MODES = Object.freeze(['auto', 'chakra', 'gold', 'graphite']);
+export const MODES = Object.freeze(['auto', 'chakra', 'gold', 'graphite', 'mirrorAuto', 'mirror']);
+
+/* ЗЕРКАЛА (выкладка 179): семь картинок владельца, по одной на цвет чакры, понедельник первым — красный
+   закат над морем, оранжевые пальмы, жёлтое небо, зелёные джунгли, голубое море, синие горы ночью,
+   сиреневое озеро. Те же файлы лежат в приложении (assets/quantum_mirror, WidgetPaint.ЗЕРКАЛО_ФАЙЛ);
+   замок сверяет их байт в байт. Путь — от корня сайта: так его видят окно и widget.html. */
+export const MIRRORS = Object.freeze(Array.from({ length: 7 }, (_, i) => `img/widget-mirror/mirror-${i}.jpg`));
+
+/* Стекло карточек на зеркале: тёмно-синее, 55% (WidgetLook.ЗЕРКАЛО_СТЕКЛО). Срок Наблюдателя — цвет
+   чакры с 70% белого (ЗЕРКАЛО_СРОК_Б), Архитектора и надписи кнопок — белые. */
+export const MIRROR_GLASS = 'rgba(10, 14, 26, 0.55)';
+export const MIRROR_TIME_B = 0.70;
 
 /* Перелив --pult-rim из web/css/app.css: остановки в процентах. Нужен тесту и Java. */
 export const RIM_STOPS = Object.freeze([
@@ -160,6 +173,13 @@ export function buttonColors(look, fill) {
     }
 
     const основа = look.graphite ? GRAPHITE.base : look.accent;
+    // Зеркало — стекло поверх картинки, надпись белая; для проверки контраста — самое тёмное место стекла
+    if (look.mirror !== undefined) {
+        return {
+            main: { fill: NEON_BASE, text: '#FFFFFF' },
+            small: { fill: NEON_BASE, text: '#FFFFFF' }
+        };
+    }
     if (!fill) {
         const подложка = look.graphite ? GRAPHITE.base : NEON_BASE;
         return {
@@ -192,11 +212,13 @@ export function normalizeStyle(raw = {}) {
     const mode = MODES.includes(raw?.mode) ? raw.mode : 'auto';
 
     const чакра = Math.trunc(Number(raw?.chakra));
+    const зеркало = Math.trunc(Number(raw?.mirror));
     const alpha = Number(raw?.alpha);
 
     return {
         mode,
         chakra: Number.isFinite(чакра) ? Math.min(6, Math.max(0, чакра)) : 0,
+        mirror: Number.isFinite(зеркало) ? Math.min(MIRRORS.length - 1, Math.max(0, зеркало)) : 0,
         alpha: raw?.alpha === undefined || raw?.alpha === null || raw?.alpha === '' || !Number.isFinite(alpha)
             ? null
             : Math.min(100, Math.max(0, Math.round(alpha))),
@@ -217,13 +239,24 @@ export function styleForNative(style, fill = false) {
  * Цвета вида сегодня, как их разрешает WidgetLook.разрешить.
  *
  * @returns {{day:number, chakra:number, accent:string, soft:string, gold:boolean,
- *            graphite:boolean, ink:boolean}}
- *          ink — нужен ли тёмный текст, если вид залит цветом
+ *            graphite:boolean, ink:boolean, mirror?:number}}
+ *          ink — нужен ли тёмный текст, если вид залит цветом; mirror — номер картинки-зеркала
  */
 export function resolveLook(style, date = new Date()) {
     const s = normalizeStyle(style);
     const day = dayIndex(date);
     const чакра = s.mode === 'chakra' ? s.chakra : day;
+
+    // Зеркало: цвет — чакра картинки, надписи — как у неонового вида (WidgetLook.зеркальный)
+    if (s.mode === 'mirror' || s.mode === 'mirrorAuto') {
+        const номер = s.mode === 'mirror' ? s.mirror : day;
+        const { hex } = CHAKRAS[номер];
+        return {
+            day, chakra: номер, accent: hex, soft: mix(hex, '#FFFFFF', 0.4),
+            timeA: '#FFFFFF', timeB: mix(hex, '#FFFFFF', MIRROR_TIME_B),
+            gold: false, graphite: false, ink: false, mirror: номер
+        };
+    }
 
     if (s.mode === 'gold') {
         return { day, chakra: чакра, accent: GOLD.icon, soft: GOLD.text, timeA: GOLD.icon, timeB: GOLD.text,
@@ -270,6 +303,8 @@ export function widgetTexts(translate) {
         modeGold: слово('modeGold'),
         modeGraphite: слово('modeGraphite'),
         modeChakra: слово('modeChakra'),
+        modeMirrorAuto: слово('modeMirrorAuto'),
+        modeMirror: слово('modeMirror'),
         sheetMore: слово('sheetMore'),
         sheetDone: слово('sheetDone'),
         sheetTime: слово('sheetTime'),

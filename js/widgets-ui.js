@@ -22,7 +22,7 @@ import { t } from './store.js';
 import { isNative, widgetList, widgetSave, offerWidget, offerTile } from './core/reminders.js';
 import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
-    FORMATS, CHAKRAS, DEFAULT_ALPHA, normalizeStyle, resolveLook, widgetAliases, translateOwn
+    FORMATS, CHAKRAS, MIRRORS, DEFAULT_ALPHA, normalizeStyle, resolveLook, widgetAliases, translateOwn
 } from './core/widgets.js';
 import { widgetHtml, widgetWords, applyWidgetVars } from './core/widget-html.js';
 
@@ -122,12 +122,21 @@ function нарисоватьФорму() {
         кнопка.setAttribute('aria-pressed', String(кнопка.dataset.mode === стиль.mode));
     }
 
-    // Цвета чакр — только когда выбран «цвет чакры»
+    // Кружки — цвета чакр при «цвете чакры», картинки-зеркала при «одном зеркале» (выкладка 179)
     const круги = $('widgetsSwatches');
-    круги.hidden = стиль.mode !== 'chakra';
-    круги.innerHTML = CHAKRAS.map((ч, i) =>
-        `<button type="button" class="wg-swatch" data-chakra="${i}" style="--sw:${ч.hex}"
-            aria-label="${экран(t(`widgets.chakra.${i}`))}" aria-pressed="${i === стиль.chakra}"></button>`).join('');
+    круги.hidden = стиль.mode !== 'chakra' && стиль.mode !== 'mirror';
+    круги.innerHTML = стиль.mode === 'mirror'
+        ? MIRRORS.map((картинка, i) =>
+            `<button type="button" class="wg-swatch wg-swatch-mirror" data-mirror="${i}" data-sw="${CHAKRAS[i].hex}"
+                data-img="${картинка}" aria-label="${экран(t(`widgets.chakra.${i}`))}" aria-pressed="${i === стиль.mirror}"></button>`).join('')
+        : CHAKRAS.map((ч, i) =>
+            `<button type="button" class="wg-swatch" data-chakra="${i}" data-sw="${ч.hex}"
+                aria-label="${экран(t(`widgets.chakra.${i}`))}" aria-pressed="${i === стиль.chakra}"></button>`).join('');
+    // Цвета кружков — свойствами: атрибут style, вставленный разметкой, политика страниц отбрасывает
+    for (const круг of круги.querySelectorAll('[data-sw]')) {
+        круг.style.setProperty('--sw', круг.dataset.sw);
+        if (круг.dataset.img) круг.style.setProperty('--sw-img', `url("${круг.dataset.img}")`);
+    }
 
     const название = t(`widgets.chakra.${look.chakra}`);
     $('widgetsModeNote').textContent = t(`widgets.modeNote.${стиль.mode}`, {
@@ -266,6 +275,8 @@ export function initWidgets() {
     $('widgetsSwatches').addEventListener('click', событие => {
         const круг = событие.target.closest('button[data-chakra]');
         if (круг) изменить({ chakra: Number(круг.dataset.chakra) });
+        const зеркало = событие.target.closest('button[data-mirror]');
+        if (зеркало) изменить({ mirror: Number(зеркало.dataset.mirror) });
     });
 
     $('widgetsAlpha').addEventListener('input', () => {
