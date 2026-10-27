@@ -1,0 +1,215 @@
+/* Свиток «Мудрость дня» — весь внешний вид модуля.
+
+   Изоляция: каждое правило начинается с .ds или #dailyScroll, чужих
+   классов файл не трогает. Цвета модуля — свои переменные --ds-*; золото
+   ссылается на токены Пульта (--gold, --gold-3d), значения после запятой —
+   запасные, если модуль открыт вне Ежедневника.
+
+   Длительности переходов парные с STEPS в index.js:
+   развязать 450 · повернуть 650 · вытянуть 500 · развернуть 850. */
+
+#dailyScroll { grid-column: 1 / -1; margin-top: 10px; }
+#dailyScroll:empty { display: none; }
+
+.ds {
+  --ds-paper: #E8D6A6;          /* пергамент, середина */
+  --ds-paper-lit: #F3E6C2;      /* пергамент в свету */
+  --ds-paper-dark: #B99A5C;     /* загар по краям */
+  --ds-ink: #3A2810;            /* чернила */
+  --ds-ink-soft: #6B5532;
+  --ds-gold: var(--gold, #E3C77C);
+  --ds-gold-3d: var(--gold-3d, linear-gradient(145deg,#F9D976 0%,#EAA82C 30%,#C18825 60%,#7A4B11 85%,#B88428 100%));
+  --ds-rod: 15px;               /* толщина одного валика */
+  position: relative;
+}
+
+/* ---- Сцена ---------------------------------------------------------------
+   Пока свиток завязан, сцена — кнопка: нажатие в любое её место
+   развязывает ленточку. */
+.ds-stage {
+  display: block;
+  border-radius: var(--edge, 12px);
+  outline-offset: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds:not(.ds-untie) .ds-stage { cursor: pointer; }
+
+/* ---- Свиток --------------------------------------------------------------
+   Два валика и бумага между ними. Завязанный свиток — оба валика вплотную,
+   бумаги нет: выглядит как один толстый свёрнутый рулон, стоящий наискосок. */
+.ds-scroll {
+  position: relative;
+  width: 150px;
+  margin: 62px auto 58px;
+  transform: rotate(-58deg);
+  transition:
+    transform .65s cubic-bezier(.45,.05,.25,1),
+    margin .65s cubic-bezier(.45,.05,.25,1),
+    width .5s cubic-bezier(.45,.05,.25,1);
+}
+.ds:not(.ds-untie) .ds-stage:hover .ds-scroll { transform: rotate(-54deg); }
+.ds.ds-turn .ds-scroll { transform: rotate(0deg); margin: 6px auto 4px; }
+.ds.ds-wide .ds-scroll { width: calc(100% - 16px); max-width: 560px; }
+
+/* Валик: свёрнутый край пергамента, круглый на свету, с золотыми
+   наконечниками по краям. */
+.ds-rod {
+  position: relative; display: block; z-index: 2;
+  height: var(--ds-rod);
+  border-radius: calc(var(--ds-rod) / 2);
+  background: linear-gradient(180deg,
+    var(--ds-paper-dark) 0%, var(--ds-paper-lit) 30%, var(--ds-paper) 55%, var(--ds-paper-dark) 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,.45);
+}
+.ds-rod::before, .ds-rod::after {
+  content: ''; position: absolute; top: -2px;
+  width: 9px; height: calc(var(--ds-rod) + 4px);
+  border-radius: 4px;
+  background: var(--ds-gold-3d);
+  box-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+.ds-rod::before { left: -5px; }
+.ds-rod::after { right: -5px; }
+
+/* Бумага. Матовая: тёплая середина, края темнее, лёгкое волокно. */
+.ds-paper {
+  position: relative; z-index: 1;
+  height: 0; overflow: hidden;
+  margin: -3px 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(120,90,40,.035) 0 2px, transparent 2px 7px),
+    radial-gradient(ellipse at 50% 40%, var(--ds-paper-lit) 0%, var(--ds-paper) 60%, var(--ds-paper-dark) 130%);
+  box-shadow: inset 0 0 18px rgba(110,78,30,.35);
+  transition: height .85s cubic-bezier(.3,.6,.25,1);
+}
+.ds.ds-open .ds-paper { height: auto; }
+
+.ds-paper-in {
+  padding: 20px 22px 16px;
+  text-align: center;
+  color: var(--ds-ink);
+  opacity: 0;
+  transition: opacity .5s ease .35s;
+}
+.ds.ds-unroll .ds-paper-in { opacity: 1; }
+
+.ds-heading {
+  margin: 0 0 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--ds-ink-soft);
+}
+.ds-text {
+  margin: 0;
+  font-family: var(--serif, Georgia, serif);
+  font-size: 19px; line-height: 1.4; font-weight: 600;
+  color: var(--ds-ink);
+}
+.ds-note {
+  margin: 14px auto 0; max-width: 46ch;
+  padding-top: 10px;
+  border-top: 1px solid rgba(90,64,24,.25);
+  font-size: 10.5px; line-height: 1.45; font-style: italic;
+  color: var(--ds-ink-soft);
+}
+
+/* ---- Лента с бантиком ----------------------------------------------------
+   Перевязывает рулон поперёк посередине: полоса ленты, бантик из двух
+   петель с узелком и два хвоста с вырезом «ласточкин хвост». Развязываясь,
+   петли расходятся, хвосты опадают, лента тает. */
+.ds-ribbon {
+  position: absolute; z-index: 3;
+  left: 50%; top: 50%;
+  width: 14px; height: calc(var(--ds-rod) * 2 + 8px);
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: linear-gradient(90deg, #7A4B11 0%, #EAA82C 30%, #FFF2B2 50%, #EAA82C 70%, #7A4B11 100%);
+  box-shadow: 0 1px 3px rgba(0,0,0,.55);
+  transition: opacity .45s ease, transform .45s ease;
+}
+.ds-ribbon::before, .ds-ribbon::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 8px; height: 30px;
+  background: linear-gradient(90deg, #8C5C14, #F6C147 50%, #8C5C14);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  transform-origin: 50% 0;
+  transition: transform .45s ease;
+}
+.ds-ribbon::before { transform: translateX(-50%) rotate(38deg); }
+.ds-ribbon::after  { transform: translateX(-50%) rotate(-38deg); }
+
+.ds-bow {
+  position: absolute; left: 50%; top: 50%;
+  width: 0; height: 0;
+}
+/* Петли: залитые золотом капли, узким концом к узелку */
+.ds-bow::before, .ds-bow::after {
+  content: ''; position: absolute; top: 0;
+  width: 24px; height: 17px;
+  background: radial-gradient(ellipse at 45% 30%, #FFF2B2 0%, #F6C147 28%, #C18825 68%, #7A4B11 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(122,75,17,.6), inset 0 -3px 4px rgba(90,52,8,.45), 0 1px 3px rgba(0,0,0,.55);
+  transition: transform .45s ease, opacity .45s ease;
+}
+.ds-bow::before { right: 3px; border-radius: 80% 25% 25% 80% / 60% 40% 40% 60%; transform: translateY(-50%) rotate(-12deg); transform-origin: 100% 50%; }
+.ds-bow::after  { left: 3px;  border-radius: 25% 80% 80% 25% / 40% 60% 60% 40%; transform: translateY(-50%) rotate(12deg);  transform-origin: 0 50%; }
+.ds-knot {
+  position: absolute; z-index: 1; left: 0; top: 0;
+  width: 11px; height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 4px;
+  background: linear-gradient(145deg, #F9D976 0%, #EAA82C 40%, #A8721A 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,242,178,.7);
+  transition: opacity .3s ease;
+}
+
+.ds.ds-untie .ds-ribbon { opacity: 0; transform: translate(-50%, -50%) translateY(16px) scaleY(.5); }
+.ds.ds-untie .ds-ribbon::before { transform: translateX(-50%) rotate(80deg); }
+.ds.ds-untie .ds-ribbon::after  { transform: translateX(-50%) rotate(-80deg); }
+.ds.ds-untie .ds-bow::before { transform: translate(-12px, -50%) rotate(-75deg); opacity: 0; }
+.ds.ds-untie .ds-bow::after  { transform: translate(12px, -50%) rotate(75deg); opacity: 0; }
+.ds.ds-untie .ds-knot { opacity: 0; }
+
+/* ---- Плашка «Мудрость дня» -----------------------------------------------
+   Под завязанным свитком, тем же прорезанным золотом, что подпись
+   «Аркан дня». Свиток повернулся — плашка уходит, её место занимает
+   заголовок на самой бумаге. */
+.ds-plaque {
+  display: table;
+  margin: 0 auto 4px;
+  padding: 6px 16px;
+  border: 1px solid var(--gold-line, #A8721A);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0B0A0D 0%, #060608 100%);
+  font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--ds-gold);
+  transition: opacity .35s ease;
+}
+.ds.ds-untie .ds-plaque { opacity: 0; }
+.ds.ds-turn .ds-plaque { display: none; }
+
+/* ---- Свернуть ------------------------------------------------------------ */
+.ds-fold {
+  display: block;
+  margin: 6px auto 0;
+  padding: 6px 14px;
+  border: 0; background: none;
+  font: inherit; font-size: 12px; letter-spacing: .3px;
+  color: var(--ds-gold);
+  opacity: .75;
+  cursor: pointer;
+}
+.ds-fold:hover { opacity: 1; }
+/* Видна только у развёрнутого до конца свитка: во время поворота её нет */
+.ds:not(.ds-open) .ds-fold { display: none; }
+
+@media (max-width: 560px) {
+  .ds-text { font-size: 17px; }
+  .ds-paper-in { padding: 18px 16px 14px; }
+}
+
+/* Кому движение мешает — свиток открывается сразу, без поворота и размотки. */
+@media (prefers-reduced-motion: reduce) {
+  .ds-scroll, .ds-paper, .ds-paper-in, .ds-ribbon, .ds-ribbon::before, .ds-ribbon::after,
+  .ds-bow::before, .ds-bow::after, .ds-knot, .ds-plaque { transition: none; }
+}

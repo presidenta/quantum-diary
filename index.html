@@ -55,6 +55,8 @@
 <!-- Вторая вкладка «Кванта». Идёт последней: берёт имена из app.css,
      своих цветов не заводит, все правила живут внутри .qm-root -->
 <link rel="stylesheet" href="css/space.css">
+<!-- Свиток «Мудрость дня»: весь модуль в js/views/scroll/, стили там же -->
+<link rel="stylesheet" href="js/views/scroll/scroll.css">
 <!-- Окно «Установить виджет»: предпросмотр берёт золото и буквы из app.css -->
 <link rel="stylesheet" href="css/widgets.css">
 <script type="module" src="js/ios-home.js"></script>
@@ -256,6 +258,11 @@
              то, с чем человек в этот раздел входит. Наполняет
              js/views/quantum.js. -->
         <div id="quantumArcana" class="q-arcana-block"></div>
+
+        <!-- Свиток «Мудрость дня» — сразу под арканом. Отдельный модуль:
+             js/views/scroll/ (см. README.md там). Место на экране
+             меняется переносом этой строки. -->
+        <div id="dailyScroll"></div>
       </div>
 
       <!-- Часть 1: моменты дня. Разметка и логика не менялись.

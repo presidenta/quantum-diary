@@ -21,6 +21,8 @@ import { observerClock, countdownText } from './core/observer-clock.js';
 import { CONFIG as SPACE_CONFIG } from './views/space/config.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
+// Свиток «Мудрость дня» под арканом: весь модуль в views/scroll/
+import { initScroll, syncScroll } from './views/scroll/index.js';
 import { initWidgets, openWidgets } from './widgets-ui.js';
 import { initSupport } from './support.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
@@ -156,6 +158,7 @@ function render() {
   if (state.view === 'wheel') renderWheelView();
   if (state.view === 'day') renderDay();
   if (state.view === 'quantum') renderQuantum();
+  syncScroll();                // свиток «Мудрость дня»: рисуется только на «Кванте»
   syncSpace();                 // вторая вкладка «Кванта»: гаснет вне раздела
   if (state.view === 'money') renderMoney();
   renderDrawerSpheres();
@@ -1210,6 +1213,7 @@ async function boot() {
   initDay();
   initQuantum();
   initSpace();
+  initScroll();
   initSlit();
   initWidgets();
   initSupport();
