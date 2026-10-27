@@ -5,6 +5,7 @@
    в Ежедневнике не трогает. */
 
 import { CONFIG } from './config.js';
+import { statKey, chronicleRows } from './chronicle-stats.js';
 import { NotificationManager } from './notifications.js';
 import { QuantumCorridorScene } from './scene.js';
 import {
@@ -1839,23 +1840,15 @@ export class QuantumApp {
         });
     }
 
-    /* Ключ записи для сводки.
-
-       Считаем по номеру слота: дверь — это место в списке, а не строка с
-       названием. Переписал намерение в первой двери — счёт продолжился,
-       просто под новым названием, а не завёлся заново.
-
-       Записи, сделанные раньше, разбираем по старым приметам: сначала id
-       двери (его ещё можно привести к слоту), потом текст. */
+    /* Ключ записи для сводки — по id двери, а не по месту (выкладка 185, см. chronicle-stats.js):
+       после удаления двери из середины открытия больше не съезжают на соседку. */
     statKeyOf(item) {
-        if (Number.isInteger(item.slot)) return 'slot:' + item.slot;
+        return statKey(item, this.statDoorIds());
+    }
 
-        if (item.doorId) {
-            const at = this.doorIds.indexOf(item.doorId);
-            return at !== -1 ? 'slot:' + at : 'door:' + item.doorId;
-        }
-
-        return 'text:' + (item.reality || '');
+    // Id нынешних дверей по местам; у двери без id — пусто (её записи найдутся по месту)
+    statDoorIds() {
+        return Array.from({ length: this.realities.length }, (_, slot) => this.doorIds[slot] || '');
     }
 
     // Нынешнее название слота; для старых записей — то, что в них записано
@@ -1888,67 +1881,48 @@ export class QuantumApp {
         </section>`;
     }
 
-    /* Доля каждой двери за всё время.
+    /* Доля каждой двери за выбранный период.
 
-       В списке стоят все двери, а не только открытые. У двери, которую ещё
-       ни разу не выбирали, своя строка и пустая шкала — видно, что она есть
-       и ждёт. Прежде такие двери в список не попадали вовсе, и наверху
-       оставалась одна-единственная строка во всю ширину: казалось, будто
-       шкала всегда полная.
+       В списке стоят все двери, а не только открытые: у двери, которую за период не открывали, своя
+       строка и пустая шкала. Длина шкалы — доля этой двери от всех переходов периода.
 
-       Длина шкалы — доля этой двери от всех переходов. Половина переходов
-       в эту дверь — половина шкалы. */
+       ДВЕРИ НА СВОИХ МЕСТАХ И С НОМЕРАМИ (выкладка 185, владелец 27.10.2026): порядок — как в описании
+       дверей, от числа открытий не зависит; меняются только шкалы. Пустая дверь (без имени, фото и
+       записи), которую не открывали, не показывается. Последняя открытая дверь — красным: её номер, прирост
+       доли «▲ +N%» и шкала — прежняя доля золотом, прирост красным. Расчёт — chronicle-stats.js. */
     renderChronicleStats() {
-        const counts = new Map();
-        // Только записи выбранного периода и после сброса; записи без времени — только «за всё время» без сброса
-        const since = this.statsSince();
-        const выборка = since === 0 ? this.history : this.history.filter(item => Number(item.ts) >= since);
-
-        // Сначала все нынешние двери, по порядку и с нулями
-        for (let slot = 0; slot < this.realities.length; slot++) {
-            counts.set('slot:' + slot, { key: 'slot:' + slot, slot, count: 0, fallback: '' });
-        }
-
-        for (const item of выборка) {
-            const key = this.statKeyOf(item);
-            const row = counts.get(key)
-                || { key, slot: null, count: 0, fallback: item.reality || '' };
-            row.count += 1;
-            if (!row.fallback) row.fallback = item.reality || '';
-            counts.set(key, row);
-        }
-
-        const total = выборка.length;
-
-        // Чаще открытые — выше; при равенстве держим порядок дверей
-        const rows = Array.from(counts.values()).sort((a, b) => {
-            if (b.count !== a.count) return b.count - a.count;
-            return (a.slot === null ? 99 : a.slot) - (b.slot === null ? 99 : b.slot);
+        const { rows, lastKey } = chronicleRows({
+            history: this.history, doorIds: this.statDoorIds(), since: this.statsSince()
         });
 
         const body = rows.map(row => {
-            const share = total > 0 ? Math.round((row.count / total) * 100) : 0;
             const name = this.statNameOf(row.key, row.fallback);
+            // Пустая и ни разу не открытая дверь — не показывается
+            if (row.count === 0 && row.slot !== null && !(this.realities[row.slot] || '').trim()
+                && name === this.t('doorTitleEmpty')) return '';
 
-            /* Доля едет в data-атрибуте, а не в style.
-
-               У страницы строгая политика безопасности: style-src 'self',
-               без unsafe-inline. Браузер молча отбрасывал атрибут
-               style="width:…", ширина у полоски не задавалась вовсе — а
-               внутренний блок без ширины растягивается на всю строку.
-               Оттого все шкалы и выглядели полными на сто процентов.
-
-               Политику не ослабляем: ширину ставит applyStatShares уже
-               после вставки, через CSSOM, — его та же политика пропускает
-               (так же работает кольцо диктофона). */
-            return `<div class="qm-stat-row${row.count === 0 ? ' qm-stat-idle' : ''}">
+            /* Доля едет в data-атрибуте, а не в style: у страницы style-src 'self' без unsafe-inline,
+               браузер отбросил бы style="width:…" и шкала стала бы полной. Ширину ставит applyStatShares
+               через CSSOM. У последней двери шкала из двух частей: прежняя доля и прирост. */
+            const шкала = row.last
+                ? `<span data-share="${row.prevShare}"></span><span class="qm-stat-gain" data-share="${row.gain}"></span>`
+                : `<span data-share="${row.share}"></span>`;
+            const прирост = row.last
+                ? ` <b class="qm-stat-delta">▲ +${row.gain}%</b>` : '';
+            const номер = row.number !== null ? row.number : '·';
+            return `<div class="qm-stat-row${row.count === 0 ? ' qm-stat-idle' : ''}${row.last ? ' qm-stat-last' : ''}"${row.last
+                ? ` title="${this.escapeHtml(this.t('chroniclesLastHint').replace('{n}', row.gain))}"` : ''}>
                 <div class="qm-stat-top">
+                    <span class="qm-stat-num">${номер}</span>
                     <span class="qm-stat-name">${this.escapeHtml(name)}</span>
-                    <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${share}%</span>
+                    <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${row.share}%${прирост}</span>
                 </div>
-                <div class="qm-stat-bar"><span data-share="${share}"></span></div>
+                <div class="qm-stat-bar">${шкала}</div>
             </div>`;
         }).join('');
+        const пояснение = lastKey
+            ? `<p class="qm-stats-legend"><span class="qm-stats-legend-dot"></span>${this.escapeHtml(this.t('chroniclesLastLegend'))}</p>`
+            : '';
 
         const период = this.statsPeriod();
         const таб = (ключ, слово) => `<button type="button" class="qm-stats-tab" data-stats-period="${ключ}"
@@ -1968,6 +1942,7 @@ export class QuantumApp {
                 <button type="button" class="qm-stats-reset" data-stats-reset>${this.escapeHtml(this.t('chroniclesReset'))}</button>
             </div>
             ${сКакого}
+            ${пояснение}
             ${body}
         </section>`;
     }
