@@ -16,6 +16,24 @@
    Длительности переходов парные с STEPS в index.js:
    развязать 450 · переложить 350 · вытянуть 500 · развернуть 850. */
 
+/* Почерк послания — Marck Script: каллиграфия пером, но читается легко (владелец 27.10.2026:
+   «как пером писали, расписной, но чтобы легко прочитать»). Файлы лежат рядом, в fonts/:
+   политика безопасности страницы пускает шрифты только с самого сайта, и без сети он тоже нужен.
+   Шрифт свободный (SIL Open Font License). Два файла — кириллица и латиница: браузер
+   скачивает только тот, чьи буквы есть в тексте. */
+@font-face {
+  font-family: 'Marck Script';
+  src: url(fonts/marck-script-cyrillic.woff2) format('woff2');
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Marck Script';
+  src: url(fonts/marck-script-latin.woff2) format('woff2');
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 .ds-btn, .ds-panel {
   --ds-paper: #E8D6A6;          /* пергамент, середина */
   --ds-paper-lit: #F3E6C2;      /* пергамент в свету */
@@ -201,12 +219,24 @@
 }
 .ds-panel.ds-unroll .ds-paper-in { opacity: 1; }
 
-/* На бумаге — только пожелание */
+/* На бумаге — только пожелание. Пишется пером золотыми чернилами: тёмное
+   старое золото с бликом, как у плашек пульта, — светлое золото на светлом
+   пергаменте не читалось бы. Перелив повторяется на каждой строке
+   (background-size по высоте строки), а не растягивается на весь абзац.
+   Светлая кайма снизу — тиснение: буква будто вдавлена в бумагу. */
 .ds-text {
   margin: 0;
-  font-family: var(--serif, Georgia, serif);
-  font-size: 19px; line-height: 1.4; font-weight: 600;
-  color: var(--ds-ink);
+  font-family: 'Marck Script', var(--serif, Georgia, serif);
+  font-size: 26px; line-height: 1.35; font-weight: 400;
+  color: #7A4B11;                                   /* запасной цвет, если перелив не сработает */
+  background-image: linear-gradient(180deg, #9C6A16 0%, #6E430C 38%, #B07C22 62%, #5E3808 100%);
+  background-size: 100% 1.35em;
+  background-repeat: repeat-y;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(255, 246, 214, .8))
+          drop-shadow(0 0 .5px rgba(60, 34, 4, .55));
 }
 
 /* Сноска — не на свитке, а под ним, на тёмном поле: это пояснение, а не
@@ -225,7 +255,7 @@
 .ds-note-mark { color: var(--gold, #E3C77C); font-weight: 700; }
 
 @media (max-width: 560px) {
-  .ds-text { font-size: 17px; }
+  .ds-text { font-size: 23px; }
   .ds-paper-in { padding: 18px 16px 16px; }
 }
 
