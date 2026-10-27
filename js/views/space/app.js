@@ -1849,11 +1849,6 @@ export class QuantumApp {
             const share = Number(bar.dataset.share);
             bar.style.width = (Number.isFinite(share) ? share : 0) + '%';
         });
-        // Серая метка прошлого периода (выкладка 187) — там, где была шкала
-        list.querySelectorAll('.qm-stat-bar .qm-stat-was[data-at]').forEach(метка => {
-            const at = Number(метка.dataset.at);
-            метка.style.left = (Number.isFinite(at) ? at : 0) + '%';
-        });
     }
 
     /* Ключ записи для сводки — по id двери, а не по месту (выкладка 185, см. chronicle-stats.js):
@@ -1926,9 +1921,11 @@ export class QuantumApp {
             const прирост = row.last
                 ? ` <b class="qm-stat-delta">+${row.gain}%</b>` : '';
             const номер = row.number !== null ? row.number : '·';
-            /* Прошлый период (выкладка 187): серая метка на шкале там, где дверь была, и «было N%» — спокойно,
-               без красного и зелёного: это наблюдение, а не оценка. */
-            const метка = row.before !== null ? `<i class="qm-stat-was" data-at="${row.before}"></i>` : '';
+            /* Прошлый период (выкладка 188, в 187 была метка поперёк шкалы — владелец: «перечёркивает»):
+               под шкалой тонкая серая полоска той же шкалы — доля двери тогда, и «было N%». Спокойно, без
+               красного и зелёного: это наблюдение, а не оценка. Ширину ставит тот же applyStatShares. */
+            const прошлая = row.before !== null
+                ? `<div class="qm-stat-bar qm-stat-bar-was"><span data-share="${row.before}"></span></div>` : '';
             const было = row.before !== null
                 ? ` <span class="qm-stat-before">${this.escapeHtml(this.t('chroniclesWas').replace('{n}', row.before))}</span>` : '';
             return `<div class="qm-stat-row${row.count === 0 ? ' qm-stat-idle' : ''}${row.last ? ' qm-stat-last' : ''}"${row.last
@@ -1938,9 +1935,12 @@ export class QuantumApp {
                     <span class="qm-stat-name">${this.escapeHtml(name)}</span>
                     <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${row.share}%${прирост}${было}</span>
                 </div>
-                <div class="qm-stat-bar">${шкала}${метка}</div>
+                <div class="qm-stat-bar">${шкала}</div>
+                ${прошлая}
             </div>`;
         }).join('');
+        /* Пояснения цветов — под списком (выкладка 188): сначала смотришь на шкалы, потом читаешь, что значат
+           цвета; наверху они каждый раз заслоняли сами двери. */
         const пояснение = lastKey
             ? `<p class="qm-stats-legend"><span class="qm-stats-legend-dot"></span>${this.escapeHtml(this.t('chroniclesLastLegend'))}</p>`
             : '';
@@ -1971,9 +1971,8 @@ export class QuantumApp {
                 <button type="button" class="qm-stats-reset" data-stats-reset>${this.escapeHtml(this.t('chroniclesReset'))}</button>
             </div>
             ${сКакого}
-            ${пояснение}
-            ${прошлое}
             ${body}
+            ${пояснение || прошлое ? `<div class="qm-stats-legends">${пояснение}${прошлое}</div>` : ''}
         </section>`;
     }
 
