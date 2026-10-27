@@ -34,35 +34,46 @@ const доля = (сколько, всего) => (всего > 0 ? Math.round((�
 /**
  * Строки сводки.
  *
+ * СРАВНЕНИЕ С ПРОШЛЫМ ПЕРИОДОМ (выкладка 187, владелец 27.10.2026: «меточка, где оно было на прошлой неделе —
+ * проекция вперёд-назад, чтобы понимать, какой выбор делает человек»). Если задано окно прошлого периода
+ * (before: {since, until}) — у каждой строки есть before: её доля среди открытий того окна (null — сравнения
+ * нет), и в ответе beforeTotal — сколько открытий было тогда. Двери прошлого периода стоят в том же порядке:
+ * дверь, которую открывали только тогда, тоже получает свою строку.
+ *
  * @param {object} p
  * @param {object[]} p.history   записи Хроник ({ts, slot, doorId, reality})
  * @param {string[]} p.doorIds   id нынешних дверей по местам
  * @param {number}   p.since     с какого мига считать (0 — все записи, и без времени тоже)
- * @returns {{total:number, lastKey:string|null, rows:{key:string, slot:number|null, number:number|null,
- *           count:number, share:number, fallback:string, last:boolean, prevShare:number, gain:number}[]}}
+ * @param {{since:number, until:number}|null} [p.before]  окно прошлого периода [since, until)
+ * @returns {{total:number, lastKey:string|null, beforeTotal:number|null, rows:{key:string, slot:number|null,
+ *           number:number|null, count:number, share:number, fallback:string, last:boolean, prevShare:number,
+ *           gain:number, before:number|null}[]}}
  */
-export function chronicleRows({ history, doorIds, since = 0 }) {
+export function chronicleRows({ history, doorIds, since = 0, before = null }) {
     const выборка = since === 0 ? history : history.filter(item => Number(item.ts) >= since);
     const total = выборка.length;
+    const прошлая = before ? history.filter(item => Number(item.ts) >= before.since && Number(item.ts) < before.until) : [];
 
     // Все нынешние двери — по местам и с нулями: дверь видна, даже если за период её не открывали
     const строки = new Map();
     for (let slot = 0; slot < doorIds.length; slot++) {
-        строки.set('slot:' + slot, { key: 'slot:' + slot, slot, number: slot + 1, count: 0, fallback: '' });
+        строки.set('slot:' + slot, { key: 'slot:' + slot, slot, number: slot + 1, count: 0, beforeCount: 0, fallback: '' });
     }
     const бывшие = [];
-    for (const item of выборка) {
+    const строкаЗаписи = item => {
         const key = statKey(item, doorIds);
         let строка = строки.get(key);
         if (!строка) {
             // Запись старой нумерации на место, которого уже нет, — тоже «бывшая» дверь
-            строка = { key, slot: null, number: null, count: 0, fallback: item.reality || '' };
+            строка = { key, slot: null, number: null, count: 0, beforeCount: 0, fallback: item.reality || '' };
             строки.set(key, строка);
             бывшие.push(строка);
         }
-        строка.count += 1;
         if (!строка.fallback) строка.fallback = item.reality || '';
-    }
+        return строка;
+    };
+    for (const item of выборка) строкаЗаписи(item).count += 1;
+    for (const item of прошлая) строкаЗаписи(item).beforeCount += 1;
 
     // Последняя открытая — самая свежая запись выборки (по времени, а не по месту в массиве)
     let свежая = null;
@@ -72,13 +83,18 @@ export function chronicleRows({ history, doorIds, since = 0 }) {
     if (!свежая && total) свежая = выборка[0];
     const lastKey = свежая ? statKey(свежая, doorIds) : null;
 
+    // Сравнивать есть с чем, только если в прошлом окне были открытия
+    const beforeTotal = before ? прошлая.length : null;
     бывшие.sort((a, b) => a.fallback.localeCompare(b.fallback));
     const rows = [...Array.from({ length: doorIds.length }, (_, slot) => строки.get('slot:' + slot)), ...бывшие]
-        .map(строка => {
+        .map(({ beforeCount, ...строка }) => {
             const share = доля(строка.count, total);
             const last = строка.key === lastKey;
             const prevShare = last ? доля(строка.count - 1, total - 1) : share;
-            return { ...строка, share, last, prevShare, gain: Math.max(0, share - prevShare) };
+            return {
+                ...строка, share, last, prevShare, gain: Math.max(0, share - prevShare),
+                before: beforeTotal ? доля(beforeCount, beforeTotal) : null
+            };
         });
-    return { total, lastKey, rows };
+    return { total, lastKey, beforeTotal, rows };
 }

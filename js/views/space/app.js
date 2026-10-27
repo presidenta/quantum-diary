@@ -1818,6 +1818,17 @@ export class QuantumApp {
         return Math.max(this.statsBaseline(), период ? now - период : 0);
     }
 
+    /* ПРОШЛЫЙ ПЕРИОД ДЛЯ СРАВНЕНИЯ (выкладка 187): неделя — 7 дней перед последними семью, месяц — 30 перед
+       последними тридцатью. «За всё время» сравнивать не с чем — null. Прошлое окно начинается раньше
+       «Сброса» — тоже null: старый отсчёт с новым не смешиваем. */
+    statsBefore(now = Date.now()) {
+        const сутки = 24 * 60 * 60 * 1000;
+        const период = { week: 7 * сутки, month: 30 * сутки }[this.statsPeriod()];
+        if (!период) return null;
+        const окно = { since: now - 2 * период, until: now - период };
+        return this.statsBaseline() > окно.since ? null : окно;
+    }
+
     onStatsClick(событие, list) {
         const таб = событие.target.closest('[data-stats-period]');
         if (таб) {
@@ -1837,6 +1848,11 @@ export class QuantumApp {
         list.querySelectorAll('.qm-stat-bar span[data-share]').forEach(bar => {
             const share = Number(bar.dataset.share);
             bar.style.width = (Number.isFinite(share) ? share : 0) + '%';
+        });
+        // Серая метка прошлого периода (выкладка 187) — там, где была шкала
+        list.querySelectorAll('.qm-stat-bar .qm-stat-was[data-at]').forEach(метка => {
+            const at = Number(метка.dataset.at);
+            метка.style.left = (Number.isFinite(at) ? at : 0) + '%';
         });
     }
 
@@ -1891,8 +1907,8 @@ export class QuantumApp {
        записи), которую не открывали, не показывается. Последняя открытая дверь — зелёным (выкладка 186, было
        красным): её номер, прирост доли «+N%» и шкала — прежняя доля золотом, прирост зелёным. Расчёт — chronicle-stats.js. */
     renderChronicleStats() {
-        const { rows, lastKey } = chronicleRows({
-            history: this.history, doorIds: this.statDoorIds(), since: this.statsSince()
+        const { rows, lastKey, beforeTotal } = chronicleRows({
+            history: this.history, doorIds: this.statDoorIds(), since: this.statsSince(), before: this.statsBefore()
         });
 
         const body = rows.map(row => {
@@ -1910,19 +1926,32 @@ export class QuantumApp {
             const прирост = row.last
                 ? ` <b class="qm-stat-delta">+${row.gain}%</b>` : '';
             const номер = row.number !== null ? row.number : '·';
+            /* Прошлый период (выкладка 187): серая метка на шкале там, где дверь была, и «было N%» — спокойно,
+               без красного и зелёного: это наблюдение, а не оценка. */
+            const метка = row.before !== null ? `<i class="qm-stat-was" data-at="${row.before}"></i>` : '';
+            const было = row.before !== null
+                ? ` <span class="qm-stat-before">${this.escapeHtml(this.t('chroniclesWas').replace('{n}', row.before))}</span>` : '';
             return `<div class="qm-stat-row${row.count === 0 ? ' qm-stat-idle' : ''}${row.last ? ' qm-stat-last' : ''}"${row.last
                 ? ` title="${this.escapeHtml(this.t('chroniclesLastHint').replace('{n}', row.gain))}"` : ''}>
                 <div class="qm-stat-top">
                     <span class="qm-stat-num">${номер}</span>
                     <span class="qm-stat-name">${this.escapeHtml(name)}</span>
-                    <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${row.share}%${прирост}</span>
+                    <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${row.share}%${прирост}${было}</span>
                 </div>
-                <div class="qm-stat-bar">${шкала}</div>
+                <div class="qm-stat-bar">${шкала}${метка}</div>
             </div>`;
         }).join('');
         const пояснение = lastKey
             ? `<p class="qm-stats-legend"><span class="qm-stats-legend-dot"></span>${this.escapeHtml(this.t('chroniclesLastLegend'))}</p>`
             : '';
+        /* Строка о прошлом периоде: сколько тогда было открытий — по одному числу видно, весомы ли проценты
+           (два открытия — 50% одно; двадцать — 50% десять). Открытий не было — сравнивать не с чем. */
+        const месяц = this.statsPeriod() === 'month';
+        const прошлое = beforeTotal === null ? ''
+            : beforeTotal === 0
+                ? `<p class="qm-stats-legend">${this.escapeHtml(this.t(месяц ? 'chroniclesWasNoneMonth' : 'chroniclesWasNoneWeek'))}</p>`
+                : `<p class="qm-stats-legend"><span class="qm-stats-legend-was"></span>${this.escapeHtml(this.t(месяц ? 'chroniclesWasLegendMonth' : 'chroniclesWasLegendWeek')
+                    .replace('{n}', `${beforeTotal} ${this.plural(beforeTotal)}`))}</p>`;
 
         const период = this.statsPeriod();
         const таб = (ключ, слово) => `<button type="button" class="qm-stats-tab" data-stats-period="${ключ}"
@@ -1943,6 +1972,7 @@ export class QuantumApp {
             </div>
             ${сКакого}
             ${пояснение}
+            ${прошлое}
             ${body}
         </section>`;
     }
