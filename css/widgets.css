@@ -242,6 +242,13 @@
 .wg-btn.mark { color: var(--wg-btn-text); }
 /* «Настройки» рядом с главной кнопкой: потише неё, но текст того же цвета */
 .wg-btn.alt { background: var(--wg-small-fill); border-color: var(--wg-small-line); color: var(--wg-small-text); }
+/* Прозрачность кнопок (выкладка 195): тает заливка, кромка остаётся — сквозь кнопку видна картинка */
+.wg-btn { background: color-mix(in srgb, var(--wg-btn-fill) var(--wg-btn-a, 100%), transparent); }
+.wg-btn.alt, .wg-btn.small { background: color-mix(in srgb, var(--wg-small-fill) var(--wg-btn-a, 100%), transparent); }
+.wg-gold.wg-btn-glass .wg-btn, .wg-gold.wg-btn-glass .wg-btn.alt, .wg-gold.wg-btn-glass .wg-btn.small {
+  border-image: url(../img/widget/gold-button.webp) 22 / 8px stretch;
+  background: color-mix(in srgb, #C8902C var(--wg-btn-a, 100%), transparent) padding-box;
+}
 
 /* ---- узкий 4×1: два срока и справа столбиком кнопки (выкладка 141) ------------- */
 .wg-slim .wg-body { grid-auto-flow: column; align-items: center; gap: 10px; padding: 10px 12px;
@@ -265,40 +272,6 @@
 .wg-btns .wg-btn.wg-scrollbtn .wg-ico { width: 82%; height: auto; }
 .wg-btns .wg-btn.wg-scrollbtn { height: auto; aspect-ratio: 1; align-self: stretch; }
 .wg-gold .wg-btn.wg-scrollbtn .wg-ico { color: #F3D375; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)); }
-.wg-btn.wg-scrollbtn, .wg-scrollpage { cursor: pointer; }
-
-/* Развёрнутый свиток — в самом виджете, на месте сроков (выкладка 194), как на телефоне
-   (WidgetScroll.развёрнутый): пергамент между валиками цвета вида, пожелание пером золотом. */
-.wg-scrollpage { display: none; }
-.wg-scroll-open .wg-scrollpage {
-  display: flex; flex-direction: column; justify-content: space-between; min-height: 0;
-  background: linear-gradient(90deg, #C9AE72, #EBDCB2 12%, #F3E6C2 50%, #EBDCB2 88%, #C9AE72);
-  margin: 0 4px; border-radius: 2px;
-}
-.wg-scroll-rod {
-  display: block; height: 9px; margin: 0 -6px; border-radius: 5px;
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--wg-ico) 65%, #000), color-mix(in srgb, var(--wg-ico) 18%, #fff) 30%,
-    color-mix(in srgb, var(--wg-ico) 45%, #fff) 60%, color-mix(in srgb, var(--wg-ico) 65%, #000));
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .5);
-}
-.wg-gold .wg-scroll-rod { background: linear-gradient(180deg, #9C6A16, #FFF4C0 30%, #EAD08A 60%, #9C6A16); }
-.wg-scroll-text {
-  margin: 0; padding: 6px 14px; text-align: center;
-  font-family: 'Marck Script', var(--serif, Georgia, serif); font-size: 17px; line-height: 1.3; font-weight: 400;
-  color: #7A4B11;
-  background-image: linear-gradient(180deg, #9C6A16 0%, #6E430C 38%, #B07C22 62%, #5E3808 100%);
-  background-size: 100% 1.3em; background-repeat: repeat-y;
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 1px 0 rgba(255, 246, 214, .8));
-}
-/* Чакровый: свиток встаёт на место карточек и недели */
-.wg-scroll-open .wg-cards, .wg-scroll-open .wg-week-strip { display: none; }
-.wg-week.wg-scroll-open .wg-scrollpage { flex: 1 1 auto; }
-/* Узкий: свиток встаёт на место двух сроков и черты между ними */
-.wg-slim.wg-scroll-open .wg-pair, .wg-slim.wg-scroll-open .wg-sep { display: none; }
-.wg-slim.wg-scroll-open .wg-scrollpage { grid-column: 1 / 4; align-self: stretch; }
-.wg-slim .wg-scroll-text { font-size: 14px; padding: 2px 10px; }
 
 /* ---- карточки: средний, чакровый, залитый горизонтальный ---------------------- */
 .wg-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }

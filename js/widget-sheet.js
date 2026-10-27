@@ -57,12 +57,16 @@ function нарисовать() {
     $('wsFormat').textContent = t(`widgets.format.${формат.key}`);
     $('wsDone').textContent = t('widgets.w.sheetDone');
     $('wsOpacityLabel').textContent = t('widgets.w.sheetOpacity');
+    $('wsButtonsLabel').textContent = t('widgets.w.sheetButtons');
     $('wsColorLabel').textContent = t('widgets.w.sheetColor');
     $('wsMore').textContent = t('widgets.w.sheetMore');
 
     const процент = стиль.alpha ?? (формат.fill ? DEFAULT_ALPHA.fill : DEFAULT_ALPHA.neon);
     $('wsAlpha').value = String(процент);
     $('wsPercent').textContent = `${процент}%`;
+    const кнопки = стиль.buttonAlpha ?? 100;
+    $('wsButtonAlpha').value = String(кнопки);
+    $('wsButtonPercent').textContent = `${кнопки}%`;
 
     $('wsColors').innerHTML = ЦВЕТА.map((ц, i) => {
         const выбран = ц.mode === стиль.mode && (ц.mode !== 'chakra' || ц.chakra === стиль.chakra);
@@ -88,6 +92,7 @@ function изменить(правка) {
 }
 
 $('wsAlpha').addEventListener('input', () => изменить({ alpha: Number($('wsAlpha').value) }));
+$('wsButtonAlpha').addEventListener('input', () => изменить({ buttonAlpha: Number($('wsButtonAlpha').value) }));
 $('wsColors').addEventListener('click', событие => {
     const круг = событие.target.closest('button[data-color]');
     if (!круг) return;

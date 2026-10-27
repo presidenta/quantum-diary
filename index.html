@@ -482,6 +482,12 @@
       <input type="range" id="widgetsAlpha" min="0" max="100" step="5" value="88">
     </label>
 
+    <!-- Прозрачность кнопок отдельно от подложки (выкладка 195): меньше 100 — остаётся контур кнопки -->
+    <label>
+      <span id="widgetsButtonAlphaLabel"></span>
+      <input type="range" id="widgetsButtonAlpha" min="0" max="100" step="5" value="100">
+    </label>
+
     <div class="wg-block">
       <span class="muted" data-i18n="widgets.texts">Надписи</span>
       <label><span data-i18n="widgets.field.title">Заголовок</span><input type="text" id="widgetsTitle" maxlength="40"></label>

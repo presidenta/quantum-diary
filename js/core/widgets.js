@@ -223,6 +223,7 @@ export function normalizeStyle(raw = {}) {
     const набор = Array.isArray(raw?.mirrors) && raw.mirrors.length
         ? pictureSet({ mirrors: raw.mirrors }).map(н => WIDGET_PICTURES[н].id) : [];
     const alpha = Number(raw?.alpha);
+    const кнопки = Number(raw?.buttonAlpha);
 
     return {
         mode,
@@ -234,6 +235,10 @@ export function normalizeStyle(raw = {}) {
         alpha: raw?.alpha === undefined || raw?.alpha === null || raw?.alpha === '' || !Number.isFinite(alpha)
             ? null
             : Math.min(100, Math.max(0, Math.round(alpha))),
+        /* Прозрачность заливки кнопок (выкладка 195): 100 — как прежде, меньше — остаётся контур */
+        buttonAlpha: raw?.buttonAlpha === undefined || raw?.buttonAlpha === null || raw?.buttonAlpha === '' || !Number.isFinite(кнопки)
+            ? 100
+            : Math.min(100, Math.max(0, Math.round(кнопки))),
         title: текст(raw?.title),
         subtitle: текст(raw?.subtitle),
         architect: текст(raw?.architect),
@@ -314,8 +319,12 @@ export function widgetTexts(translate) {
         scroll: слово('scroll'),
         // Свиток на виджете, пока приложение не прислало пожеланий (выкладка 194)
         scrollWait: слово('scrollWait'),
+        // Окно свитка поверх рабочего стола (выкладка 195): сноска под свитком и «Закрыть»
+        scrollNote: слово('scrollNote'),
+        scrollClose: слово('scrollClose'),
         // Панель настроек на рабочем столе (WidgetSheetActivity, выкладка 141)
         sheetTitle: слово('sheetTitle'),
+        sheetButtons: слово('sheetButtons'),
         sheetOpacity: слово('sheetOpacity'),
         sheetColor: слово('sheetColor'),
         modeAuto: слово('modeAuto'),

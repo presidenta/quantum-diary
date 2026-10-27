@@ -85,10 +85,9 @@ function срокHtml(текст) {
  * @param дата    для цвета дня (режим «авто»)
  * @param сроки   {architect, observer} — сроки словами, как на плашке
  * @param перевод (ключ, значения) → строка на языке человека
- * @param мудрость пожелание дня для свитка на виджете со свитком (выкладка 194); пусто — «откройте приложение»
  * @returns разметка; цвета вида ставит applyWidgetVars после вставки
  */
-export function widgetHtml(формат, стиль, дата, сроки, перевод, мудрость = '') {
+export function widgetHtml(формат, стиль, дата, сроки, перевод) {
     const look = resolveLook(стиль, дата);
     /* Вид со свитком рисуется как свой основной (узкий, чакровый) плюс кнопка свитка (выкладка 193) */
     const основа = формат.base || формат.key;
@@ -127,14 +126,6 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
     const кнопка = (текст, класс = '') =>
         `<span class="wg-btn ${класс}">${буквы(экран(текст))}</span>`;
     const шестерня = `<span class="wg-gear">${значок('gear')}</span>`;
-    /* Развёрнутый свиток (выкладка 194) — в самом виджете, на месте сроков: пергамент между двумя
-       валиками, пожелание почерком пером. Скрыт, пока виджет без класса wg-scroll-open
-       (toggleWidgetScroll); как WidgetScroll.развёрнутый на телефоне. */
-    const лист = формат.scroll
-        ? `<div class="wg-scrollpage" role="button" tabindex="0"><span class="wg-scroll-rod"></span>
-             <p class="wg-scroll-text">${экран(мудрость || перевод('widgets.w.scrollWait'))}</p>
-             <span class="wg-scroll-rod"></span></div>`
-        : '';
     const заголовок = `<span class="wg-title">${буквы(экран(слово.title))}</span>`;
 
     let тело;
@@ -144,7 +135,7 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
           <div class="wg-pair wg-a"><div class="wg-label">${иконка('a')}${метка('a')}</div><div class="wg-value">${срок('a')}</div></div>
           <span class="wg-sep"></span>
           <div class="wg-pair wg-b"><div class="wg-label">${иконка('b')}${метка('b')}</div><div class="wg-value">${срок('b')}</div></div>
-          ${лист}${формат.scroll ? кнопкаСвитка(true) : ''}<span class="wg-stack"><span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span></span>`;
+          ${формат.scroll ? кнопкаСвитка(true) : ''}<span class="wg-stack"><span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span></span>`;
     } else if (формат.tall) {
         const шапка = формат.fill
             // «Активно» сразу за заголовком, мельче и другим цветом — как на телефоне
@@ -169,18 +160,13 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
         const низ = формат.fill
             ? кнопка(слово.cabinet)
             : (формат.scroll ? кнопкаСвитка(false) : '') + кнопка(слово.settings, 'alt') + кнопка(слово.cabinet);
-        тело = `${шапка}<div class="wg-cards">${карточка('a')}${карточка('b')}</div>${неделя}${лист}
+        тело = `${шапка}<div class="wg-cards">${карточка('a')}${карточка('b')}</div>${неделя}
                 <div class="wg-btns">${низ}</div>`;
     }
 
-    return `<div class="${классы}" data-format="${формат.key}" data-accent="${look.accent}" data-soft="${look.soft}" data-time-a="${look.timeA}" data-time-b="${look.timeB}" data-fill="${заливка}" data-alpha="${alpha}"${картинка}>
+    return `<div class="${классы}" data-format="${формат.key}" data-accent="${look.accent}" data-soft="${look.soft}" data-time-a="${look.timeA}" data-time-b="${look.timeB}" data-fill="${заливка}" data-alpha="${alpha}" data-btn-alpha="${стиль.buttonAlpha ?? 100}"${картинка}>
         <span class="wg-plate"></span><span class="wg-rim"></span>
         <div class="wg-body">${тело}</div></div>`;
-}
-
-/** Свиток на виджете со свитком: развернуть свёрнутый, свернуть развёрнутый (выкладка 194). */
-export function toggleWidgetScroll(виджет) {
-    return виджет?.classList.toggle('wg-scroll-open') ?? false;
 }
 
 /** Поставить цвета вида виджетам внутри узла (после вставки разметки widgetHtml). */
@@ -193,6 +179,9 @@ export function applyWidgetVars(узел) {
         виджет.style.setProperty('--wg-time-b', виджет.dataset.timeB);
         виджет.style.setProperty('--wg-fill', виджет.dataset.fill);
         виджет.style.setProperty('--wg-alpha', виджет.dataset.alpha);
+        // Прозрачность заливки кнопок (выкладка 195); у золота — класс: пластина остаётся одной кромкой
+        виджет.style.setProperty('--wg-btn-a', `${виджет.dataset.btnAlpha ?? 100}%`);
+        виджет.classList.toggle('wg-btn-glass', Number(виджет.dataset.btnAlpha ?? 100) < 100);
         // Картинка зеркала — свойством, а не атрибутом style (политика безопасности страниц)
         /* Полным адресом (выкладка 182): относительный url() из переменной Chrome ищет от файла стилей
            (css/widgets.css), то есть в css/img/…, — картинки на компьютере и в окне не было видно. */
