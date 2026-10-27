@@ -1888,8 +1888,8 @@ export class QuantumApp {
 
        ДВЕРИ НА СВОИХ МЕСТАХ И С НОМЕРАМИ (выкладка 185, владелец 27.10.2026): порядок — как в описании
        дверей, от числа открытий не зависит; меняются только шкалы. Пустая дверь (без имени, фото и
-       записи), которую не открывали, не показывается. Последняя открытая дверь — красным: её номер, прирост
-       доли «▲ +N%» и шкала — прежняя доля золотом, прирост красным. Расчёт — chronicle-stats.js. */
+       записи), которую не открывали, не показывается. Последняя открытая дверь — зелёным (выкладка 186, было
+       красным): её номер, прирост доли «+N%» и шкала — прежняя доля золотом, прирост зелёным. Расчёт — chronicle-stats.js. */
     renderChronicleStats() {
         const { rows, lastKey } = chronicleRows({
             history: this.history, doorIds: this.statDoorIds(), since: this.statsSince()
@@ -1908,7 +1908,7 @@ export class QuantumApp {
                 ? `<span data-share="${row.prevShare}"></span><span class="qm-stat-gain" data-share="${row.gain}"></span>`
                 : `<span data-share="${row.share}"></span>`;
             const прирост = row.last
-                ? ` <b class="qm-stat-delta">▲ +${row.gain}%</b>` : '';
+                ? ` <b class="qm-stat-delta">+${row.gain}%</b>` : '';
             const номер = row.number !== null ? row.number : '·';
             return `<div class="qm-stat-row${row.count === 0 ? ' qm-stat-idle' : ''}${row.last ? ' qm-stat-last' : ''}"${row.last
                 ? ` title="${this.escapeHtml(this.t('chroniclesLastHint').replace('{n}', row.gain))}"` : ''}>

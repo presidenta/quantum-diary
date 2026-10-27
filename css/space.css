@@ -996,17 +996,18 @@
 }
 .qm-root .qm-stat-top { align-items: center; }
 
-/* Последняя открытая дверь — красным: на золоте и тёмном фоне красный виден сразу. Шкала из двух частей:
-   прежняя доля — золото, прирост от последнего открытия — красный. */
-.qm-root { --qm-last: #FF5C6C; }
+/* Последняя открытая дверь — зелёным (выкладка 186, владелец: «плюс — зелёным»; в 185 был красный): прирост —
+   это рост, а не тревога. На золоте и тёмном фоне изумрудный виден сразу. Шкала из двух частей: прежняя
+   доля — золото, прирост от последнего открытия — зелёный. */
+.qm-root { --qm-last: #34D399; }
 .qm-root .qm-stat-bar { display: flex; }
 .qm-root .qm-stat-bar span { flex: 0 0 auto; }
 .qm-root .qm-stat-bar .qm-stat-gain {
-    background: linear-gradient(90deg, #E8384B, var(--qm-last));
-    box-shadow: 0 0 8px rgba(255, 92, 108, .6);
+    background: linear-gradient(90deg, #10B981, var(--qm-last));
+    box-shadow: 0 0 8px rgba(52, 211, 153, .55);
 }
-.qm-root .qm-stat-last .qm-stat-num { background: var(--qm-last); border-color: var(--qm-last); color: #1A0306; }
-.qm-root .qm-stat-last .qm-stat-name { color: #FF8A95; font-weight: 600; }
+.qm-root .qm-stat-last .qm-stat-num { background: var(--qm-last); border-color: var(--qm-last); color: #04170F; }
+.qm-root .qm-stat-last .qm-stat-name { color: #7EE8B5; font-weight: 600; }
 .qm-root .qm-stat-delta { color: var(--qm-last); font-weight: 700; margin-left: 4px; }
 .qm-root .qm-stats-legend { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px 0; font-size: 12px; color: var(--qm-faint); }
 .qm-root .qm-stats-legend-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--qm-last); flex: 0 0 auto; }
