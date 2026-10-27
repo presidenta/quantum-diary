@@ -19,6 +19,23 @@ const экран = текст => String(текст ?? '').replace(/[&<>"]/g, c =
 
 const значок = имя => `<span class="wg-ico">${WIDGET_ICONS[имя]}</span>`;
 
+/* СВИТОК НА КНОПКЕ (выкладка 193) — тот же рисунок, что у WidgetScroll.java на телефоне: два валика
+   рулоном, наконечники, лента с бантиком. Цвет — currentColor (цвет значков вида), рулон светлее.
+   Не в WIDGET_ICONS: тот файл создаёт скрипт из рисунков телефона, а свиток там рисует код. */
+const СВИТОК = `<svg viewBox="0 0 48 24" aria-hidden="true">
+  <g stroke="rgba(0,0,0,.55)" stroke-width=".6">
+    <rect x="5" y="7" width="38" height="5" rx="2.5" fill="currentColor" fill-opacity=".55"/>
+    <rect x="5" y="12" width="38" height="5" rx="2.5" fill="currentColor" fill-opacity=".45"/>
+    <rect x="3" y="6" width="3.2" height="12" rx="1.6" fill="currentColor"/>
+    <rect x="41.8" y="6" width="3.2" height="12" rx="1.6" fill="currentColor"/>
+    <rect x="22.3" y="5.5" width="3.4" height="13" fill="currentColor"/>
+    <path d="M24 12 C25.5 8 30 8.5 30.5 12 C30 15.5 25.5 16 24 12 Z M24 12 C22.5 8 18 8.5 17.5 12 C18 15.5 22.5 16 24 12 Z" fill="currentColor"/>
+    <rect x="22.4" y="10" width="3.2" height="4" rx="1" fill="currentColor"/>
+  </g>
+</svg>`;
+const кнопкаСвитка = вертикально =>
+    `<span class="wg-btn small wg-scrollbtn${вертикально ? ' wg-scroll-tall' : ''}"><span class="wg-ico">${СВИТОК}</span></span>`;
+
 /* Слова вида: свои надписи человека, а где их нет — стандартные из словаря. */
 /** Слова вида (заголовок, подписи, кнопки, дни) — и для подсказок в окне «Установить виджет». */
 export function widgetWords(стиль, ключ, look, перевод) {
@@ -72,7 +89,9 @@ function срокHtml(текст) {
  */
 export function widgetHtml(формат, стиль, дата, сроки, перевод) {
     const look = resolveLook(стиль, дата);
-    const слово = widgetWords(стиль, формат.key, look, перевод);
+    /* Вид со свитком рисуется как свой основной (узкий, чакровый) плюс кнопка свитка (выкладка 193) */
+    const основа = формат.base || формат.key;
+    const слово = widgetWords(стиль, основа, look, перевод);
     const золото = look.gold;
 
     const alpha = (стиль.alpha ?? (формат.fill ? DEFAULT_ALPHA.fill : DEFAULT_ALPHA.neon)) / 100;
@@ -80,7 +99,7 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
     // Зеркало (выкладка 179): основа — картинка, цвета — как у неонового вида на любом виде
     const зеркало = look.mirror !== undefined;
     const залит = формат.fill && !зеркало;
-    const классы = ['wg', `wg-${формат.key.toLowerCase()}`,
+    const классы = ['wg', `wg-${основа.toLowerCase()}`, формат.scroll ? 'wg-with-scroll' : '',
         залит ? 'wg-fill' : '', золото ? 'wg-gold' : '', look.graphite ? 'wg-graphite' : '',
         зеркало ? 'wg-mirror' : '',
         залит && look.ink && !золото && !look.graphite ? 'wg-ink' : '',
@@ -110,13 +129,13 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
     const заголовок = `<span class="wg-title">${буквы(экран(слово.title))}</span>`;
 
     let тело;
-    if (формат.key === 'slim') {
+    if (основа === 'slim') {
         // Как на телефоне (выкладка 141): справа столбиком шестерёнка и вход в кабинет
         тело = `
           <div class="wg-pair wg-a"><div class="wg-label">${иконка('a')}${метка('a')}</div><div class="wg-value">${срок('a')}</div></div>
           <span class="wg-sep"></span>
           <div class="wg-pair wg-b"><div class="wg-label">${иконка('b')}${метка('b')}</div><div class="wg-value">${срок('b')}</div></div>
-          <span class="wg-stack"><span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span></span>`;
+          ${формат.scroll ? кнопкаСвитка(true) : ''}<span class="wg-stack"><span class="wg-btn small">${значок('gear')}</span><span class="wg-btn small mark">${значок('mark')}</span></span>`;
     } else if (формат.tall) {
         const шапка = формат.fill
             // «Активно» сразу за заголовком, мельче и другим цветом — как на телефоне
@@ -129,7 +148,7 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
             : `<div class="wg-btns">${кнопка(слово.cabinet)}<span class="wg-btn small">${значок('gear')}</span></div>`;
         тело = `${шапка}${карточка('a', 'wg-row')}${карточка('b', 'wg-row')}${низ}`;
     } else {
-        const неделя = формат.key === 'week'
+        const неделя = основа === 'week'
             ? `<div class="wg-week-strip">${слово.days.map((д, i) => {
                 /* На картинке (выкладка 184) — цвет чакры светлее (35% белого): чистый красный или синий
                    тонет в пёстрой картинке; жирность и тёмный ореол — в css/widgets.css (.wg-mirror). */
@@ -140,7 +159,7 @@ export function widgetHtml(формат, стиль, дата, сроки, пе�
             <span class="wg-chip">${экран(слово.sub)}</span>${формат.fill ? шестерня : ''}</span></div>`;
         const низ = формат.fill
             ? кнопка(слово.cabinet)
-            : кнопка(слово.settings, 'alt') + кнопка(слово.cabinet);
+            : (формат.scroll ? кнопкаСвитка(false) : '') + кнопка(слово.settings, 'alt') + кнопка(слово.cabinet);
         тело = `${шапка}<div class="wg-cards">${карточка('a')}${карточка('b')}</div>${неделя}
                 <div class="wg-btns">${низ}</div>`;
     }

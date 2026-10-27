@@ -10,8 +10,9 @@
    - #dailyScrollPanel — развёрнутый свиток и сноска (под текстом аркана).
    Где эти места стоят, решает страница (index.html и сетка в app.css).
 
-   Из app.js вызываются ровно две функции: initScroll() один раз при старте
-   и syncScroll() на каждый render().
+   Из app.js вызываются initScroll() один раз при старте, syncScroll() на
+   каждый render() и openDailyScroll(), когда свиток открывают снаружи —
+   кнопкой свитка на виджете рабочего стола (выкладка 193).
 
    Про батарею: никаких вечных таймеров. Один setTimeout до полуночи, чтобы
    свиток сменился ровно в 00:00, и короткая цепочка таймеров во время
@@ -41,6 +42,7 @@ let loading = null;
 let drawn = '';           // что нарисовано: дата|язык|человек|размер базы
 let busy = false;         // идёт анимация — перерисовка её не обрывает
 let midnightTimer = null;
+let current = null;       // нарисованный свиток: { isOpen, toggle }
 
 /* ---------- Язык ---------- */
 
@@ -121,18 +123,19 @@ function build(prediction, lang, open) {
     button.setAttribute('aria-label', `${tx.title}: ${isOpen() ? tx.fold : tx.unfold}`);
   };
 
-  button.addEventListener('click', () => {
-    if (busy) return;
+  const toggle = () => {
+    if (busy) return Promise.resolve();
     const forward = !isOpen();
-    run(parts, paper, inner, forward).then(() => { label(); saveOpen(forward); });
-  });
+    return run(parts, paper, inner, forward).then(() => { label(); saveOpen(forward); });
+  };
+  button.addEventListener('click', toggle);
 
   if (open) {
     // Уже открывали сегодня — свиток встречает развёрнутым, без анимации
     for (const p of parts) p.classList.add(...STEPS.map(([cls]) => cls), 'ds-open');
   }
   label();
-  return { button, panel };
+  return { button, panel, isOpen, toggle };
 }
 
 /* ---------- Анимация ---------- */
@@ -197,11 +200,11 @@ async function draw(buttonHost, panelHost) {
   if (sign === drawn || busy) return;
   drawn = sign;
 
-  if (!list.length) { buttonHost.replaceChildren(); panelHost.replaceChildren(); return; }
+  if (!list.length) { current = null; buttonHost.replaceChildren(); panelHost.replaceChildren(); return; }
   const prediction = list[pickIndex(userId, date, list.length)];
-  const { button, panel } = build(prediction, lang, isOpenToday(saved, date));
-  buttonHost.replaceChildren(button);
-  panelHost.replaceChildren(panel);
+  current = build(prediction, lang, isOpenToday(saved, date));
+  buttonHost.replaceChildren(current.button);
+  panelHost.replaceChildren(current.panel);
 }
 
 /* На каждый render() приложения. Рисует заново, только если сменился день,
@@ -211,6 +214,19 @@ export function syncScroll() {
   const panelHost = document.getElementById(PANEL_ID);
   if (!buttonHost || !panelHost || state.view !== 'quantum') return;
   draw(buttonHost, panelHost);
+}
+
+/* СВИТОК ОТКРЫЛИ СНАРУЖИ — кнопкой на виджете рабочего стола (выкладка 193).
+   Приложение уже на главной (app.js). Свиток показываем на экране и, если он
+   ещё свёрнут, разворачиваем той же анимацией, что по нажатию на кнопку. */
+export async function openDailyScroll() {
+  const buttonHost = document.getElementById(BUTTON_ID);
+  const panelHost = document.getElementById(PANEL_ID);
+  if (!buttonHost || !panelHost) return;
+  await draw(buttonHost, panelHost);
+  if (!current) return;
+  buttonHost.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (!current.isOpen()) await current.toggle();
 }
 
 /* Полночь: новый день — новое послание и завязанная ленточка. */

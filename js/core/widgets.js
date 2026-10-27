@@ -11,7 +11,9 @@
      tall      — вертикальный 2×3;
      week      — чакровый 4×2: средний, а сверху неделя;
      fillWide  — залитый горизонтальный;
-     fillTall  — залитый вертикальный.
+     fillTall  — залитый вертикальный;
+     slimScroll, weekScroll — узкий и чакровый с кнопкой свитка «Мудрость дня» (выкладка 193):
+                 те же виды и та же раскладка, плюс маленькая кнопка свитка (scroll: true).
 
    ЦВЕТ. Семь режимов:
      auto       — семь цветов чакр по дням недели, смена в полночь;
@@ -36,7 +38,9 @@ export const FORMATS = Object.freeze([
     Object.freeze({ key: 'tall', fill: false, tall: true }),
     Object.freeze({ key: 'week', fill: false, tall: false }),
     Object.freeze({ key: 'fillWide', fill: true, tall: false }),
-    Object.freeze({ key: 'fillTall', fill: true, tall: true })
+    Object.freeze({ key: 'fillTall', fill: true, tall: true }),
+    Object.freeze({ key: 'slimScroll', fill: false, tall: false, base: 'slim', scroll: true }),
+    Object.freeze({ key: 'weekScroll', fill: false, tall: false, base: 'week', scroll: true })
 ]);
 
 export const MODES = Object.freeze(['auto', 'chakra', 'gold', 'graphite', 'mirrorAuto', 'mirror', 'mirrorRotate']);
@@ -306,6 +310,8 @@ export function widgetTexts(translate) {
         cabinet: слово('cabinet'),
         cabinetPersonal: слово('cabinetPersonal'),
         cabinetMain: слово('cabinetMain'),
+        // Кнопка свитка «Мудрость дня» на виджете (выкладка 193): подпись для озвучки
+        scroll: слово('scroll'),
         // Панель настроек на рабочем столе (WidgetSheetActivity, выкладка 141)
         sheetTitle: слово('sheetTitle'),
         sheetOpacity: слово('sheetOpacity'),

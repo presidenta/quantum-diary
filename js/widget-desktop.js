@@ -99,10 +99,15 @@ const СТАРАЯ_ОБОЛОЧКА = /KvantDesktop\/1\.0\b/.test(navigator.user
 const ОКНО_НАСТРОЕК = 'popup,width=400,height=640';
 
 корень.addEventListener('click', событие => {
-    const настройки = событие.target.closest('.wg-gear, .wg-btn.alt, .wg-btn.small:not(.mark)');
+    const настройки = событие.target.closest('.wg-gear, .wg-btn.alt, .wg-btn.small:not(.mark):not(.wg-scrollbtn)');
     if (настройки) {
         if (СТАРАЯ_ОБОЛОЧКА) window.open('index.html#widgets', 'kvant-app');
         else window.open(`widget-sheet.html?f=${encodeURIComponent(формат.key)}`, `kvant-sheet-${формат.key}`, ОКНО_НАСТРОЕК);
+        return;
+    }
+    // Свиток (выкладка 193) — приложение сразу на свитке «Мудрость дня»
+    if (событие.target.closest('.wg-scrollbtn')) {
+        window.open('index.html#scroll', 'kvant-app');
         return;
     }
     if (событие.target.closest('.wg-btn')) window.open('index.html', 'kvant-app');

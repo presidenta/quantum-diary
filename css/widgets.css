@@ -254,6 +254,18 @@
 .wg-stack { display: grid; gap: 5px; }
 .wg-slim .wg-btn.small { width: 40px; height: 30px; }
 
+/* ---- кнопка свитка «Мудрость дня» (выкладка 193) ------------------------------
+   Узкий: перед столбиком кнопок, во всю высоту — свиток стоймя. Чакровый: квадрат в начале
+   нижнего ряда. Рисунок свитка — цвета значков вида, как WidgetScroll.java на телефоне. */
+.wg-slim.wg-with-scroll .wg-body { grid-template-columns: 1fr auto 1fr auto auto; }
+.wg-btn.wg-scrollbtn { color: var(--wg-ico); }
+.wg-btn.wg-scrollbtn .wg-ico { width: 30px; height: 15px; }
+.wg-slim .wg-btn.wg-scrollbtn.wg-scroll-tall { width: 40px; height: 65px; }
+.wg-btn.wg-scroll-tall .wg-ico { width: 56px; height: 28px; transform: rotate(90deg); }
+.wg-btns .wg-btn.wg-scrollbtn .wg-ico { width: 82%; height: auto; }
+.wg-btns .wg-btn.wg-scrollbtn { height: auto; aspect-ratio: 1; align-self: stretch; }
+.wg-gold .wg-btn.wg-scrollbtn .wg-ico { color: #F3D375; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)); }
+
 /* ---- карточки: средний, чакровый, залитый горизонтальный ---------------------- */
 .wg-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 /* В карточке срок столбиком: «после» мелко над крупным временем, как на телефоне */

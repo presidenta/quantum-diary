@@ -22,7 +22,7 @@ import { CONFIG as SPACE_CONFIG } from './views/space/config.js';
 import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space/index.js';
 import { initSlit } from './views/quantum-slit.js';
 // Свиток «Мудрость дня» под арканом: весь модуль в views/scroll/
-import { initScroll, syncScroll } from './views/scroll/index.js';
+import { initScroll, syncScroll, openDailyScroll } from './views/scroll/index.js';
 import { initWidgets, openWidgets } from './widgets-ui.js';
 import { initSupport } from './support.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
@@ -911,6 +911,8 @@ async function openAlarmDialog() {
  *           время Архитектора, — цифры на плашке и на экране сверяются
  *           глазом.
  *   space — окно возможностей (звонок Наблюдателя).
+ *   scroll — кнопка свитка на виджете (выкладка 193): главная, свиток «Мудрость
+ *           дня» разворачивается сам.
  *   widget:<номер> — шестерёнка на виджете рабочего стола: окно «Установить
  *           виджет» сразу на настройках этого виджета (раздел 9.21).
  *   всё остальное — вкладка «Моменты», как и раньше. */
@@ -942,6 +944,14 @@ async function применитьЧасИзВиджета(правка) {
   await saveAlarm({ ...alarm, [ПОЛЯ_ЧАСА[поле]]: час }, { windowTouched: поле === 'window' });
   await quietChanged();
   await moveToBack();
+}
+
+/* Свиток «Мудрость дня» живёт на пустом пульте, под плашкой аркана: обе части «Кванта»
+   закрываем, чтобы он был виден, и разворачиваем его (выкладка 193). */
+async function открытьСвиток() {
+  await go('quantum');
+  openQuantumPart(null);
+  await openDailyScroll();
 }
 
 async function открытьПоЗвонку() {
@@ -980,6 +990,10 @@ async function открытьПоЗвонку() {
   await go('quantum');
   if (цель === 'space') {
     openQuantumPart('space');
+    return;
+  }
+  if (цель === 'scroll') {
+    await открытьСвиток();
     return;
   }
   openQuantumPart('moments');
@@ -1102,6 +1116,15 @@ async function start() {
     history.replaceState(null, '', location.pathname + location.search);
     await openWidgets(кВиджетам[1] || 0);
   }
+  /* Кнопка свитка в окне виджета на компьютере (выкладка 193): #scroll — свиток «Мудрость дня».
+     Окно приложения уже открыто — адрес меняется без перезагрузки, поэтому слушаем и смену метки. */
+  const кСвитку = async () => {
+    if (location.hash !== '#scroll') return;
+    history.replaceState(null, '', location.pathname + location.search);
+    await открытьСвиток();
+  };
+  await кСвитку();
+  window.addEventListener('hashchange', () => { кСвитку().catch(err => console.warn('[свиток]', err.message)); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     открытьПоЗвонку().catch(err => console.warn('[будильник]', err.message));
