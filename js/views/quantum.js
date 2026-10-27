@@ -38,6 +38,32 @@ let forcedId = null;
    (а она случается от любой правки) не вправе стереть их посреди показа. */
 let finishing = false;
 
+/* «АРКАН ДНЯ» — КНОПКА, И ЧИТАЕТСЯ ПО ОЧЕРЕДИ СО СВИТКОМ (выкладка 194).
+
+   Владелец 27.10.2026: плашка выглядит как кнопка, а не нажимается — нелогично. Теперь нажатие
+   прячет и показывает смысл аркана, и открыта только одна из двух кнопок: аркан или свиток
+   «Мудрость дня». Кто открылся, сообщает событием страницы «kvant:reading» ({ who }), и
+   открытый сосед, услышав чужое имя, закрывается сам. Модули друг друга не знают: свиток
+   (views/scroll/) слушает то же событие.
+
+   Состояние живёт здесь, а не в разметке: аркан перерисовывается целиком при каждой
+   отрисовке раздела, и открытость не должна сбрасываться. */
+const ЧТЕНИЕ = 'kvant:reading';
+let arcanaOpen = true;
+
+function applyArcana() {
+  const plate = document.querySelector('#quantumArcana .q-plate');
+  const say = document.querySelector('#quantumArcana .q-arcana-say');
+  if (plate) plate.setAttribute('aria-expanded', String(arcanaOpen));
+  if (say) say.classList.toggle('q-arcana-closed', !arcanaOpen);
+}
+
+function toggleArcana() {
+  arcanaOpen = !arcanaOpen;
+  applyArcana();
+  if (arcanaOpen) document.dispatchEvent(new CustomEvent(ЧТЕНИЕ, { detail: { who: 'arcana' } }));
+}
+
 /** Открыть живой экран момента по звонку. wantedId пуст — идущий сейчас или ближайший (momentToLive). */
 export function openMomentLive(wantedId = '') {
   const day = state.quantum;
@@ -273,8 +299,12 @@ export function renderQuantum() {
   if (arcanaBox) {
     fill(arcanaBox,
       h('div', { class: 'q-head' },
-        // Аркан — медальон на своей пластине, а не полоса во всю ширину.
-        h('div', { class: 'q-plate' },
+        // Аркан — медальон на своей пластине, а не полоса во всю ширину. Пластина — кнопка:
+        // прячет и показывает смысл аркана (выкладка 194)
+        h('button', {
+          type: 'button', class: 'q-plate', onclick: toggleArcana,
+          'aria-expanded': String(arcanaOpen), 'aria-controls': 'quantumArcanaSay'
+        },
           h('div', { class: 'q-arcana' }, h('span', { text: arcanaRoman(day.arcana) })),
           h('div', { class: 'q-plate-text' },
             h('p', { class: 'muted m0 q-label', text: t('quantum.arcana') }),
@@ -282,7 +312,7 @@ export function renderQuantum() {
 
         /* Справа от плашки — о чём этот аркан и пожелание к нему. Обе
            строки берутся по номеру аркана, как и его название. */
-        h('div', { class: 'q-arcana-say' },
+        h('div', { class: `q-arcana-say${arcanaOpen ? '' : ' q-arcana-closed'}`, id: 'quantumArcanaSay' },
           h('p', { class: 'q-arcana-day', text: t(`${arcanaKey(day.arcana)}.day`) }),
           h('p', { class: 'q-arcana-wish', text: t(`${arcanaKey(day.arcana)}.wish`) }))));
   }
@@ -672,6 +702,13 @@ function scheduleWake(next) {
 }
 
 export function initQuantum() {
+  // Открылся свиток (или другая кнопка чтения) — смысл аркана прячется: читается одно (выкладка 194)
+  document.addEventListener(ЧТЕНИЕ, событие => {
+    if (событие.detail?.who === 'arcana' || !arcanaOpen) return;
+    arcanaOpen = false;
+    applyArcana();
+  });
+
   // Вернулись на вкладку — перечитываем день: момент мог наступить
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible') return;

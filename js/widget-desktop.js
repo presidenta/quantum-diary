@@ -14,7 +14,7 @@
 
 import { FORMATS, normalizeStyle } from './core/widgets.js';
 import { translate } from './core/i18n.js';
-import { widgetHtml, applyWidgetVars } from './core/widget-html.js';
+import { widgetHtml, applyWidgetVars, toggleWidgetScroll } from './core/widget-html.js';
 import { logEvent } from './core/web-journal.js';
 import { PICTURE_STEP_KEY, setPictureStep } from './core/widget-pictures.js';
 import { readDesktopStyle } from './core/desktop-widget-store.js';
@@ -57,6 +57,15 @@ function прочитать(имя) {
 }
 
 let последнееПоказанное = '';
+// Свиток развёрнут (выкладка 194): окно перерисовывается по часам и по событиям — раскрытый не схлопываем
+let свитокОткрыт = false;
+
+/* Сегодняшнее пожелание из тех, что приложение положило вперёд по датам (publishDesktopWidget) */
+function мудростьСегодня(данные) {
+    const д = new Date();
+    const ключ = `${д.getFullYear()}-${String(д.getMonth() + 1).padStart(2, '0')}-${String(д.getDate()).padStart(2, '0')}`;
+    return данные?.wisdom?.[ключ] || '';
+}
 
 function нарисовать() {
     const данные = прочитать('kvant-desktop-widget');
@@ -84,8 +93,9 @@ function нарисовать() {
     // Шаг картинок «при открытии» кладёт приложение (выкладка 181); его запись будит окно событием storage
     setPictureStep(прочитать(PICTURE_STEP_KEY));
     корень.innerHTML = widgetHtml(формат, normalizeStyle(readDesktopStyle(формат.key)),
-        new Date(), сроки, перевод);
+        new Date(), сроки, перевод, мудростьСегодня(данные));
     applyWidgetVars(корень);
+    if (свитокОткрыт) корень.querySelector('.wg-with-scroll')?.classList.add('wg-scroll-open');
     document.documentElement.lang = язык;
     if (закрыть) закрыть.title = закрыть.ariaLabel = перевод('widgets.closeWidget');
     document.title = `${перевод('widgets.format.' + формат.key)} · Квант`;
@@ -105,9 +115,9 @@ const ОКНО_НАСТРОЕК = 'popup,width=400,height=640';
         else window.open(`widget-sheet.html?f=${encodeURIComponent(формат.key)}`, `kvant-sheet-${формат.key}`, ОКНО_НАСТРОЕК);
         return;
     }
-    // Свиток (выкладка 193) — приложение сразу на свитке «Мудрость дня»
-    if (событие.target.closest('.wg-scrollbtn')) {
-        window.open('index.html#scroll', 'kvant-app');
+    // Свиток (выкладка 194) — раскрывается прямо в виджете, приложение не открывается
+    if (событие.target.closest('.wg-scrollbtn, .wg-scrollpage')) {
+        свитокОткрыт = toggleWidgetScroll(событие.target.closest('.wg'));
         return;
     }
     if (событие.target.closest('.wg-btn')) window.open('index.html', 'kvant-app');

@@ -31,6 +31,8 @@ import {
     guardFrames, guardText, guardTerm, namedHorizon, anchorHours, freshDay, orphanKeys
 } from './core/reminder-rules.js';
 import { widgetTexts } from './core/widgets.js';
+// Пожелания «Мудрости дня» для свитка на виджете (выкладка 194): выбирает модуль свитка
+import { wisdomAhead } from './views/scroll/wisdom.js';
 import { provisionalDay } from './core/quantum.js';
 import { todayKey, addDays } from './core/dates.js';
 import { cycleNamedHour } from './core/observer-clock.js';
@@ -389,6 +391,17 @@ export async function widgetTerms(now = new Date()) {
    телефоне (guardFramesFor): расписаны по часам вперёд, и окно виджета (widget.html) само
    выбирает текущий — последний, чей час наступил. Кладутся на компьютер (localStorage) при
    каждой перестановке расписания в браузере; открытое окно виджета слышит это сразу. */
+/* Пожелания «Мудрости дня» на две недели — для свитка на виджетах (выкладка 194). Человек — тот же,
+   что на главной (userId), язык — приложения. Сбой не вправе остановить звонки: тогда null. */
+async function пожелания() {
+    try {
+        const userId = String((await getMeta('userId')) || '');
+        return await wisdomAhead({ userId, language: state.language, days: 14 });
+    } catch {
+        return null;
+    }
+}
+
 export async function publishDesktopWidget(now = new Date()) {
     try {
         const alarm = await loadAlarm();
@@ -399,7 +412,9 @@ export async function publishDesktopWidget(now = new Date()) {
         localStorage.setItem('kvant-desktop-widget', JSON.stringify({
             at: now.getTime(),
             lang: state.language,
-            frames: кадрыВиджетам
+            frames: кадрыВиджетам,
+            // Свиток на виджете со свитком (выкладка 194): пожелания вперёд по датам
+            wisdom: await пожелания()
         }));
         записатьСрокиВиджетам(кадрыВиджетам, now.getTime());
         return true;
@@ -477,6 +492,9 @@ export async function planReminders() {
         homeLabel: t('guard.home'),
         // Слова виджетов рабочего стола: они рисуются, когда приложение закрыто
         widgets: widgetTexts(t),
+        /* Свиток на виджете читают без приложения: пожелания на две недели вперёд, на языке
+           человека. Ошибка в них не вправе остановить постановку звонков — тогда просто null. */
+        wisdom: await пожелания(),
         // Часы «Режима будильника» — для строки «Время звонков» в панели виджета
         named: назначенныеЧасы(alarm),
         // Резервный будильник в «Часах» телефона (выкладка 169)

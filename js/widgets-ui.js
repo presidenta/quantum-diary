@@ -18,14 +18,17 @@
    стиль, который получит виджет, положенный на стол следом; уже стоящие он не
    трогает. В браузере телефона нет: окно работает как просмотр. */
 
-import { t } from './store.js';
+import { t, state } from './store.js';
 import { isNative, widgetList, widgetSave, offerWidget, offerTile } from './core/reminders.js';
 import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
     FORMATS, CHAKRAS, DEFAULT_ALPHA, normalizeStyle, resolveLook, widgetAliases, translateOwn
 } from './core/widgets.js';
 import { PICTURE_STEP_KEY, setPictureStep } from './core/widget-pictures.js';
-import { widgetHtml, widgetWords, applyWidgetVars } from './core/widget-html.js';
+import { widgetHtml, widgetWords, applyWidgetVars, toggleWidgetScroll } from './core/widget-html.js';
+// Пожелание дня для свитка в превью виджетов со свитком (выкладка 194)
+import { wisdomAhead } from './views/scroll/wisdom.js';
+import { getMeta } from './db.js';
 import { readDesktopStyle, writeDesktopStyle } from './core/desktop-widget-store.js';
 import { pickerHtml, pickerAction, applySwatches, styleNote } from './widget-picker.js';
 
@@ -72,6 +75,11 @@ function дляТелефона(стиль) {
    ОКНО
    ========================================================================== */
 
+/* Свиток в превью (выкладка 194): пожелание дня и какие виды сейчас развёрнуты — галерея
+   перерисовывается от любой правки стиля, и раскрытый свиток не должен схлопываться. */
+let мудрость = '';
+const развёрнуты = new Set();
+
 function нарисоватьГалерею() {
     const стиль = стильЦели();
     const дата = new Date();
@@ -80,13 +88,16 @@ function нарисоватьГалерею() {
     $('widgetsGallery').innerHTML = FORMATS.map(формат => `
         <div class="wg-item">
           <span class="wg-item-name">${экран(t(`widgets.format.${формат.key}`))}</span>
-          ${widgetHtml(формат, стиль, дата, сроки, t)}
+          ${widgetHtml(формат, стиль, дата, сроки, t, мудрость)}
           ${можноСтавить
             ? `<button type="button" class="btn" data-install="${формат.key}">${экран(t('widgets.install'))}</button>`
             : `<button type="button" class="btn" data-desktop="${формат.key}">${экран(t(вПриложенииДляКомпьютера()
                 ? 'widgets.placeDesktop' : 'widgets.openDesktop'))}</button>`}
         </div>`).join('');
     applyWidgetVars($('widgetsGallery'));
+    for (const виджет of $('widgetsGallery').querySelectorAll('.wg-with-scroll')) {
+        if (развёрнуты.has(виджет.dataset.format)) виджет.classList.add('wg-scroll-open');
+    }
 }
 
 /* ВИДЖЕТ НА КОМПЬЮТЕРЕ (выкладка 150). На телефоне кнопка ставит виджет на рабочий стол, а в
@@ -231,6 +242,9 @@ export async function openWidgets(номер = 0) {
 
     const список = await widgetList();
     стоящие = список.widgets;
+    мудрость = Object.values(await wisdomAhead({
+        userId: String(await getMeta('userId').catch(() => '') || ''), language: state.language, days: 1
+    }).catch(() => null) || {})[0] || '';
     /* На компьютере и в браузере (выкладка 182) «стоящие» — шесть видов окон-виджетов, у каждого свой стиль;
        «новые» — общий стиль. Читаются сохранённые: до 182 окно открывалось с умолчаниями и затирало их. */
     if (!isNative()) {
@@ -331,6 +345,14 @@ export function initWidgets() {
     $('widgetsTileAdd').addEventListener('click', поставитьПлитку);
 
     $('widgetsGallery').addEventListener('click', событие => {
+        // Свиток на превью — раскрывается прямо в виджете, как на телефоне (выкладка 194)
+        const свиток = событие.target.closest('.wg-scrollbtn, .wg-scrollpage');
+        if (свиток) {
+            const виджет = свиток.closest('.wg');
+            if (toggleWidgetScroll(виджет)) развёрнуты.add(виджет.dataset.format);
+            else развёрнуты.delete(виджет.dataset.format);
+            return;
+        }
         const кнопка = событие.target.closest('button[data-install]');
         if (кнопка) установить(кнопка.dataset.install);
         const компьютер = событие.target.closest('button[data-desktop]');

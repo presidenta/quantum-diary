@@ -10,9 +10,9 @@
    - #dailyScrollPanel — развёрнутый свиток и сноска (под текстом аркана).
    Где эти места стоят, решает страница (index.html и сетка в app.css).
 
-   Из app.js вызываются initScroll() один раз при старте, syncScroll() на
-   каждый render() и openDailyScroll(), когда свиток открывают снаружи —
-   кнопкой свитка на виджете рабочего стола (выкладка 193).
+   Из app.js вызываются initScroll() один раз при старте и syncScroll() на
+   каждый render(). Пожелания для свитка на виджетах (телефон, окно виджета
+   на компьютере, превью) отдаёт wisdom.js — выбор один на всё приложение.
 
    Про батарею: никаких вечных таймеров. Один setTimeout до полуночи, чтобы
    свиток сменился ровно в 00:00, и короткая цепочка таймеров во время
@@ -20,13 +20,19 @@
 
 import { state } from '../../store.js';
 import { getMeta, setMeta } from '../../db.js';
-import { dayKey, msToMidnight, pickIndex, normalize, textOf, isOpenToday } from './engine.js';
+import { dayKey, msToMidnight, pickIndex, textOf, isOpenToday } from './engine.js';
+import { loadBase, langOf } from './wisdom.js';
 import { textsFor } from './texts.js';
+
+/* Читается по очереди с «Арканом дня» (выкладка 194): открываясь, свиток сообщает об этом
+   событием страницы, а услышав, что открылось другое, сворачивается сам. Аркан
+   (views/quantum.js) слушает то же событие. Друг о друге модули не знают. */
+const ЧТЕНИЕ = 'kvant:reading';
+const сообщитьОткрыт = () => document.dispatchEvent(new CustomEvent(ЧТЕНИЕ, { detail: { who: 'scroll' } }));
 
 const BUTTON_ID = 'dailyScrollButton';
 const PANEL_ID = 'dailyScrollPanel';
 const META_KEY = 'dailyScroll';
-const DATA_URL = new URL('./predictions.json', import.meta.url).href;
 
 /* Шаги развязывания: сколько длится каждый, в миллисекундах. Те же числа
    стоят в scroll.css у переходов — меняются парой. */
@@ -37,36 +43,16 @@ const STEPS = [
   ['ds-unroll', 850]   // разворачивается, открывая послание
 ];
 
-let base = null;          // послания, уже приведённые к { ru, uk, en }
-let loading = null;
 let drawn = '';           // что нарисовано: дата|язык|человек|размер базы
 let busy = false;         // идёт анимация — перерисовка её не обрывает
 let midnightTimer = null;
 let current = null;       // нарисованный свиток: { isOpen, toggle }
 
-/* ---------- Язык ---------- */
+/* ---------- Язык и база ---------- */
 
-/* Свиток говорит на языке Ежедневника, своего переключателя не показывает. */
-function currentLang() {
-  const raw = String(state.language || 'ru').slice(0, 2).toLowerCase();
-  if (raw === 'ua') return 'uk';
-  return ['ru', 'uk', 'en'].includes(raw) ? raw : 'ru';
-}
-
-/* ---------- База посланий ---------- */
-
-/* Грузится один раз. Не загрузилась (нет сети и нет в запасе) — пробуем
-   снова при следующей отрисовке, а свиток пока не показываем. */
-function loadBase() {
-  if (base) return Promise.resolve(base);
-  if (!loading) {
-    loading = fetch(DATA_URL)
-      .then(res => { if (!res.ok) throw new Error(`база посланий: ${res.status}`); return res.json(); })
-      .then(raw => (base = normalize(raw)))
-      .catch(() => { loading = null; return []; });
-  }
-  return loading;
-}
+/* Свиток говорит на языке Ежедневника, своего переключателя не показывает.
+   База посланий и выбор на даты — в wisdom.js. */
+const currentLang = () => langOf(state.language);
 
 /* ---------- Разметка ---------- */
 
@@ -126,6 +112,7 @@ function build(prediction, lang, open) {
   const toggle = () => {
     if (busy) return Promise.resolve();
     const forward = !isOpen();
+    if (forward) сообщитьОткрыт();
     return run(parts, paper, inner, forward).then(() => { label(); saveOpen(forward); });
   };
   button.addEventListener('click', toggle);
@@ -205,6 +192,8 @@ async function draw(buttonHost, panelHost) {
   current = build(prediction, lang, isOpenToday(saved, date));
   buttonHost.replaceChildren(current.button);
   panelHost.replaceChildren(current.panel);
+  // Свиток встретил развёрнутым — аркан в это время закрыт: читается одно
+  if (current.isOpen()) сообщитьОткрыт();
 }
 
 /* На каждый render() приложения. Рисует заново, только если сменился день,
@@ -216,19 +205,6 @@ export function syncScroll() {
   draw(buttonHost, panelHost);
 }
 
-/* СВИТОК ОТКРЫЛИ СНАРУЖИ — кнопкой на виджете рабочего стола (выкладка 193).
-   Приложение уже на главной (app.js). Свиток показываем на экране и, если он
-   ещё свёрнут, разворачиваем той же анимацией, что по нажатию на кнопку. */
-export async function openDailyScroll() {
-  const buttonHost = document.getElementById(BUTTON_ID);
-  const panelHost = document.getElementById(PANEL_ID);
-  if (!buttonHost || !panelHost) return;
-  await draw(buttonHost, panelHost);
-  if (!current) return;
-  buttonHost.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  if (!current.isOpen()) await current.toggle();
-}
-
 /* Полночь: новый день — новое послание и завязанная ленточка. */
 function armMidnight() {
   clearTimeout(midnightTimer);
@@ -237,6 +213,11 @@ function armMidnight() {
 
 export function initScroll() {
   armMidnight();
+  // Открылось другое (аркан) — свиток сворачивается той же анимацией, что по нажатию
+  document.addEventListener(ЧТЕНИЕ, событие => {
+    if (событие.detail?.who === 'scroll' || !current || busy || !current.isOpen()) return;
+    current.toggle();
+  });
   /* Телефон мог проспать полночь со свёрнутым приложением: таймеры в фоне
      замирают. Вернулись — сверяем день. */
   document.addEventListener('visibilitychange', () => {

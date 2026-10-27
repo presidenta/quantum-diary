@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 193;
+const RELEASE = 194;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -29,7 +29,7 @@ const SHELL = [
   'js/views/space/notifications.js', 'js/views/space/scene.js', 'js/views/space/template.js',
   'js/vendor/three.min.js',
   // Свиток «Мудрость дня»: модуль целиком, с базой посланий — чтобы открывался без сети
-  'js/views/scroll/index.js', 'js/views/scroll/engine.js', 'js/views/scroll/texts.js',
+  'js/views/scroll/index.js', 'js/views/scroll/engine.js', 'js/views/scroll/texts.js', 'js/views/scroll/wisdom.js',
   'js/views/scroll/predictions.json', 'js/views/scroll/scroll.css',
   'js/views/scroll/fonts/marck-script-cyrillic.woff2', 'js/views/scroll/fonts/marck-script-latin.woff2',
   'admin.html', 'css/admin.css', 'js/admin.js',

@@ -1586,6 +1586,37 @@ body {
 #dailyScrollPanel { grid-area: panel; min-width: 0; }
 #dailyScrollButton:empty, #dailyScrollPanel:empty { display: none; }
 
+/* «Аркан дня» — кнопка (выкладка 194): пластина прячет и показывает смысл аркана, и
+   открыта только одна из двух — аркан или свиток. Вид пластины прежний, добавлены
+   подсветка под мышью и нажатие, как у кнопки свитка рядом. */
+.q-arcana-row .q-plate {
+  font: inherit; text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .2s ease, box-shadow .2s ease, transform .12s ease;
+}
+@media (hover: hover) {
+  .q-arcana-row .q-plate:hover {
+    filter: brightness(1.1) saturate(1.05);
+    box-shadow: var(--pult-bar-edge), 0 0 18px rgba(246, 193, 71, .45);
+  }
+}
+.q-arcana-row .q-plate:focus-visible { outline: 2px solid var(--gold-line-lit, #F6C147); outline-offset: 3px; }
+.q-arcana-row .q-plate:active {
+  transform: translateY(1px) scale(.985);
+  filter: brightness(1.18);
+  box-shadow: var(--pult-bar-edge), 0 0 22px rgba(246, 193, 71, .6);
+}
+/* Смысл аркана сворачивается плавно: высота и прозрачность, без прыжка соседей */
+.q-arcana-row .q-arcana-say {
+  max-height: 20em; overflow: hidden;
+  transition: max-height .45s ease, opacity .35s ease, margin .45s ease;
+}
+.q-arcana-row .q-arcana-say.q-arcana-closed { max-height: 0; opacity: 0; margin-top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .q-arcana-row .q-arcana-say, .q-arcana-row .q-plate { transition: none; }
+}
+
 @media (min-width: 720px) {
   .q-arcana-row {
     grid-template-columns: auto minmax(0, 1fr) minmax(220px, 300px);

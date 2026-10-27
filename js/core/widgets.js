@@ -312,6 +312,8 @@ export function widgetTexts(translate) {
         cabinetMain: слово('cabinetMain'),
         // Кнопка свитка «Мудрость дня» на виджете (выкладка 193): подпись для озвучки
         scroll: слово('scroll'),
+        // Свиток на виджете, пока приложение не прислало пожеланий (выкладка 194)
+        scrollWait: слово('scrollWait'),
         // Панель настроек на рабочем столе (WidgetSheetActivity, выкладка 141)
         sheetTitle: слово('sheetTitle'),
         sheetOpacity: слово('sheetOpacity'),
