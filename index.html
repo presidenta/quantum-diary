@@ -257,12 +257,17 @@
              внутри «Архитектора», потому что это не содержимое раздела, а
              то, с чем человек в этот раздел входит. Наполняет
              js/views/quantum.js. -->
-        <div id="quantumArcana" class="q-arcana-block"></div>
-
-        <!-- Свиток «Мудрость дня» — сразу под арканом. Отдельный модуль:
-             js/views/scroll/ (см. README.md там). Место на экране
-             меняется переносом этой строки. -->
-        <div id="dailyScroll"></div>
+        <!-- Аркан дня и свиток «Мудрость дня» — одна сетка (.q-arcana-row в
+             app.css): плашка аркана, справа от неё золотая кнопка свитка,
+             под ними смысл аркана, ещё ниже разворачивается сам свиток.
+             Свиток — отдельный модуль js/views/scroll/ (см. README.md там):
+             он рисует кнопку в #dailyScrollButton, свиток в #dailyScrollPanel.
+             Места на экране задаёт сетка, а не модуль. -->
+        <div class="q-arcana-row">
+          <div id="quantumArcana" class="q-arcana-block"></div>
+          <div id="dailyScrollButton"></div>
+          <div id="dailyScrollPanel"></div>
+        </div>
       </div>
 
       <!-- Часть 1: моменты дня. Разметка и логика не менялись.

@@ -1556,6 +1556,48 @@ body {
 .q-arcana-block { grid-column: 1 / -1; margin-top: 6px; }
 .q-arcana-block:empty { display: none; }
 .q-arcana-block .q-head { margin-bottom: 0; }
+
+/* ---- Аркан дня и свиток «Мудрость дня» — одна сетка (выкладка 191) ------
+   Владелец 27.10.2026: кнопка свитка — справа от плашки аркана, такая же
+   золотая и той же высоты, во всю оставшуюся ширину; свиток
+   разворачивается под текстом аркана.
+
+   Плашку и текст аркана рисует views/quantum.js в #quantumArcana и при
+   каждой отрисовке пересобирает. Поэтому кнопку туда не вкладываем, а
+   ставим рядом: #quantumArcana и его .q-head растворены (display: contents),
+   и плашка, текст, кнопка и свиток становятся ячейками одной сетки.
+
+   Телефон: [плашка | кнопка] / [текст аркана] / [свиток].
+   Широкий экран: [плашка | текст аркана | кнопка] / [свиток]. */
+.q-arcana-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "plate scroll" "say say" "panel panel";
+  column-gap: 10px;
+  align-items: stretch;
+  margin-top: 6px;
+}
+.q-arcana-row > #quantumArcana,
+.q-arcana-row .q-head { display: contents; }
+.q-arcana-row .q-plate { grid-area: plate; }
+.q-arcana-row .q-arcana-say { grid-area: say; margin-top: 12px; }
+#dailyScrollButton { grid-area: scroll; display: flex; min-width: 0; }
+#dailyScrollPanel { grid-area: panel; min-width: 0; }
+#dailyScrollButton:empty, #dailyScrollPanel:empty { display: none; }
+
+@media (min-width: 720px) {
+  .q-arcana-row {
+    grid-template-columns: auto minmax(0, 1fr) minmax(220px, 300px);
+    grid-template-areas: "plate say scroll" "panel panel panel";
+    column-gap: 16px;
+    align-items: center;
+  }
+  .q-arcana-row .q-arcana-say { margin-top: 0; }
+  /* Кнопка — вровень с плашкой аркана, а не во всю высоту текста рядом: пара должна быть симметричной */
+  #dailyScrollButton { align-self: center; }
+  #dailyScrollButton .ds-btn { min-height: 66px; }
+}
 .q-idle[hidden] { display: none; }
 
 .q-exp {

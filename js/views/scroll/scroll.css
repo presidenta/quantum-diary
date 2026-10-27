@@ -1,60 +1,99 @@
 /* Свиток «Мудрость дня» — весь внешний вид модуля.
 
-   Изоляция: каждое правило начинается с .ds или #dailyScroll, чужих
-   классов файл не трогает. Цвета модуля — свои переменные --ds-*; золото
-   ссылается на токены Пульта (--gold, --gold-line), значения после запятой —
-   запасные, если модуль открыт вне Ежедневника.
+   Две части: .ds-btn — золотая кнопка со свёрнутым свитком (справа от
+   плашки аркана) и .ds-panel — развёрнутый свиток со сноской (под текстом
+   аркана). Где стоят их места на странице — сетка .q-arcana-row в app.css.
+
+   Изоляция: каждое правило начинается с .ds-, чужих классов файл не трогает.
+   Золото кнопки — тот же металл и та же кромка, что у плашки «Аркан дня»
+   (--pult-rim, --pult-bar-edge); рисунок металла другой: у пульта соседние
+   пластины не повторяют друг друга. Путь к картинке — от ЭТОГО файла.
+
+   Нельзя брать здесь var(--gold-3d) и var(--gold-gradient): в app.css они
+   заданы картинкой url(../img/gold/…), а путь внутри переменной браузер
+   считает от файла, где её подставили, — выходило js/views/img/gold/…, 404.
 
    Длительности переходов парные с STEPS в index.js:
-   развязать 450 · повернуть 650 · вытянуть 500 · развернуть 850. */
+   развязать 450 · переложить 350 · вытянуть 500 · развернуть 850. */
 
-#dailyScroll { grid-column: 1 / -1; margin-top: 10px; }
-#dailyScroll:empty { display: none; }
-
-.ds {
+.ds-btn, .ds-panel {
   --ds-paper: #E8D6A6;          /* пергамент, середина */
   --ds-paper-lit: #F3E6C2;      /* пергамент в свету */
   --ds-paper-dark: #B99A5C;     /* загар по краям */
   --ds-ink: #3A2810;            /* чернила */
-  --ds-ink-soft: #6B5532;
-  --ds-gold: var(--gold, #E3C77C);
-  /* Своё золото, а не var(--gold-3d): в app.css оно задано картинкой url(../img/gold/…), а путь
-     внутри переменной браузер считает от ЭТОГО файла — выходило js/views/img/gold/…, 404 (выкладка 190). */
-  --ds-gold-3d: linear-gradient(145deg,#F9D976 0%,#EAA82C 30%,#C18825 60%,#7A4B11 85%,#B88428 100%);
-  --ds-rod: 15px;               /* толщина одного валика */
-  position: relative;
+  --ds-cap: linear-gradient(145deg,#F9D976 0%,#EAA82C 30%,#C18825 60%,#7A4B11 85%,#B88428 100%);
 }
 
-/* ---- Сцена ---------------------------------------------------------------
-   Пока свиток завязан, сцена — кнопка: нажатие в любое её место
-   развязывает ленточку. */
-.ds-stage {
-  display: block;
-  border-radius: var(--edge, 12px);
-  outline-offset: 4px;
+/* ---- Кнопка ---------------------------------------------------------------
+   Золотая пластина во всю оставшуюся ширину, той же высоты, что плашка
+   аркана. Сверху подпись, под ней поперёк лежит свёрнутый свиток. */
+.ds-btn {
+  --ds-rod: 9px;
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px;
+  width: 100%; min-height: 58px;
+  padding: 7px 16px 10px;
+  border: 2px solid transparent;
+  border-radius: 13px;
+  background:
+      url(../../../img/gold/n05.jpg) center/cover no-repeat padding-box,
+      var(--pult-rim, linear-gradient(135deg,#FFFBE8 0%,#F3D375 25%,#D9A83F 50%,#C8902C 75%,#AE7D21 100%)) border-box;
+  box-shadow: var(--pult-bar-edge, 0 0 0 1px rgba(10,8,4,.9), 0 4px 12px rgba(0,0,0,.65));
+  font: inherit;
+  color: var(--pult-ink, #231703);
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: filter .2s ease, box-shadow .2s ease, transform .12s ease;
 }
-.ds:not(.ds-untie) .ds-stage { cursor: pointer; }
-
-/* ---- Свиток --------------------------------------------------------------
-   Два валика и бумага между ними. Завязанный свиток — оба валика вплотную,
-   бумаги нет: выглядит как один толстый свёрнутый рулон, стоящий наискосок. */
-.ds-scroll {
-  position: relative;
-  width: 150px;
-  margin: 62px auto 58px;
-  transform: rotate(-58deg);
-  transition:
-    transform .65s cubic-bezier(.45,.05,.25,1),
-    margin .65s cubic-bezier(.45,.05,.25,1),
-    width .5s cubic-bezier(.45,.05,.25,1);
+/* Подсветка: мышь наведена или кнопка в фокусе — металл светлеет и даёт ореол.
+   Только там, где наведение есть: на телефоне оно «залипало» бы после касания. */
+@media (hover: hover) {
+  .ds-btn:hover {
+    filter: brightness(1.12) saturate(1.06);
+    box-shadow: var(--pult-bar-edge, 0 0 0 1px rgba(10,8,4,.9), 0 4px 12px rgba(0,0,0,.65)),
+                0 0 18px rgba(246,193,71,.45);
+  }
 }
-.ds:not(.ds-untie) .ds-stage:hover .ds-scroll { transform: rotate(-54deg); }
-.ds.ds-turn .ds-scroll { transform: rotate(0deg); margin: 6px auto 4px; }
-.ds.ds-wide .ds-scroll { width: calc(100% - 16px); max-width: 560px; }
+.ds-btn:focus-visible {
+  outline: 2px solid var(--gold-line-lit, #F6C147); outline-offset: 3px;
+  filter: brightness(1.1);
+}
+/* Палец на кнопке — она вдавливается и вспыхивает */
+.ds-btn:active {
+  transform: translateY(1px) scale(.985);
+  filter: brightness(1.2) saturate(1.08);
+  box-shadow: var(--pult-bar-edge, 0 0 0 1px rgba(10,8,4,.9), 0 4px 12px rgba(0,0,0,.65)),
+              0 0 22px rgba(246,193,71,.6);
+}
 
-/* Валик: свёрнутый край пергамента, круглый на свету, с золотыми
-   наконечниками по краям. */
+/* Подпись — тем же прорезанным золотом, что «Аркан дня» на соседней плашке */
+.ds-btn-label {
+  font-size: 12px; font-weight: 600; letter-spacing: .4px; line-height: 1.1;
+  background-image: var(--pult-rim, linear-gradient(135deg,#FFFBE8,#D9A83F));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(20, 12, 1, 1))
+          drop-shadow(0 0 2px rgba(20, 12, 1, .95));
+}
+
+.ds-btn .ds-scroll {
+  width: min(82%, 240px);
+  transition: opacity .35s ease, transform .35s ease;
+}
+/* Свиток ушёл с кнопки вниз — на кнопке остаётся его тень */
+.ds-btn.ds-lift .ds-scroll { opacity: .3; transform: translateY(4px); }
+
+/* ---- Свиток ---------------------------------------------------------------
+   Два валика и бумага между ними. Свёрнутый — оба валика вплотную, бумаги
+   нет: один толстый рулон. */
+.ds-scroll { position: relative; margin: 0 auto; }
+
+/* Валик: свёрнутый край пергамента с золотыми наконечниками */
 .ds-rod {
   position: relative; display: block; z-index: 2;
   height: var(--ds-rod);
@@ -65,9 +104,9 @@
 }
 .ds-rod::before, .ds-rod::after {
   content: ''; position: absolute; top: -2px;
-  width: 9px; height: calc(var(--ds-rod) + 4px);
+  width: 8px; height: calc(var(--ds-rod) + 4px);
   border-radius: 4px;
-  background: var(--ds-gold-3d);
+  background: var(--ds-cap);
   box-shadow: 0 1px 2px rgba(0,0,0,.5);
 }
 .ds-rod::before { left: -5px; }
@@ -84,45 +123,15 @@
   box-shadow: inset 0 0 18px rgba(110,78,30,.35);
   transition: height .85s cubic-bezier(.3,.6,.25,1);
 }
-.ds.ds-open .ds-paper { height: auto; }
 
-.ds-paper-in {
-  padding: 20px 22px 16px;
-  text-align: center;
-  color: var(--ds-ink);
-  opacity: 0;
-  transition: opacity .5s ease .35s;
-}
-.ds.ds-unroll .ds-paper-in { opacity: 1; }
-
-.ds-heading {
-  margin: 0 0 10px;
-  font-size: 11px; font-weight: 700; letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--ds-ink-soft);
-}
-.ds-text {
-  margin: 0;
-  font-family: var(--serif, Georgia, serif);
-  font-size: 19px; line-height: 1.4; font-weight: 600;
-  color: var(--ds-ink);
-}
-.ds-note {
-  margin: 14px auto 0; max-width: 46ch;
-  padding-top: 10px;
-  border-top: 1px solid rgba(90,64,24,.25);
-  font-size: 10.5px; line-height: 1.45; font-style: italic;
-  color: var(--ds-ink-soft);
-}
-
-/* ---- Лента с бантиком ----------------------------------------------------
+/* ---- Лента с бантиком (только на кнопке) ---------------------------------
    Перевязывает рулон поперёк посередине: полоса ленты, бантик из двух
-   петель с узелком и два хвоста с вырезом «ласточкин хвост». Развязываясь,
-   петли расходятся, хвосты опадают, лента тает. */
+   петель с узелком и два хвоста «ласточкин хвост». Развязываясь, петли
+   расходятся, хвосты опадают, лента тает. */
 .ds-ribbon {
   position: absolute; z-index: 3;
   left: 50%; top: 50%;
-  width: 14px; height: calc(var(--ds-rod) * 2 + 8px);
+  width: 12px; height: calc(var(--ds-rod) * 2 + 8px);
   transform: translate(-50%, -50%);
   border-radius: 2px;
   background: linear-gradient(90deg, #7A4B11 0%, #EAA82C 30%, #FFF2B2 50%, #EAA82C 70%, #7A4B11 100%);
@@ -131,7 +140,7 @@
 }
 .ds-ribbon::before, .ds-ribbon::after {
   content: ''; position: absolute; top: 50%; left: 50%;
-  width: 8px; height: 30px;
+  width: 7px; height: 22px;
   background: linear-gradient(90deg, #8C5C14, #F6C147 50%, #8C5C14);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
   transform-origin: 50% 0;
@@ -140,14 +149,11 @@
 .ds-ribbon::before { transform: translateX(-50%) rotate(38deg); }
 .ds-ribbon::after  { transform: translateX(-50%) rotate(-38deg); }
 
-.ds-bow {
-  position: absolute; left: 50%; top: 50%;
-  width: 0; height: 0;
-}
+.ds-bow { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
 /* Петли: залитые золотом капли, узким концом к узелку */
 .ds-bow::before, .ds-bow::after {
   content: ''; position: absolute; top: 0;
-  width: 24px; height: 17px;
+  width: 20px; height: 14px;
   background: radial-gradient(ellipse at 45% 30%, #FFF2B2 0%, #F6C147 28%, #C18825 68%, #7A4B11 100%);
   box-shadow: inset 0 0 0 1.5px rgba(122,75,17,.6), inset 0 -3px 4px rgba(90,52,8,.45), 0 1px 3px rgba(0,0,0,.55);
   transition: transform .45s ease, opacity .45s ease;
@@ -156,7 +162,7 @@
 .ds-bow::after  { left: 3px;  border-radius: 25% 80% 80% 25% / 40% 60% 60% 40%; transform: translateY(-50%) rotate(12deg);  transform-origin: 0 50%; }
 .ds-knot {
   position: absolute; z-index: 1; left: 0; top: 0;
-  width: 11px; height: 14px;
+  width: 10px; height: 12px;
   transform: translate(-50%, -50%);
   border-radius: 4px;
   background: linear-gradient(145deg, #F9D976 0%, #EAA82C 40%, #A8721A 100%);
@@ -164,54 +170,69 @@
   transition: opacity .3s ease;
 }
 
-.ds.ds-untie .ds-ribbon { opacity: 0; transform: translate(-50%, -50%) translateY(16px) scaleY(.5); }
-.ds.ds-untie .ds-ribbon::before { transform: translateX(-50%) rotate(80deg); }
-.ds.ds-untie .ds-ribbon::after  { transform: translateX(-50%) rotate(-80deg); }
-.ds.ds-untie .ds-bow::before { transform: translate(-12px, -50%) rotate(-75deg); opacity: 0; }
-.ds.ds-untie .ds-bow::after  { transform: translate(12px, -50%) rotate(75deg); opacity: 0; }
-.ds.ds-untie .ds-knot { opacity: 0; }
+.ds-btn.ds-untie .ds-ribbon { opacity: 0; transform: translate(-50%, -50%) translateY(12px) scaleY(.5); }
+.ds-btn.ds-untie .ds-ribbon::before { transform: translateX(-50%) rotate(80deg); }
+.ds-btn.ds-untie .ds-ribbon::after  { transform: translateX(-50%) rotate(-80deg); }
+.ds-btn.ds-untie .ds-bow::before { transform: translate(-10px, -50%) rotate(-75deg); opacity: 0; }
+.ds-btn.ds-untie .ds-bow::after  { transform: translate(10px, -50%) rotate(75deg); opacity: 0; }
+.ds-btn.ds-untie .ds-knot { opacity: 0; }
 
-/* ---- Плашка «Мудрость дня» -----------------------------------------------
-   Под завязанным свитком, тем же прорезанным золотом, что подпись
-   «Аркан дня». Свиток повернулся — плашка уходит, её место занимает
-   заголовок на самой бумаге. */
-.ds-plaque {
-  display: table;
-  margin: 0 auto 4px;
-  padding: 6px 16px;
-  border: 1px solid var(--gold-line, #A8721A);
-  border-radius: 999px;
-  background: linear-gradient(180deg, #0B0A0D 0%, #060608 100%);
-  font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: var(--ds-gold);
-  transition: opacity .35s ease;
+/* ---- Развёрнутый свиток под текстом аркана -------------------------------
+   Пока свиток на кнопке, места не занимает. Сошёл с кнопки — появляется
+   свёрнутым, вытягивается во всю ширину и разматывается. */
+.ds-panel { --ds-rod: 15px; display: none; padding-top: 14px; }
+.ds-panel.ds-lift { display: block; animation: ds-arrive .35s ease both; }
+@keyframes ds-arrive {
+  from { opacity: 0; transform: translateY(-18px); }
+  to   { opacity: 1; transform: none; }
 }
-.ds.ds-untie .ds-plaque { opacity: 0; }
-.ds.ds-turn .ds-plaque { display: none; }
+.ds-panel .ds-scroll {
+  width: 200px;
+  transition: width .5s cubic-bezier(.45,.05,.25,1);
+}
+.ds-panel.ds-wide .ds-scroll { width: calc(100% - 12px); max-width: 640px; }
+.ds-panel.ds-open .ds-paper { height: auto; }
 
-/* ---- Свернуть ------------------------------------------------------------ */
-.ds-fold {
-  display: block;
-  margin: 6px auto 0;
-  padding: 6px 14px;
-  border: 0; background: none;
-  font: inherit; font-size: 12px; letter-spacing: .3px;
-  color: var(--ds-gold);
-  opacity: .75;
-  cursor: pointer;
+.ds-paper-in {
+  padding: 20px 22px 18px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity .5s ease .35s;
 }
-.ds-fold:hover { opacity: 1; }
-/* Видна только у развёрнутого до конца свитка: во время поворота её нет */
-.ds:not(.ds-open) .ds-fold { display: none; }
+.ds-panel.ds-unroll .ds-paper-in { opacity: 1; }
+
+/* На бумаге — только пожелание */
+.ds-text {
+  margin: 0;
+  font-family: var(--serif, Georgia, serif);
+  font-size: 19px; line-height: 1.4; font-weight: 600;
+  color: var(--ds-ink);
+}
+
+/* Сноска — не на свитке, а под ним, на тёмном поле: это пояснение, а не
+   послание. Помечена звёздочкой. Появляется, когда свиток развернулся. */
+.ds-note {
+  max-width: 62ch;
+  margin: 0 auto;
+  max-height: 0; overflow: hidden;
+  opacity: 0;
+  font-size: 12.5px; line-height: 1.5;
+  color: var(--ink-2, #A09A92);
+  text-align: center;
+  transition: opacity .4s ease, max-height .4s ease, margin .4s ease;
+}
+.ds-panel.ds-open .ds-note { max-height: 12em; margin-top: 12px; opacity: 1; }
+.ds-note-mark { color: var(--gold, #E3C77C); font-weight: 700; }
 
 @media (max-width: 560px) {
   .ds-text { font-size: 17px; }
-  .ds-paper-in { padding: 18px 16px 14px; }
+  .ds-paper-in { padding: 18px 16px 16px; }
 }
 
-/* Кому движение мешает — свиток открывается сразу, без поворота и размотки. */
+/* Кому движение мешает — свиток открывается сразу, без размотки */
 @media (prefers-reduced-motion: reduce) {
-  .ds-scroll, .ds-paper, .ds-paper-in, .ds-ribbon, .ds-ribbon::before, .ds-ribbon::after,
-  .ds-bow::before, .ds-bow::after, .ds-knot, .ds-plaque { transition: none; }
+  .ds-btn, .ds-btn .ds-scroll, .ds-paper, .ds-paper-in, .ds-panel .ds-scroll, .ds-note,
+  .ds-ribbon, .ds-ribbon::before, .ds-ribbon::after,
+  .ds-bow::before, .ds-bow::after, .ds-knot { transition: none; }
+  .ds-panel.ds-lift { animation: none; }
 }
