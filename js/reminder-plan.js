@@ -412,7 +412,9 @@ export async function publishDesktopWidget(now = new Date()) {
         localStorage.setItem('kvant-desktop-widget', JSON.stringify({
             at: now.getTime(),
             lang: state.language,
-            frames: кадрыВиджетам
+            frames: кадрыВиджетам,
+            // Свиток на виджете со свитком (выкладка 194): пожелания вперёд по датам
+            wisdom: await пожелания()
         }));
         записатьСрокиВиджетам(кадрыВиджетам, now.getTime());
         return true;
