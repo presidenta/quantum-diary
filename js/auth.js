@@ -68,11 +68,30 @@ export async function hasSession() {
   return Boolean(await getMeta('token'));
 }
 
+/* ПРОФИЛЬ ЖИВЁТ И НА УСТРОЙСТВЕ (выкладка 202). Владелец 28.10.2026: «куда-то исчезла фотография с
+   аватарки… она должна там постоянно находиться, пока человек её сам не заберёт». Фото хранилось только
+   на сервере и бралось оттуда при каждом запуске: не ответил сервер в первые секунды (телефон проснулся
+   без связи, сервер перезапускался) — до конца сессии вместо фото стояла точка. Теперь каждый ответ
+   сервера кладётся на устройство (meta «me»), и приложение показывает его сразу; сервер лишь обновляет.
+   Сбой связи профиль не трогает: null значит «не узнали», а не «фото нет». */
 export async function fetchMe() {
   const token = await getMeta('token');
   if (!token) return null;
-  const res = await request(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
-  return res.ok ? res.json() : null;
+  try {
+    const res = await request(`${API_BASE}/api/me`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return null;
+    const me = await res.json();
+    if (me && typeof me === 'object') await setMeta('me', me);
+    return me;
+  } catch {
+    return null;
+  }
+}
+
+/** Профиль с устройства — последний ответ сервера, только того же человека, что вошёл. */
+export async function cachedMe() {
+  const [me, userId] = await Promise.all([getMeta('me'), getMeta('userId')]);
+  return me && userId != null && String(me.id) === String(userId) ? me : null;
 }
 
 /* Явный выход — например, чтобы на этом устройстве работал другой человек.
@@ -102,7 +121,11 @@ export async function saveAvatar(avatar) {
     err.status = res.status;
     throw err;
   }
-  return (await res.json()).avatar;
+  const сохранено = (await res.json()).avatar;
+  // Профиль на устройстве — тот же, что на сервере (выкладка 202)
+  const me = await getMeta('me');
+  if (me) await setMeta('me', { ...me, avatar: сохранено });
+  return сохранено;
 }
 
 export async function logout() {

@@ -3,7 +3,7 @@
 
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
-import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, logoutAndClear, fetchMe, changeOwnPassword, saveAvatar } from './auth.js';
+import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, logoutAndClear, fetchMe, cachedMe, changeOwnPassword, saveAvatar } from './auth.js';
 import { shrinkPhoto, paintAvatar, watchInstall, installed } from './profile.js';
 import { API_BASE, serverAlive } from './config.js';
 import {
@@ -1042,8 +1042,14 @@ async function start() {
     syncNow();
   }
 
+  /* Профиль с устройства — сразу (выкладка 202): имя и фото не зависят от того, ответил ли сервер
+     при запуске. Ответ сервера его обновляет; не ответил — остаётся то, что было. */
+  if (!state.me) {
+    state.me = await cachedMe();
+    renderUser();
+  }
   if (API_BASE && !state.serverDown) {
-    state.me = await fetchMe();
+    state.me = (await fetchMe()) || state.me;
     renderUser();
     await loadQuantum();     // счётчик моментов нужен сразу, на любом экране
     renderNav();
@@ -1519,11 +1525,28 @@ async function boot() {
     }
     setTimeout(() => { msg.textContent = ''; }, 4000);
   });
+  /* Убрать фото — только по решению человека (выкладка 202, владелец: «пока человек её сам не заберёт»):
+     кнопка стоит рядом с «Загрузить фото», и случайное нажатие стирало снимок без вопроса. */
   $('photoClear').addEventListener('click', async () => {
+    if (!confirm(t('profile.photoClearConfirm'))) return;
     try {
       state.me.avatar = await saveAvatar('');
       renderUser();
     } catch { /* не убралась — остаётся как была */ }
+  });
+
+  /* Сервер не ответил при запуске — профиль подтянется, как только вернётся связь или приложение снова
+     откроют (выкладка 202). Нет входа — спрашивать некого. */
+  const обновитьПрофиль = async () => {
+    if (!API_BASE || !(await hasSession())) return;
+    const свежий = await fetchMe();
+    if (!свежий) return;
+    state.me = свежий;
+    renderUser();
+  };
+  window.addEventListener('online', обновитьПрофиль);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') обновитьПрофиль();
   });
 
   // Кнопка установки появляется, только когда браузер готов её предложить
