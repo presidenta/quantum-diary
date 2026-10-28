@@ -2161,7 +2161,17 @@ export class QuantumApp {
             if (this.scene3D.hand && this.scene3D.hand.parentNode) {
                 this.scene3D.hand.parentNode.removeChild(this.scene3D.hand);
             }
-            if (this.scene3D.renderer) this.scene3D.renderer.dispose();
+            /* ВИДЕОКОНТЕКСТ ОТПУСКАЕМ СРАЗУ (выкладка 191). dispose() освобождает только буферы three.js, а сам
+               WebGL-контекст жил, пока его не соберёт сборщик мусора, — то есть неопределённо долго. Каждое
+               открытие «Наблюдателя» добавляло по контексту во весь экран; на телефоне (OBLUE TANK 3, 27.10.2026)
+               видеопамять кончалась, и новый коридор получал мёртвый контекст: таймер идёт, дверей нет, чёрный экран. */
+            const renderer = this.scene3D.renderer;
+            this.scene3D.disposing = true;
+            if (renderer) {
+                renderer.dispose();
+                renderer.forceContextLoss();
+                renderer.domElement.remove();
+            }
             this.scene3D = null;
         }
     }

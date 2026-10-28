@@ -12,6 +12,8 @@
 
    Частицы, материалы, цвета, камера, туннель и вспышка не изменены. */
 
+import { logEvent } from '../../core/web-journal.js';
+
 /* Пороги управления пальцем. Вынесены наверх, чтобы подкручивать в одном месте. */
 const TAP_SLOP = 12;                      // px: дальше этого — уже жест, а не тап
 const TAP_TIME = 500;                     // мс: дольше — уже не тап
@@ -195,6 +197,13 @@ export class QuantumCorridorScene {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.container.appendChild(this.renderer.domElement);
+
+        /* Потерю видеоконтекста — в журнал устройства (выкладка 191). Сама по себе она не ошибка кода, и без
+           этой строки человек видит чёрный экран с таймером, а в журнале пусто. Свой forceContextLoss() при
+           уходе с вкладки сюда тоже попадает — его отличаем по флагу disposing. */
+        this.renderer.domElement.addEventListener('webglcontextlost', () => {
+            if (!this.disposing) logEvent('E', { m: 'Коридор дверей: видеоконтекст WebGL потерян — дверей не видно' });
+        });
 
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
