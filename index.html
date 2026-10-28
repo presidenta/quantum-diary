@@ -423,6 +423,13 @@
            про одно и то же — как именно телефон зовёт человека. Одна о том,
            когда молчать, вторая о том, как звонить. -->
       <button type="button" class="btn" id="alarmMode" data-i18n="alarm.open">Режим будильника</button>
+      <!-- УВЕДОМЛЕНИЯ С СЕРВЕРА (выкладка 205): iPhone с экрана «Домой» и браузер — там своих будильников
+           нет, в час момента звонит сервер пушем. В приложении для Android блок скрыт (app.js). -->
+      <div id="pushBox" hidden>
+        <button type="button" class="btn" id="pushToggle" hidden data-i18n="push.enable">Включить уведомления о моментах</button>
+        <p class="muted m0" id="pushNote"></p>
+        <p class="gate-msg" id="pushMsg" role="status"></p>
+      </div>
       <!-- Виджеты рабочего стола — отдельная кнопка в меню профиля, а не в «Логах»
            (просьба владельца 17.10.2026): там их смотрят, настраивают и ставят. -->
       <button type="button" class="btn" id="widgetsOpen" data-i18n="profile.widgets">Установить виджет</button>

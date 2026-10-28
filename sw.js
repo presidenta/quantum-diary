@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 204;
+const RELEASE = 205;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -34,7 +34,7 @@ const SHELL = [
   'js/views/scroll/fonts/marck-script-cyrillic.woff2', 'js/views/scroll/fonts/marck-script-latin.woff2',
   'admin.html', 'css/admin.css', 'js/admin.js',
   'js/core/net.js', 'js/core/media-box.js', 'js/core/access-controller.js', 'js/core/reminders.js', 'js/core/reminder-rules.js', 'js/core/observer-clock.js', 'js/core/live-update.js',
-  'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js'
+  'js/core/push.js', 'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js'
 ];
 
 self.addEventListener('install', event => {
@@ -80,4 +80,42 @@ self.addEventListener('fetch', event => {
       return res;
     })
     .catch(() => caches.match(event.request, { ignoreSearch: true })));
+});
+
+/* ПУШ С СЕРВЕРА (выкладка 205). В час момента и окна сервер присылает пуш (server/src/push.js), а показывает
+   его этот скрипт — даже когда «Квант» закрыт. На iPhone так звонит сайт с экрана «Домой» (iOS 16.4+).
+   Показывать обязательно каждый пуш: браузер, получивший пуш без уведомления, отзывает подписку. */
+self.addEventListener('push', event => {
+  let данные = {};
+  try {
+    данные = event.data ? event.data.json() : {};
+  } catch {
+    данные = { body: event.data ? event.data.text() : '' };
+  }
+  event.waitUntil(self.registration.showNotification(данные.title || 'Квант', {
+    body: данные.body || '',
+    tag: данные.key || 'kvant',
+    renotify: true,
+    requireInteraction: true,
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    data: { target: данные.target || '' }
+  }));
+});
+
+/* Нажатие — тот же экран, что «Прожить» на Android: момент, моменты или пространство. Открытое окно
+   «Кванта» получает цель сообщением, закрытое открывается с #open=<цель>. */
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const цель = event.notification.data?.target || '';
+  const адрес = new URL(цель ? `./#open=${encodeURIComponent(цель)}` : './', self.registration.scope).href;
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(окна => {
+    for (const окно of окна) {
+      if (окно.url.startsWith(self.registration.scope) && 'focus' in окно) {
+        окно.postMessage({ type: 'kvant-open', target: цель });
+        return окно.focus();
+      }
+    }
+    return clients.openWindow(адрес);
+  }));
 });

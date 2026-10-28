@@ -41,6 +41,7 @@ import { getMeta, setMeta } from './db.js';
 import { publishPref, prefValue, prefMissing, takeRemotePrefs } from './prefs.js';
 import { logEvent } from './core/web-journal.js';
 import { CONFIG } from './views/space/config.js';
+import { sendPushPlan } from './core/push.js';
 
 /* ТИХИЙ ЧАС.
 
@@ -450,6 +451,7 @@ export async function planReminders() {
     // В браузере ставить нечего — но окну виджета на компьютере нужны свежие сроки
     if (!isNative()) {
         await publishDesktopWidget();
+        await расписаниеДляПушей().catch(err => console.warn('[пуши]', err));
         return false;
     }
     if (!await readyOnce()) return false; // человек не дал разрешения
@@ -500,6 +502,33 @@ export async function planReminders() {
         quiet
     });
 
+    const { ring, silence, впереди } = await собратьЗвонки(now, quiet, alarm, день);
+    if (silence.length) await cancelKeys(silence);
+
+    // Сервер звонит пушами там, где своих будильников нет (выкладка 205): то же расписание
+    отдатьПушам(ring);
+
+    /* СВЕРКА С ТЕМ, ЧТО РЕАЛЬНО СТОИТ В СИСТЕМЕ.
+       Только если горизонт посчитался: упавший расчёт дал бы неполный
+       список, и сверка сняла бы настоящие звонки как «лишние». */
+    if (впереди.ok) await убратьЛишние(ring, now);
+
+    if (!ring.length) return false;
+
+    /* ГОДЕН ДО. Каждому напоминанию — час, до которого оно ещё годится, если телефон
+       разбудит приложение позже срока (lateUntil в reminder-rules.js). Нативная часть
+       хранит его вместе со звонком и по нему решает: опоздавший звонит, а не
+       записывается «не дошёл». */
+    return scheduleReminders(ring.map(item => разметитьРежим(
+        { ...item, lateUntil: lateUntil(item, CONFIG.timing.opportunityWindowMs, quiet) }, alarm)));
+}
+
+/* РАСПИСАНИЕ ЗВОНКОВ — БЕЗ ПОСТАНОВКИ (выкладка 205). Одно и то же нужно двоим: телефону с Android
+   (ставит будильники) и серверу (шлёт пуши на iPhone и в браузер). Поэтому расчёт отдельно, а ставит и
+   снимает planReminders.
+
+   @returns ring — что звонить, silence — какие ключи снять, впереди — горизонт (впереди.ok — посчитался) */
+async function собратьЗвонки(now, quiet, alarm, день) {
     /* Направление выключено совсем — в план оно не попадает, а его ключи
        уходят в снятие (momentPlan и windowPlan это делают сами). Режим
        активности сюда не смотрит: он решает только, звонить ли. */
@@ -531,7 +560,6 @@ export async function planReminders() {
        передали на постановку, и про остальные знать не может. */
     const silence = (window ? moments.silence : moments.silence.concat(KEY_WINDOW))
         .concat(следующие.silence, впереди.silence);
-    if (silence.length) await cancelKeys(silence);
 
     const totalSec = Math.floor(CONFIG.timing.opportunityWindowMs / 1000);
 
@@ -587,19 +615,25 @@ export async function planReminders() {
             });
     }
 
-    /* СВЕРКА С ТЕМ, ЧТО РЕАЛЬНО СТОИТ В СИСТЕМЕ.
-       Только если горизонт посчитался: упавший расчёт дал бы неполный
-       список, и сверка сняла бы настоящие звонки как «лишние». */
-    if (впереди.ok) await убратьЛишние(ring, now);
+    return { ring, silence, впереди };
+}
 
-    if (!ring.length) return false;
+/* ПУШИ С СЕРВЕРА (выкладка 205). Звонки, попавшие в тихий час, на сервер не идут: пуш в тишину — тот же
+   звонок в тишину. Ошибка здесь не вправе задеть постановку будильников. */
+function отдатьПушам(ring) {
+    const звонки = ring.filter(item => !item.quiet).map(item => ({
+        key: item.key, at: item.at, title: item.title, body: item.body, target: item.openTarget || ''
+    }));
+    sendPushPlan(звонки).catch(err => console.warn('[пуши]', err));
+}
 
-    /* ГОДЕН ДО. Каждому напоминанию — час, до которого оно ещё годится, если телефон
-       разбудит приложение позже срока (lateUntil в reminder-rules.js). Нативная часть
-       хранит его вместе со звонком и по нему решает: опоздавший звонит, а не
-       записывается «не дошёл». */
-    return scheduleReminders(ring.map(item => разметитьРежим(
-        { ...item, lateUntil: lateUntil(item, CONFIG.timing.opportunityWindowMs, quiet) }, alarm)));
+/* В браузере и на iPhone будильников нет — только расписание для сервера. */
+async function расписаниеДляПушей() {
+    const now = new Date();
+    const quiet = await loadQuiet();
+    const alarm = await loadAlarm();
+    const { ring } = await собратьЗвонки(now, quiet, alarm, freshDay(state.quantum, todayKey(now)));
+    отдатьПушам(ring);
 }
 
 /* ЛИШНИЕ ЗВОНКИ: В СИСТЕМЕ ЕСТЬ, В РАСПИСАНИИ НЕТ.

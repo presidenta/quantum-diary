@@ -5,6 +5,7 @@ import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
 import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, logoutAndClear, fetchMe, cachedMe, changeOwnPassword, saveAvatar } from './auth.js';
 import { shrinkPhoto, paintAvatar, watchInstall, installed } from './profile.js';
+import { pushSupported, needsHomeScreen, pushStatus, enablePush, disablePush } from './core/push.js';
 import { API_BASE, serverAlive } from './config.js';
 import {
   state, t, save, reload, onChange, changed, $, h, svgIcon, ICONS,
@@ -938,8 +939,8 @@ async function применитьЧасИзВиджета(правка) {
   await moveToBack();
 }
 
-async function открытьПоЗвонку() {
-  const цель = await takeAlarmTarget();
+async function открытьПоЗвонку(изПуша = '') {
+  const цель = изПуша || await takeAlarmTarget();
   if (!цель) return;
 
   const виджет = цель === 'widget' || цель.startsWith('widget:');
@@ -983,6 +984,9 @@ async function открытьПоЗвонку() {
 }
 
 let syncStarted = false;
+// Цели нажатия на пуш (выкладка 205): момент, моменты, пространство — и ничего больше
+const ЦЕЛЬ_ПУША = /^(space|moments|moment:[\w-]{1,80})$/;
+let pushListening = false;
 
 /* КОГДА ПРИЛОЖЕНИЮ ДЛЯ КОМПЬЮТЕРА СПРОСИТЬ СЕРВЕР (выкладка 158). Владелец 18.10.2026: не
    каждые 15 секунд — «сработал звонок — тогда полное обновление, или раз в час; главное, чтобы
@@ -1097,6 +1101,22 @@ async function start() {
      адресом #widgets — сразу окно «Установить виджет». Метка снимается, чтобы обновление
      страницы не открывало окно снова. #widgets:<вид> (выкладка 182, «Надписи и другие виды» из окна
      настроек виджета) — окно сразу на этом виде. */
+  /* ПУШ С СЕРВЕРА (выкладка 205): нажатие на пуш открывает «Квант» с #open=<цель> или, если он уже открыт,
+     присылает цель сообщением из sw.js. Цели — только экраны звонка: адрес может прийти и не из пуша. */
+  const изПуша = /^#open=(.+)$/.exec(location.hash);
+  if (изПуша) {
+    history.replaceState(null, '', location.pathname + location.search);
+    const цель = decodeURIComponent(изПуша[1]);
+    if (ЦЕЛЬ_ПУША.test(цель)) await открытьПоЗвонку(цель);
+  }
+  if (!pushListening && 'serviceWorker' in navigator) {
+    pushListening = true;
+    navigator.serviceWorker.addEventListener('message', событие => {
+      const цель = событие.data?.type === 'kvant-open' ? String(событие.data.target || '') : '';
+      if (ЦЕЛЬ_ПУША.test(цель)) открытьПоЗвонку(цель).catch(err => console.warn('[пуш]', err.message));
+    });
+  }
+
   const кВиджетам = /^#widgets(?::(\w+))?$/.exec(location.hash);
   if (кВиджетам) {
     history.replaceState(null, '', location.pathname + location.search);
@@ -1548,6 +1568,40 @@ async function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') обновитьПрофиль();
   });
+
+  /* УВЕДОМЛЕНИЯ С СЕРВЕРА (выкладка 205) — где своих будильников нет: iPhone с экрана «Домой» и браузер.
+     В приложении для Android блока нет: там звонит свой будильник. */
+  const показатьПуши = async () => {
+    const блок = $('pushBox');
+    блок.hidden = isNative() || (!pushSupported() && !needsHomeScreen());
+    if (блок.hidden) return;
+    const состояние = await pushStatus();
+    $('pushNote').textContent = t(`push.${состояние}`);
+    $('pushToggle').hidden = !['on', 'off'].includes(состояние);
+    $('pushToggle').textContent = t(состояние === 'on' ? 'push.disable' : 'push.enable');
+    $('pushToggle').dataset.on = состояние === 'on' ? '1' : '';
+  };
+  $('pushToggle').addEventListener('click', async () => {
+    const msg = $('pushMsg');
+    msg.className = 'gate-msg';
+    msg.textContent = '';
+    try {
+      if ($('pushToggle').dataset.on) {
+        await disablePush();
+      } else {
+        await enablePush();   // первым делом — вопрос разрешения: iPhone задаёт его только в ответ на нажатие
+        await planReminders();
+        msg.className = 'gate-msg is-ok';
+        msg.textContent = t('push.done');
+      }
+    } catch (err) {
+      msg.className = 'gate-msg is-error';
+      msg.textContent = t(err.message === 'push_off' ? 'push.serverOff' : err.message === 'denied' ? 'push.denied' : 'push.failed');
+    }
+    await показатьПуши();
+  });
+  $('drawerUser').addEventListener('click', () => { показатьПуши().catch(() => {}); });
+  показатьПуши().catch(() => {});
 
   // Кнопка установки появляется, только когда браузер готов её предложить
   watchInstall($('installApp'));
