@@ -319,6 +319,9 @@ export function widgetTexts(translate) {
         scroll: слово('scroll'),
         // Свиток на виджете, пока приложение не прислало пожеланий (выкладка 194)
         scrollWait: слово('scrollWait'),
+        // Окно свитка поверх рабочего стола (выкладка 195): сноска под свитком и «Закрыть»
+        scrollNote: слово('scrollNote'),
+        scrollClose: слово('scrollClose'),
         // Панель настроек на рабочем столе (WidgetSheetActivity, выкладка 141)
         sheetTitle: слово('sheetTitle'),
         sheetButtons: слово('sheetButtons'),
