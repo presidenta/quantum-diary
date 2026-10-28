@@ -249,6 +249,15 @@
   border-image: url(../img/widget/gold-button.webp) 22 / 8px stretch;
   background: color-mix(in srgb, #C8902C var(--wg-btn-a, 100%), transparent) padding-box;
 }
+/* Карточки сроков — тоже кнопки (выкладка 199, владелец: «от кнопки должен остаться только контур,
+   полосочка тонкая»): заливка тает, кромка — как у «Настроек» (WidgetPaint.карточкаСтекло на телефоне). */
+.wg-card, .wg-row { background: color-mix(in srgb, var(--wg-card) var(--wg-btn-a, 100%), transparent); }
+.wg-btn-glass .wg-card { border-color: var(--wg-small-line); }
+.wg-btn-glass .wg-row { border-top-color: var(--wg-small-line); border-right-color: var(--wg-small-line);
+  border-bottom-color: var(--wg-small-line); }
+.wg-gold.wg-btn-glass .wg-card, .wg-gold.wg-btn-glass .wg-row {
+  background: color-mix(in srgb, #0F0D10 var(--wg-btn-a, 100%), transparent) padding-box, var(--pult-rim) border-box;
+}
 
 /* ---- узкий 4×1: два срока и справа столбиком кнопки (выкладка 141) ------------- */
 .wg-slim .wg-body { grid-auto-flow: column; align-items: center; gap: 10px; padding: 10px 12px;
@@ -335,3 +344,9 @@
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4), 0 0 10px color-mix(in srgb, var(--wg-accent) 35%, transparent);
 }
 .wg-mirror .wg-chip { background: rgba(10, 14, 26, .55); }
+/* Надписи на картинке — с тёмной обводкой и ореолом (выкладка 199, владелец: «белые цифры должны быть с
+   чёрным контуром, чтобы их было видно»), как WidgetPaint.обводка на телефоне. */
+.wg-mirror .wg-value, .wg-mirror .wg-label, .wg-mirror .wg-title, .wg-mirror .wg-sub, .wg-mirror .wg-btn {
+  text-shadow: 1px 0 0 #0E0800, -1px 0 0 #0E0800, 0 1px 0 #0E0800, 0 -1px 0 #0E0800,
+    1px 1px 0 #0E0800, -1px -1px 0 #0E0800, 1px -1px 0 #0E0800, -1px 1px 0 #0E0800, 0 0 4px rgba(14, 8, 0, .9);
+}
