@@ -322,11 +322,6 @@ export function normalizeAlarm(raw) {
            крестиков. */
         guardOn: src.guardOn !== false,
 
-        /* РЕЗЕРВНЫЙ БУДИЛЬНИК В «ЧАСАХ» ТЕЛЕФОНА (выкладка 169, android-alarm-plugin, ClockBackup): прошивка
-           останавливает приложение и стирает его звонки, а звонки «Часов» остаются. Включён по умолчанию (решение
-           владельца 20.10.2026); выключает только явное false. */
-        clockBackup: src.clockBackup !== false,
-
         windowAt: время(src.windowAt),
         momentsAt: время(src.momentsAt),
 

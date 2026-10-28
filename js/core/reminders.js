@@ -719,7 +719,7 @@ export async function pendingAlarms() {
         alarms: [], systemNext: 0, batteryUnrestricted: true,
         missed: 0, missedAt: 0, fired: 0, firedAt: 0, step: '', stepAt: 0,
         maker: '', model: '', sdk: 0, guardOn: true, plashkaUp: false, autostartKnown: false,
-        bucket: 0, bgRestricted: false, apk: 0, clockBackup: true, clockBackupCount: 0,
+        bucket: 0, bgRestricted: false, apk: 0,
         journal: []
     };
 
@@ -780,13 +780,11 @@ export async function pendingAlarms() {
             bucket: Number(ответ && ответ.bucket) || 0,
             bgRestricted: !!(ответ && ответ.bgRestricted),
 
-            /* Какая сборка стоит (номер выкладки) и страховка в «Часах» (выкладка 171): без них
-               журнал нельзя привязать к сборке. Сборка старше 171 номера не пришлёт — будет «—». */
+            /* Какая сборка стоит (номер выкладки, выкладка 171): без него журнал нельзя привязать к
+               сборке. Сборка старше 171 номера не пришлёт — будет «—». */
             apk: Number(ответ && ответ.apk) || 0,
-            clockBackup: (ответ && ответ.clockBackup) !== false,
-            clockBackupCount: Number(ответ && ответ.clockBackupCount) || 0,
 
-            /* Что было, по секундам: поставлен, сработал, подстраховка,
+            /* Что было, по секундам: поставлен, сработал,
                снят, пропущен, страж встал, приложение смахнули. Счётчики
                говорят «сколько», а когда звонок промолчал, нужно «что было
                до этого». */
@@ -848,7 +846,7 @@ export async function openAppSettings() {
    часам дня ({from, text}, см. guardFrames в reminder-rules.js), а
    settingsLabel и homeLabel — надписи на двух её кнопках. Нет кадров —
    страж покажет запасной text. */
-export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel, widgets, named, clockBackup }) {
+export async function setGuard({ on, title, text, frames, settingsLabel, homeLabel, widgets, named, wisdom }) {
     const QA = alarmPlugin();
     if (!QA || typeof QA.setGuard !== 'function') return false;
 
@@ -864,8 +862,8 @@ export async function setGuard({ on, title, text, frames, settingsLabel, homeLab
             widgets: widgets && typeof widgets === 'object' ? widgets : {},
             // Часы «Режима будильника» — для строки «Время звонков» в панели виджета (выкладка 147)
             named: named && typeof named === 'object' ? named : {},
-            // Резервный будильник в «Часах» телефона: включён, пока явно не выключен (выкладка 169)
-            clockBackup: clockBackup !== false
+            // Пожелания дня для свитка на виджете (выкладка 194), по датам
+            wisdom: wisdom && typeof wisdom === 'object' ? wisdom : {}
         });
         return true;
     } catch (err) {

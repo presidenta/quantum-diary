@@ -403,7 +403,6 @@ function alarmFromForm() {
   return {
     on: $('alarmOn').checked,
     guardOn: $('alarmGuard').checked,
-    clockBackup: $('alarmBackup').checked,
     windowMode: $('alarmWindowMode').value,
     momentsMode: $('alarmMomentsMode').value,
     windowAt: $('alarmWindowAt').value,
@@ -504,7 +503,7 @@ async function showAlarmPending() {
 
   const { alarms, systemNext, batteryUnrestricted, missed, missedAt, fired, firedAt,
     step, stepAt, maker, model, sdk, guardOn, plashkaUp, autostartKnown, bucket, bgRestricted,
-    apk, clockBackup, clockBackupCount, journal } = await pendingAlarms();
+    apk, journal } = await pendingAlarms();
   стоящиеЗвонки = alarms;
 
   const час = at => new Intl.DateTimeFormat('ru', {
@@ -630,14 +629,10 @@ async function showAlarmPending() {
       })
       : '';
 
-    /* Какая сборка стоит и заведены ли резервы в «Часах» (выкладка 171): журнал 24.10.2026
-       нельзя было привязать к сборке. Приложение — номер APK, сайт — номер веб-слоя; они
-       расходятся, пока новый APK не поставлен. */
+    /* Какая сборка стоит (выкладка 171): журнал 24.10.2026 нельзя было привязать к сборке.
+       Приложение — номер APK, сайт — номер веб-слоя; они расходятся, пока новый APK не поставлен. */
     const сайт = await номерСайта();
-    const сборка = ' ' + t('alarm.build', {
-      apk: apk || '—', web: сайт || '—',
-      backup: clockBackup ? t('alarm.backupOn', { n: clockBackupCount }) : t('alarm.backupOff')
-    });
+    const сборка = ' ' + t('alarm.build', { apk: apk || '—', web: сайт || '—' });
 
     $('alarmDevice').textContent =
       t('alarm.device', { maker, model, sdk, guard: охрана }) + состояние + сборка;
@@ -872,7 +867,6 @@ async function openAlarmDialog() {
   const alarm = await loadAlarm();
   $('alarmOn').checked = alarm.on;
   $('alarmGuard').checked = alarm.guardOn;
-  $('alarmBackup').checked = alarm.clockBackup;
   $('alarmWindowMode').value = alarm.windowMode;
   $('alarmMomentsMode').value = alarm.momentsMode;
   $('alarmWindowAt').value = alarm.windowAt;
