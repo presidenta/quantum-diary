@@ -1652,6 +1652,33 @@ async function boot() {
   if (API_BASE && !(await hasSession())) { showGate(); return; }
   hideGate();
   await start();
+  await проверитьГотовность();
+}
+
+/* ГОТОВНОСТЬ БУДИЛЬНИКА — САМА ПРИ СТАРТЕ (выкладка 203, ТЗ владельца 28.10.2026: «запрашивать все права
+   самостоятельно»). Чего не хватает телефону, чтобы звонок встал окном поверх всего: снятых ограничений батареи,
+   полноэкранного окна, окна «Поверх других приложений». Батарею спрашивает системное окно — зовём его прямо;
+   остальное выдаётся в настройках телефона, туда ведут кнопки «Режима будильника» — открываем его, красные
+   строки там говорят, что и где включить. Раз в сутки: отказ — решение человека, каждый запуск не донимаем.
+   Точные будильники у «Кванта» есть по умолчанию (USE_EXACT_ALARM), уведомления спрашивает initReminders. */
+async function проверитьГотовность() {
+  if (!isNative()) return;
+  try {
+    const сегодня = todayKey();
+    if (await getMeta('readyAskedDay') === сегодня) return;
+    const состояние = await alarmState();
+    if (!состояние.plugin) return;
+    const { batteryUnrestricted } = await pendingAlarms();
+    const экран = !состояние.fullScreen && состояние.askable;
+    const поверх = !состояние.overlay && состояние.overlayAskable;
+    if (!экран && !поверх && batteryUnrestricted) return;
+    await setMeta('readyAskedDay', сегодня);
+    if (!batteryUnrestricted) await askBatteryFreedom();
+    if (экран || поверх) await openAlarmDialog();
+  } catch (err) {
+    // Проверка — помощь, а не работа: сбой не должен мешать приложению открыться
+    console.error('[alarm] готовность не проверилась:', err);
+  }
 }
 
 boot();
