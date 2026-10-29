@@ -136,3 +136,16 @@ const ГРУППЫ = Object.freeze({
 export function standbyName(число) {
     return ГРУППЫ[Number(число)] || '';
 }
+
+/* ВЕРСИЯ ANDROID ДЛЯ ОТЧЁТА (выкладка 208). Система отдаёт номер API (SDK_INT), и в журнале
+   29.10.2026 он читался как «Android 34», а это Android 14. Пишем оба: версию — человеку, номер
+   API — для документации. Неизвестный номер остаётся как был. */
+const ВЕРСИИ = Object.freeze({
+    26: '8', 27: '8.1', 28: '9', 29: '10', 30: '11', 31: '12', 32: '12L',
+    33: '13', 34: '14', 35: '15', 36: '16'
+});
+
+export function androidVersion(sdk) {
+    const версия = ВЕРСИИ[Number(sdk)];
+    return версия ? `${версия} (API ${sdk})` : String(sdk ?? '');
+}

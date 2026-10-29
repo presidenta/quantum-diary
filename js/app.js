@@ -37,7 +37,7 @@ import {
   loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet, observerNamedHour, observerNamedSetAt
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext, momentIdOfKey } from './core/reminder-rules.js';
-import { formatJournal, formatPending, standbyName } from './core/alarm-journal.js';
+import { formatJournal, formatPending, standbyName, androidVersion } from './core/alarm-journal.js';
 import { logEvent, readJournal } from './core/web-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
@@ -636,7 +636,7 @@ async function showAlarmPending() {
     const сборка = ' ' + t('alarm.build', { apk: apk || '—', web: сайт || '—' });
 
     $('alarmDevice').textContent =
-      t('alarm.device', { maker, model, sdk, guard: охрана }) + состояние + сборка;
+      t('alarm.device', { maker, model, sdk: androidVersion(sdk), guard: охрана }) + состояние + сборка;
     $('alarmDevice').hidden = false;
   }
 
@@ -1055,9 +1055,15 @@ async function start() {
   if (API_BASE && !state.serverDown) {
     state.me = (await fetchMe()) || state.me;
     renderUser();
-    await loadQuantum();     // счётчик моментов нужен сразу, на любом экране
-    renderNav();
   }
+
+  /* ДЕНЬ — ПРИ ЛЮБОМ СЕРВЕРЕ (выкладка 208). Счётчик моментов нужен сразу, на любом экране, а главное —
+     расписание звонков строится по дню в памяти. Без сервера день здесь не грузился: расписание ставило
+     заготовку («moment-next-…»), а заход на вкладку «Квант» — день, посчитанный телефоном
+     («moment-local-…»), с другими часами. Журнал 29.10.2026 (сервер недоступен): звонки перескакивали
+     между ними с каждым запуском. Без сервера loadQuantum его и не спрашивает. */
+  await loadQuantum();
+  renderNav();
 
   /* СИСТЕМНЫЕ НАПОМИНАНИЯ.
 
@@ -1700,6 +1706,8 @@ async function boot() {
     hideGate();
     await start();
     $('syncStatus').textContent = t('sync.local');
+    // Разрешения будильнику нужны и без сервера: в этой ветке их не спрашивали (журнал 29.10.2026)
+    await проверитьГотовность();
     return;
   }
 
