@@ -28,7 +28,7 @@ import {
 import {
     momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT, momentTarget,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf, lateUntil,
-    guardFrames, guardText, guardTerm, namedHorizon, anchorHours, freshDay, orphanKeys
+    guardFrames, guardText, guardTerm, namedHorizon, anchorHours, freshDay, orphanKeys, architectRings
 } from './core/reminder-rules.js';
 import { widgetTexts } from './core/widgets.js';
 // Пожелания «Мудрости дня» для свитка на виджете (выкладка 194): выбирает модуль свитка
@@ -110,16 +110,54 @@ export async function loadAlarm() {
    настройках, панель на столе, плашка, виджеты и таймеры. Переезд записывается с отметкой
    «назначен сейчас»: следующий раз час переедет уже после своего нового звонка. */
 async function следоватьЦиклу(alarm, now = Date.now()) {
+    const quiet = await loadQuiet();
+    /* Звонки Архитектора — такими, какими они будут после переезда: переехавший час автоматический
+       и день моментов не перестраивает (anchorHours), значит, разводить надо с днём без него. */
+    const звонки = await звонкиАрхитектора(new Date(now), { ...alarm, windowAuto: true }, quiet);
+    запомнитьАрхитектора(звонки);
     if (!alarm.on || alarm.windowMode === 'off') return alarm;
     const новый = cycleNamedHour({
         named: alarm.windowAt, setAt: alarm.windowSetAt, lastJump: lastJumpTime(), now,
         cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs,
-        quiet: await loadQuiet()
+        quiet, architect: звонки
     });
     if (!новый) return alarm;
-    const следующий = { ...alarm, windowAt: новый, windowSetAt: now };
+    // Час поставила автоматика, не человек — помечаем (выкладка 209, normalizeAlarm.windowAuto)
+    const следующий = { ...alarm, windowAt: новый, windowSetAt: now, windowAuto: true };
     await setMeta(ALARM_KEY, следующий);
     return следующий;
+}
+
+/* ЗВОНКИ АРХИТЕКТОРА (выкладка 209) — с ними разводится окно Наблюдателя: не ближе получаса
+   (core/observer-clock.js, apartFromArchitect). Сегодня — день в памяти, а нет его — заготовка (она и
+   звонит тогда, см. горизонт); завтра — заготовка; и назначенный час моментов. Те же входы, что у
+   кадров плашки (guardFramesFor), — поэтому звонок, плашка, виджеты и таймеры показывают одно время. */
+async function звонкиАрхитектора(now, alarm, quiet, день = freshDay(state.quantum, todayKey(now))) {
+    try {
+        const заготовка = await заготовки(now, quiet, alarm);
+        return architectRings({
+            today: день?.moments?.length ? день.moments : заготовка.сегодня?.moments,
+            tomorrow: заготовка.завтра?.moments,
+            named: назначенныеЧасы(alarm).moments,
+            now, on: alarm.momentsMode !== 'off', quiet
+        });
+    } catch (err) {
+        console.warn('[напоминания] звонки Архитектора не посчитались:', err);
+        return [];
+    }
+}
+
+/* Звонки Архитектора в памяти — для таймеров, которые тикают каждую секунду и ждать хранилища не
+   могут. Обновляются при каждом чтении режима (loadAlarm) и перестановке расписания. */
+let звонкиАрхитектораВПамяти = [];
+
+function запомнитьАрхитектора(звонки) {
+    звонкиАрхитектораВПамяти = звонки;
+}
+
+/** Звонки Архитектора, мс — для таймеров Наблюдателя (окно не ближе получаса к ним). */
+export function observerArchitect() {
+    return звонкиАрхитектораВПамяти;
 }
 
 /* НАЗНАЧЕННЫЙ ЧАС НАБЛЮДАТЕЛЯ — В ПАМЯТИ ДЛЯ ТАЙМЕРОВ (выкладка 148). Таймеры тикают каждую
@@ -151,8 +189,13 @@ export async function saveAlarm(value, { windowTouched = false } = {}) {
     // (панель виджета), даже если он совпал с прежним: выбор человека — тоже назначение.
     const прежний = normalizeAlarm(await getMeta(ALARM_KEY).catch(() => null));
     const новый = normalizeAlarm(value);
-    if (новый.windowAt !== прежний.windowAt || (windowTouched && новый.windowAt)) новый.windowSetAt = Date.now();
-    else if (!новый.windowSetAt) новый.windowSetAt = прежний.windowSetAt;
+    if (новый.windowAt !== прежний.windowAt || (windowTouched && новый.windowAt)) {
+        новый.windowSetAt = Date.now();
+        новый.windowAuto = false;           // час поставил человек — он ручной (выкладка 209)
+    } else {
+        if (!новый.windowSetAt) новый.windowSetAt = прежний.windowSetAt;
+        новый.windowAuto = прежний.windowAuto;
+    }
     const alarm = запомнитьЧас(новый);
     await setMeta(ALARM_KEY, alarm);
     await publishPref('alarm', alarm);      // и на остальные устройства (выкладка 158)
@@ -533,12 +576,16 @@ async function собратьЗвонки(now, quiet, alarm, день) {
        уходят в снятие (momentPlan и windowPlan это делают сами). Режим
        активности сюда не смотрит: он решает только, звонить ли. */
     const moments = momentPlan(день?.moments, now, quiet, alarm);
+    // Окно Наблюдателя не ближе получаса к звонкам Архитектора (выкладка 209)
+    const архитектор = await звонкиАрхитектора(now, alarm, quiet, день);
+    запомнитьАрхитектора(архитектор);
     const window = windowPlan(lastJumpTime(), now, {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
         windowMs: CONFIG.timing.opportunityWindowMs,
         // Назначенный звонок Наблюдателя перезапускает цикл (core/observer-clock.js)
         named: назначенныеЧасы(alarm).window || '',
         windowSetAt: alarm.windowSetAt,
+        architect: архитектор,
         quiet,
         off: modeOf(KEY_WINDOW, alarm) === 'off'
     });

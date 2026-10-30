@@ -11,7 +11,9 @@
    или погашен крестиком, — снять его может только приложение, и только
    если знает, что именно снимать. */
 
-import { observerClock, afterQuiet, namedOccurrences, nextNamedAt } from './observer-clock.js';
+import {
+    observerClock, afterQuiet, namedOccurrences, nextNamedAt, windowOpensAfter, apartFromArchitect
+} from './observer-clock.js';
 import {
     isOff, activeMoment, nextMoment, timeNow, MOMENT_WINDOW_MINUTES
 } from './quantum.js';
@@ -329,7 +331,12 @@ export function normalizeAlarm(raw) {
            следует за циклом, только если он уже прозвенел ПОСЛЕ того, как его назначили
            (cycleNamedHour в core/observer-clock.js), — иначе автоматика затёрла бы час,
            который человек только что поставил на вечер. */
-        windowSetAt: Number(src.windowSetAt) > 0 ? Number(src.windowSetAt) : 0
+        windowSetAt: Number(src.windowSetAt) > 0 ? Number(src.windowSetAt) : 0,
+
+        /* Час Наблюдателя поставила автоматика (cycleNamedHour), а не человек (выкладка 209). Такой
+           час уже разведён с Архитектором и день моментов не перестраивает (anchorHours). Человек
+           поставил час сам — признак снимается (saveAlarm). Старые записи без признака — ручные. */
+        windowAuto: src.windowAuto === true && Boolean(время(src.windowAt))
     };
 }
 
@@ -546,10 +553,37 @@ export function anchorHours(alarm) {
     const настройка = normalizeAlarm(alarm);
     if (!настройка.on) return [];
 
+    /* Час Наблюдателя, переставленный автоматикой (windowAuto), день Архитектора не перестраивает
+       (выкладка 209): он сам разведён с моментами, и перестройка дня после него сдвинула бы моменты
+       за Наблюдателя — Архитектор перестал бы звонить первым, и время снова съехалось бы. */
     return [
-        настройка.windowMode === 'off' ? '' : настройка.windowAt,
+        настройка.windowMode === 'off' || настройка.windowAuto ? '' : настройка.windowAt,
         настройка.momentsMode === 'off' ? '' : настройка.momentsAt
     ].filter(Boolean).sort();
+}
+
+/* ЗВОНКИ АРХИТЕКТОРА, мс — для разводки с Наблюдателем (выкладка 209, core/observer-clock.js):
+   живые моменты сегодняшнего дня, моменты завтрашнего (заготовка — окно может открыться завтра с
+   концом тишины) и приходы назначенного часа моментов. Направление выключено — звонков нет. */
+export function architectRings({ today = [], tomorrow = [], named = '', now = new Date(), on = true, quiet = null } = {}) {
+    if (!on) return [];
+    const базаЗавтра = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+    const звонки = new Set();
+    const добавить = (список, опора) => {
+        for (const момент of Array.isArray(список) ? список : []) {
+            if (isOff(момент) || момент.doneAt) continue;
+            const at = atToday(момент.at, опора);
+            if (at) звонки.add(at.getTime());
+        }
+    };
+    добавить(today, now);
+    добавить(tomorrow, базаЗавтра);
+    if (named) {
+        for (const опора of [now, базаЗавтра]) {
+            for (const приход of namedOccurrences(named, опора.getTime(), quiet)) звонки.add(приход.at);
+        }
+    }
+    return [...звонки].sort((a, b) => a - b);
 }
 
 /* Звонит ли это напоминание будильником.
@@ -578,7 +612,7 @@ export function ringsAsAlarm(key, alarm) {
    Тихий час в это число больше не входит. Он не снимает напоминание, а
    глушит его: приходит беззвучная плашка (разбор у momentPlan выше). */
 export function windowPlan(lastJump, now = new Date(), options = {}) {
-    const { cooldownMs = 0, windowMs = 0, quiet = null, off = false, named = '', windowSetAt = 0 } = options;
+    const { cooldownMs = 0, windowMs = 0, quiet = null, off = false, named = '', windowSetAt = 0, architect = [] } = options;
 
     // Наблюдатель выключен совсем: окно не ставится, а прежнее снимает
     // вызывающий (reminder-plan.js кладёт ключ в снятие, когда окна нет)
@@ -590,12 +624,13 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
        него. Окно открыто или прошло — следующее откроется после назначенного звонка. */
     /* Тихий час (выкладка 160): окно, попавшее в тишину, открывается с её концом и звонит
        будильником утром, а не беззвучной плашкой посреди ночи. */
-    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs, quiet, setAt: windowSetAt });
+    /* Открытие окна не ближе получаса к звонкам Архитектора (выкладка 209, windowOpensAfter). */
+    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs, quiet, setAt: windowSetAt, architect });
     let когда = 0;
     if (часы.phase === 'cooldown') {
-        когда = часы.nextNamed && часы.nextNamed < часы.opens ? afterQuiet(часы.nextNamed + cooldownMs, quiet) : часы.opens;
+        когда = часы.nextNamed && часы.nextNamed < часы.opens ? windowOpensAfter(часы.nextNamed, cooldownMs, quiet, architect) : часы.opens;
     } else if (часы.phase !== 'never' && часы.nextNamed) {
-        когда = afterQuiet(часы.nextNamed + cooldownMs, quiet);
+        когда = windowOpensAfter(часы.nextNamed, cooldownMs, quiet, architect);
     }
     if (!когда) return null;
 
@@ -679,8 +714,12 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
     const сегодняшний = миг => new Date(миг).toDateString() === now.toDateString();
     const last = Number(lastJump);
     const прыгал = Number.isFinite(last) && last > 0;
+    // Звонки Архитектора — окно Наблюдателя не ближе получаса к ним (выкладка 209)
+    const звонкиАрхитектора = architectRings({
+        today: список, tomorrow: завтра, named: named.moments, now, on: architectOn, quiet
+    });
     // Окно, попавшее в тихий час, открывается с её концом (core/observer-clock.js)
-    const откроется = afterQuiet(last + cooldownMs, quiet);
+    const откроется = windowOpensAfter(last, cooldownMs, quiet, звонкиАрхитектора);
 
     /* Срок словами для кадра: «ЧЧ:ММ», а если он на следующий день после кадра — «ЧЧ:ММ+1». */
     const срок = (когда, миг) => {
@@ -698,7 +737,7 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
 
     /* Ближайший звонок дня после мига: следующий момент, после последнего — первый утренний
        завтра (заготовка), или назначенный час моментов, если он раньше. */
-    const ближайшийЗвонок = миг => {
+    const ближайшийМиг = миг => {
         const время = timeNow(new Date(миг));
         const день = сегодняшний(миг) ? список : завтра;
         const опора = сегодняшний(миг) ? now : базаЗавтра;
@@ -710,7 +749,10 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
             const первый = nextMoment(завтра, '');
             if (первый) ближайший = atToday(первый.at, базаЗавтра);
         }
-        ближайший = раньше(ближайший, следующий(named.moments, миг));
+        return раньше(ближайший, следующий(named.moments, миг));
+    };
+    const ближайшийЗвонок = миг => {
+        const ближайший = ближайшийМиг(миг);
         return ближайший ? срок(ближайший, миг) : '';
     };
 
@@ -737,15 +779,19 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
        перед тихим часом — значит, утренний». Своего срока у Наблюдателя нет, когда опоры нет
        (не было ни прыжка, ни назначенного звонка — прежде «окно открыто») и когда окно прошло, а
        часа не назначено (прежде прочерк). Тогда — ближайший звонок дня, как у Архитектора после
-       идущего момента: следующий момент, после последнего — первый утренний завтра. */
+       идущего момента: следующий момент, после последнего — первый утренний завтра.
+       НО НЕ ТОТ ЖЕ ЧАС, ЧТО У АРХИТЕКТОРА (выкладка 209): ночью обе строки показывали «12:00+1» —
+       «два будильника на одно время». Наблюдатель — не раньше чем через полчаса после Архитектора. */
     const наблюдатель = миг => {
         if (!observerOn) return '';
         const часы = observerClock({
-            lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs, quiet, setAt: windowSetAt
+            lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs, quiet, setAt: windowSetAt,
+            architect: звонкиАрхитектора
         });
         if (часы.phase === 'open') return timeNow(new Date(часы.opens));
         if (часы.phase === 'cooldown' || часы.next) return срок(new Date(часы.next), миг);
-        return ближайшийЗвонок(миг);
+        const ближайший = ближайшийМиг(миг);
+        return ближайший ? срок(new Date(apartFromArchitect(ближайший.getTime(), звонкиАрхитектора, quiet)), миг) : '';
     };
 
     /* Границы, на которых текст может измениться: время каждого живого
@@ -785,7 +831,7 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
         const опоры = new Set([...namedOccurrences(named.window, now.getTime(), quiet),
             ...namedOccurrences(named.window, базаЗавтра.getTime(), quiet)].map(п => п.at));
         for (const опора of опоры) {
-            const открытие = afterQuiet(опора + cooldownMs, quiet);
+            const открытие = windowOpensAfter(опора, cooldownMs, quiet, звонкиАрхитектора);
             границы.add(открытие);
             границы.add(открытие + windowMs);
         }

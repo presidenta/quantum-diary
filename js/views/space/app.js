@@ -17,7 +17,7 @@ import {
 } from './photos.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
    значит, он же и переставляет напоминание, когда это время меняется. */
-import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSetAt, observerQuiet } from '../../reminder-plan.js';
+import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSetAt, observerQuiet, observerArchitect } from '../../reminder-plan.js';
 import { observerClock, countdownText } from '../../core/observer-clock.js';
 import { logEvent } from '../../core/web-journal.js';
 
@@ -2041,7 +2041,8 @@ export class QuantumApp {
             const часы = observerClock({
                 lastJump: last, named: observerNamedHour(), now, setAt: observerNamedSetAt(),
                 cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs,
-                quiet: observerQuiet()
+                quiet: observerQuiet(),
+                architect: observerArchitect()   // не ближе получаса к Архитектору (выкладка 209)
             });
             const disp = document.getElementById('s5-cooldown-timer');
 

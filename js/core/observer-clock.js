@@ -67,6 +67,43 @@ export function afterQuiet(миг, quiet) {
     return конец.getTime();
 }
 
+/* НАБЛЮДАТЕЛЬ — НЕ ВМЕСТЕ С АРХИТЕКТОРОМ (выкладка 209). Владелец 30.10.2026: тихий час кончается
+   в 12:00, и в 12:00 стояли оба звонка — окно Наблюдателя, попавшее в тишину, переносилось ровно на её
+   конец, а первый утренний момент Архитектора тоже начинается с конца тишины. «В один момент невозможно
+   прозвонить двум будильникам». Правило: первым звонит Архитектор, Наблюдатель — не раньше чем через
+   полчаса после него. Касается только РАСЧЁТНОГО открытия окна; час, назначенный человеком вручную,
+   стоит где поставлен — «насколько он захотел». */
+export const OBSERVER_GAP_MS = 30 * 60 * 1000;
+
+/**
+ * Миг Наблюдателя, разведённый со звонками Архитектора: ближе получаса к любому из них — переезжает
+ * на полчаса после этого звонка (только вперёд: Наблюдатель идёт после Архитектора). Переехал в тихий
+ * час — с её концом, и проверка заново: там уже утренние моменты следующего дня.
+ *
+ * @param {number} миг          расчётный миг, мс
+ * @param {number[]} architect  звонки Архитектора, мс (моменты и его назначенный час)
+ */
+export function apartFromArchitect(миг, architect = [], quiet = null) {
+    if (!миг) return миг;
+    const звонки = (architect || []).filter(Number.isFinite).sort((a, b) => a - b);
+    let итог = миг;
+    // Кругов немного: второй и дальше нужны, только если переезд упёрся в тихий час
+    for (let круг = 0; круг < 4; круг++) {
+        const было = итог;
+        for (const звонок of звонки) {
+            if (Math.abs(звонок - итог) < OBSERVER_GAP_MS) итог = звонок + OBSERVER_GAP_MS;
+        }
+        итог = afterQuiet(итог, quiet);
+        if (итог === было) break;
+    }
+    return итог;
+}
+
+/** Открытие окна от опоры: через cooldownMs, за тихим часом и не ближе получаса к Архитектору. */
+export function windowOpensAfter(опора, cooldownMs, quiet = null, architect = []) {
+    return apartFromArchitect(afterQuiet(опора + cooldownMs, quiet), architect, quiet);
+}
+
 /**
  * Приходы ежедневного часа вокруг мига — с позавчера до завтра, по возрастанию: raw — сам час в
  * тот день, at — когда он звонит на самом деле (попал в тихий час — с её концом). Позавчерашний
@@ -110,6 +147,7 @@ export function nextNamedAt(hhmm, миг, quiet = null) {
  * @param {{on: boolean, from: string, until: string}} [p.quiet] тихий час: окно в нём — с его концом
  * @param {number} [p.setAt]    когда час Наблюдателя назначили вручную, мс (0 — не знаем): назначенное
  *                              после последней опоры и позже расчётного окна — ближайший срок, см. РУЧНОЙ ЧАС
+ * @param {number[]} [p.architect] звонки Архитектора, мс: открытие окна не ближе получаса к ним (выкладка 209)
  * @returns {{phase: 'never'|'cooldown'|'open'|'missed', anchor: number, opens: number,
  *            closes: number, nextNamed: number, next: number}}
  *   phase  — never: опоры нет (не было ни прыжка, ни звонка) — окно открыто с начала;
@@ -117,7 +155,7 @@ export function nextNamedAt(hhmm, миг, quiet = null) {
  *   next   — ближайший срок Наблюдателя после мига (открытие окна или назначенный звонок),
  *            0 — неизвестен (окно открыто или прошло, а часа не назначено).
  */
-export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null, setAt = 0 }) {
+export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null, setAt = 0, architect = [] }) {
     const прыжок = Number(lastJump) > 0 ? Number(lastJump) : 0;
     const опора = Math.max(прыжок, lastNamedAt(named, now, quiet));
     const nextNamed = nextNamedAt(named, now, quiet);
@@ -125,7 +163,7 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
     if (!опора) {
         return { phase: 'never', anchor: 0, opens: 0, closes: 0, nextNamed, next: 0 };
     }
-    const opens = afterQuiet(опора + cooldownMs, quiet);
+    const opens = windowOpensAfter(опора, cooldownMs, quiet, architect);
     const closes = opens + windowMs;
 
     /* РУЧНОЙ ЧАС ПЕРЕНОСИТСЯ НА ЭКРАН СРАЗУ (выкладка 164). Владелец 19.10.2026 в 20:21: окно
@@ -138,7 +176,7 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
        опора переезжает на него, окно откроется через cooldownMs (с учётом тихого часа). Прыжок
        после назначения или сам звонок снимают правило: цикл снова идёт от последней опоры. */
     if (named && Number(setAt) > опора && nextNamed > opens) {
-        const открытие = afterQuiet(nextNamed + cooldownMs, quiet);
+        const открытие = windowOpensAfter(nextNamed, cooldownMs, quiet, architect);
         return {
             phase: 'cooldown', anchor: nextNamed, opens: открытие, closes: открытие + windowMs,
             nextNamed, next: nextNamed, manual: true
@@ -165,12 +203,13 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
    окно впереди (cooldown): открытое или прошедшее окно часа не даёт.
 
    @returns {string} новый час «ЧЧ:ММ» или '' — оставить как есть */
-export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs, quiet = null }) {
+export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs, quiet = null, architect = [] }) {
     if (!named) return '';
     const прозвучал = lastNamedAt(named, now, quiet);
     if (!прозвучал || прозвучал < setAt) return '';
 
-    const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs, quiet });
+    // Переезжает на открытие, уже разведённое с Архитектором (выкладка 209)
+    const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs, quiet, architect });
     if (часы.phase !== 'cooldown') return '';
     const открытие = new Date(часы.opens);
     const час = `${String(открытие.getHours()).padStart(2, '0')}:${String(открытие.getMinutes()).padStart(2, '0')}`;

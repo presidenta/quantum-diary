@@ -34,7 +34,8 @@ import {
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
-  loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet, observerNamedHour, observerNamedSetAt
+  loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet, observerNamedHour, observerNamedSetAt,
+  observerArchitect
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext, momentIdOfKey } from './core/reminder-rules.js';
 import { formatJournal, formatPending, standbyName, androidVersion } from './core/alarm-journal.js';
@@ -836,7 +837,9 @@ function показатьЧасыНаблюдателя() {
     lastJump: Number(localStorage.getItem('last_quantum_jump_time')) || 0, named, now, setAt: назначен,
     cooldownMs: SPACE_CONFIG.timing.jumpCooldownMs, windowMs: SPACE_CONFIG.timing.opportunityWindowMs,
     // Окно в тихий час — с её концом, как у плашки и звонка (выкладка 160)
-    quiet: observerQuiet()
+    quiet: observerQuiet(),
+    // И не ближе получаса к звонкам Архитектора (выкладка 209)
+    architect: observerArchitect()
   });
 
   let время = '--:--:--';
