@@ -2,7 +2,7 @@
    fetch до сервера не доходит — см. core/net.js. */
 import { request } from './core/net.js';
 
-const PRODUCTION_API = 'https://game.coreviaflow.space/genesisystem';
+const PRODUCTION_API = 'https://game.coreviaflow.com/genesisystem';
 
 /* ПОЧЕМУ СМОТРИМ НА ПРОТОКОЛ, А НЕ ТОЛЬКО НА ИМЯ УЗЛА.
 
