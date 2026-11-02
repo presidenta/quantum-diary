@@ -57,6 +57,8 @@
 <link rel="stylesheet" href="css/space.css">
 <!-- Свиток «Мудрость дня»: весь модуль в js/views/scroll/, стили там же -->
 <link rel="stylesheet" href="js/views/scroll/scroll.css">
+<!-- GoldenFit: плитка на главной и пункт меню — модуль js/views/sport/ (README.md там) -->
+<link rel="stylesheet" href="js/views/sport/sport.css">
 <!-- Окно «Установить виджет»: предпросмотр берёт золото и буквы из app.css -->
 <link rel="stylesheet" href="css/widgets.css">
 <script type="module" src="js/ios-home.js"></script>
@@ -143,6 +145,8 @@
     </button>
 
     <div class="drawer-list" id="drawerMain"></div>
+    <!-- GoldenFit: пункт меню рисует js/views/sport/ -->
+    <div class="drawer-list" id="drawerSport"></div>
 
     <div class="drawer-sep"></div>
 
@@ -268,6 +272,11 @@
           <div id="dailyScrollButton"></div>
           <div id="dailyScrollPanel"></div>
         </div>
+
+        <!-- GoldenFit — спортивное приложение на аккаунте «Кванта». Плитку рисует
+             js/views/sport/ (README.md там): открывает спорт уже вошедшим и ставит
+             его значок на экран. -->
+        <div id="sportTile"></div>
       </div>
 
       <!-- Часть 1: моменты дня. Разметка и логика не менялись.

@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 210;
+const RELEASE = 211;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -32,6 +32,8 @@ const SHELL = [
   'js/views/scroll/index.js', 'js/views/scroll/engine.js', 'js/views/scroll/texts.js', 'js/views/scroll/wisdom.js',
   'js/views/scroll/predictions.json', 'js/views/scroll/scroll.css',
   'js/views/scroll/fonts/marck-script-cyrillic.woff2', 'js/views/scroll/fonts/marck-script-latin.woff2',
+  // GoldenFit: плитка на главной (сам спорт — отдельный сайт со своим кэшем)
+  'js/views/sport/index.js', 'js/views/sport/texts.js', 'js/views/sport/sport.css', 'js/views/sport/goldenfit.png',
   'admin.html', 'css/admin.css', 'js/admin.js',
   'js/core/net.js', 'js/core/media-box.js', 'js/core/access-controller.js', 'js/core/reminders.js', 'js/core/reminder-rules.js', 'js/core/observer-clock.js', 'js/core/live-update.js',
   'js/core/push.js', 'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js'

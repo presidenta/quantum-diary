@@ -24,6 +24,7 @@ import { initSpace, syncSpace, openPart as openQuantumPart } from './views/space
 import { initSlit } from './views/quantum-slit.js';
 // Свиток «Мудрость дня» под арканом: весь модуль в views/scroll/
 import { initScroll, syncScroll } from './views/scroll/index.js';
+import { initSport, syncSport, openSport } from './views/sport/index.js';
 import { initWidgets, openWidgets } from './widgets-ui.js';
 import { initSupport } from './support.js';
 import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
@@ -161,6 +162,7 @@ function render() {
   if (state.view === 'day') renderDay();
   if (state.view === 'quantum') renderQuantum();
   syncScroll();                // свиток «Мудрость дня»: рисуется только на «Кванте»
+  syncSport();                 // плитка GoldenFit: перерисовывается при смене языка
   syncSpace();                 // вторая вкладка «Кванта»: гаснет вне раздела
   if (state.view === 'money') renderMoney();
   renderDrawerSpheres();
@@ -954,6 +956,12 @@ async function открытьПоЗвонку(изПуша = '') {
     return;
   }
 
+  // «Войти через Квант» на сайте GoldenFit (выкладка 211): открыть спорт с пропуском
+  if (цель === 'sport-login') {
+    await openSport();
+    return;
+  }
+
   /* НОВЫЙ ЧАС ИЗ ПАНЕЛИ ВИДЖЕТА: «alarmAt:window=16:30» или «alarmAt:moments=08:02»
      (выкладка 147). Запоминаем его ровно так же, как «Сохранить» в «Режиме будильника»:
      saveAlarm переставляет звонки, плашку и виджеты, quietChanged пересобирает день
@@ -1243,6 +1251,7 @@ async function boot() {
   initQuantum();
   initSpace();
   initScroll();
+  initSport();
   initSlit();
   initWidgets();
   initSupport();
