@@ -192,7 +192,9 @@ export async function initUpdate(buttonId = 'updateBtn') {
     const [nowClient, nowServer] = await Promise.all([clientVersion(), serverVersion()]);
     const lines = techLines(nowClient, nowServer);
 
-    if (!nowClient && !nowServer) {
+    /* Сайта не дозваться (сервер может и отвечать): ниже запас стирается и страница перезагружается — без сайта
+       она больше не открылась бы. Запрос идёт мимо запаса (no-store), поэтому ответ честный. */
+    if (!nowClient) {
       button.classList.remove('spin');
       delete button.dataset.busy;
       popup('offline', lines);

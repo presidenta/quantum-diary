@@ -1212,16 +1212,23 @@ async function start() {
 
   render();
 
-  /* В собранном приложении service worker не нужен и даже вреден: файлы и
-     так лежат на телефоне, а его запас мог бы заслонить свежий пакет,
-     пришедший по воздуху. В браузере он по-прежнему главный работник
-     офлайна. */
-  const inApp = Boolean(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function'
-    && window.Capacitor.isNativePlatform());
+  /* СЛУЖЕБНЫЙ РАБОТНИК НУЖЕН И В ПРИЛОЖЕНИИ (выкладка 213).
 
-  if (!inApp && 'serviceWorker' in navigator
+     Здесь стояло «в приложении он вреден: файлы и так лежат на телефоне» — так было до 12.10.2026. С тех пор
+     приложение открывает страницу прямо с сайта (server.url, docs/OBNOVLENIE.md), файлов на телефоне нет, и это
+     условие оставило его без запаса. Звонок будит телефон, а связь поднимается не сразу: в такую секунду
+     приложение показывало системную страницу «Не удалось открыть веб-страницу, ERR_INTERNET_DISCONNECTED»
+     (скриншот владельца 04.11.2026, журнал: звонок 13:03 ✓, «окно открыто» 13:03). Мост к звонкам со страницей
+     из запаса работает: Capacitor вставляет его при открытии любой страницы сайта (addDocumentStartJavaScript).
+     Вторым голосом пуш не станет: подписка в приложении скрыта (isNative, блок пушей ниже).
+
+     Запас дополняем при каждом запуске: кнопка «Обновить» его стирает, а установка заполняет только один раз. */
+  if ('serviceWorker' in navigator
       && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('[sw]', err.message));
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => navigator.serviceWorker.ready)
+      .then(рег => рег.active?.postMessage({ type: 'kvant-fill-shell' }))
+      .catch(err => console.warn('[sw]', err.message));
   }
 }
 

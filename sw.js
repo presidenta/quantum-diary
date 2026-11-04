@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 212;
+const RELEASE = 213;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -36,11 +36,54 @@ const SHELL = [
   'js/views/sport/index.js', 'js/views/sport/texts.js', 'js/views/sport/sport.css', 'js/views/sport/goldenfit.png',
   'admin.html', 'css/admin.css', 'js/admin.js',
   'js/core/net.js', 'js/core/media-box.js', 'js/core/access-controller.js', 'js/core/reminders.js', 'js/core/reminder-rules.js', 'js/core/observer-clock.js', 'js/core/live-update.js',
-  'js/core/push.js', 'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js'
+  'js/core/push.js', 'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js',
+  // Без этих модулей страница без сети не запускалась: один не найденный модуль останавливает все (замок — test/oflayn-prilozheniya.test.js)
+  'js/core/web-journal.js', 'js/core/alarm-journal.js', 'js/core/sectors.js', 'js/views/quantum-figures.js', 'js/prefs.js'
 ];
 
+/* Сколько ждать сеть при открытии страницы, если есть своя копия. Телефон мог проснуться от звонка на слабой
+   связи (на скриншоте владельца — EDGE): сеть формально есть, а страница идёт минуту, и человек смотрит на
+   белый экран вместо момента. Без своей копии ждём столько, сколько потребуется. */
+const ЖДЁМ_СЕТЬ_МС = 4000;
+
+/* Страница взята из запаса — её модули и стили тоже берём из запаса, иначе на слабой связи старая разметка
+   встретится с новым кодом, если как раз вышла выкладка. Следующее открытие снова начнёт с сети. */
+const ЗАПАС_ДЕРЖИМ_МС = 30000;
+let изЗапасаДо = 0;
+
+const вАдрес = путь => new URL(путь, self.location).href;
+const безПараметров = адрес => адрес.split(/[?#]/)[0];
+
+/* Запрос пересобираем по адресу, а не копированием: у перехода по ссылке режим navigate, и копия с другими
+   настройками кэша для него недопустима — браузер отверг бы её. По адресу же получается обычный запрос, ответ
+   на который подходит и для перехода. */
+const свежий = (адрес, заголовки) => new Request(адрес, {
+  cache: 'no-cache', credentials: 'same-origin', headers: заголовки
+});
+
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  /* С проверкой у сервера, как и всё ниже: иначе в запас ляжет копия из браузерного кэша от прошлой выкладки. */
+  event.waitUntil(caches.open(CACHE)
+    .then(c => c.addAll(SHELL.map(путь => свежий(вАдрес(путь)))))
+    .then(() => self.skipWaiting()));
+});
+
+/* Дополнить запас тем, чего в нём нет (его стирает кнопка «Обновить»). Файл не скачался — возьмём при следующем
+   запуске, поэтому по одному, а не addAll: на слабой связи тот падает целиком. */
+async function дополнитьЗапас() {
+  const кэш = await caches.open(CACHE);
+  for (const путь of SHELL) {
+    const адрес = вАдрес(путь);
+    if (await кэш.match(адрес)) continue;
+    try {
+      const ответ = await fetch(свежий(адрес));
+      if (ответ.status === 200) await кэш.put(адрес, ответ);
+    } catch { /* нет связи — в следующий раз */ }
+  }
+}
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'kvant-fill-shell') event.waitUntil(дополнитьЗапас());
 });
 
 self.addEventListener('activate', event => {
@@ -63,25 +106,64 @@ self.addEventListener('activate', event => {
    не добавляет, зато смеси версий больше не бывает.
 
    Нет сети — ответ придёт из запаса, как и раньше. */
+
+/* В запас — без параметров адреса: version.json?t=… при каждом запуске добавлял бы новую запись. Только ответ 200:
+   частичный ответ 206 (звук) кэш не принимает. */
+function запомнить(event, ответ) {
+  if (ответ.status !== 200) return;
+  const копия = ответ.clone();
+  event.waitUntil(caches.open(CACHE)
+    .then(кэш => кэш.put(безПараметров(event.request.url), копия))
+    .catch(() => {}));
+}
+
+async function открытьСтраницу(event) {
+  const адрес = event.request.url;
+  const сеть = fetch(свежий(адрес, event.request.headers)).catch(() => null);
+  const запас = await caches.match(безПараметров(адрес));
+  const ответ = await (запас
+    ? Promise.race([сеть, new Promise(готово => setTimeout(() => готово(null), ЖДЁМ_СЕТЬ_МС))])
+    : сеть);
+  if (ответ?.ok) {
+    изЗапасаДо = 0;
+    запомнить(event, ответ);
+    return ответ;
+  }
+  /* Сайт ответил ошибкой или не ответил вовремя — запоздавшую страницу в запас не кладём: к ней нет свежих модулей. */
+  if (запас) {
+    изЗапасаДо = Date.now() + ЗАПАС_ДЕРЖИМ_МС;
+    return запас;
+  }
+  return ответ || (await caches.match(self.registration.scope)) || Response.error();
+}
+
+async function отдатьФайл(event) {
+  const адрес = безПараметров(event.request.url);
+  if (Date.now() < изЗапасаДо) {
+    const запас = await caches.match(адрес);
+    if (запас) return запас;
+  }
+  try {
+    const ответ = await fetch(свежий(event.request.url, event.request.headers));
+    запомнить(event, ответ);
+    return ответ;
+  } catch {
+    return (await caches.match(адрес)) || Response.error();
+  }
+}
+
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== location.origin) return;
-  /* Запрос пересобираем по адресу, а не копированием: у перехода по ссылке
-     режим navigate, и копия с другими настройками кэша для него недопустима —
-     браузер отверг бы её. По адресу же получается обычный запрос, ответ на
-     который подходит и для перехода. */
-  const fresh = new Request(event.request.url, {
-    cache: 'no-cache', credentials: 'same-origin', headers: event.request.headers
-  });
-  event.respondWith(fetch(fresh)
-    .then(res => {
-      if (res.ok) {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(event.request, copy));
-      }
-      return res;
-    })
-    .catch(() => caches.match(event.request, { ignoreSearch: true })));
+  const { request } = event;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== location.origin) return;
+  /* Страница прямо попросила не брать из запаса — значит, ей нужен честный ответ сети. Кнопка «Обновить» так
+     узнаёт, что связи нет, и не стирает запас; проверка выкладки в live-update.js не получает старый номер и не
+     запускает подмену пакета. */
+  if (request.cache === 'no-store') return;
+  /* Страница установки с файлом приложения и пакеты обновления — не часть экрана: в запасе им делать нечего. */
+  const свойПуть = url.pathname.slice(new URL(self.registration.scope).pathname.length);
+  if (/^(app|native)\//.test(свойПуть)) return;
+  event.respondWith(request.mode === 'navigate' ? открытьСтраницу(event) : отдатьФайл(event));
 });
 
 /* ПУШ С СЕРВЕРА (выкладка 205). В час момента и окна сервер присылает пуш (server/src/push.js), а показывает
