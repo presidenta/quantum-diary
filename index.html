@@ -448,8 +448,11 @@
       <button type="button" class="btn" id="changePassword" hidden data-i18n="password.change">Сменить пароль</button>
       <button type="button" class="btn" id="profileLogout" data-i18n="auth.logout">Выйти</button>
       <button type="button" class="btn danger" id="deleteData" data-i18n="profile.removeApp">Удалить приложение</button>
+      <p class="muted m0" data-i18n="profile.removeNote">Удаление стирает все записи на этом устройстве. Если вход сохранён на сервере, они вернутся при следующем входе.</p>
+      <!-- Отдельная кнопка в самом низу списка (просьба владельца 04.11.2026, выкладка 215): внутри «Режима будильника»
+           её приходилось искать. Пояснение об удалении стоит выше, чтобы остаться рядом со своей кнопкой. -->
+      <button type="button" class="btn" id="alarmLogs" data-i18n="alarm.logs">Логи</button>
     </div>
-    <p class="muted m0" data-i18n="profile.removeNote">Удаление стирает все записи на этом устройстве. Если вход сохранён на сервере, они вернутся при следующем входе.</p>
   </div>
 </dialog>
 
@@ -740,14 +743,7 @@
 
 <dialog id="alarmDialog">
   <form method="dialog" class="sheet" id="alarmForm">
-    <div class="alarm-head">
-      <h2 data-i18n="alarm.title">Режим будильника</h2>
-      <!-- ВРЕМЕННО. Кнопка ведёт в окно с логами и проверками — оно нужно,
-           пока звонки не подтвердятся на разных телефонах, и потом должно
-           уйти целиком (вместе с #alarmLogDialog ниже и обработчиком в
-           app.js). Это записано в docs/METHODOLOGY.md, раздел 9.7. -->
-      <button type="button" class="alarm-logs" id="alarmLogs" data-i18n="alarm.logs">Логи</button>
-    </div>
+    <h2 data-i18n="alarm.title">Режим будильника</h2>
 
     <label class="quiet-switch">
       <input type="checkbox" name="on" id="alarmOn">
@@ -822,11 +818,10 @@
   </form>
 </dialog>
 
-<!-- ВРЕМЕННОЕ ОКНО «ЛОГИ». Всё, что нужно для разбора звонков и что
-     загромождало основное окно: что поставлено, счётчики, докуда дошло
-     срабатывание, марка телефона, журнал по секундам и обе проверки.
-     Убрать целиком, когда звонки подтвердятся: удалить это окно, кнопку
-     #alarmLogs выше и обработчик alarmLogs в js/app.js. -->
+<!-- ОКНО «ЛОГИ». Всё, что нужно для разбора звонков и что загромождало
+     основное окно: что поставлено, счётчики, докуда дошло срабатывание,
+     марка телефона, журнал по секундам и обе проверки. Открывается кнопкой
+     #alarmLogs внизу профиля. -->
 <dialog id="alarmLogDialog">
   <form method="dialog" class="sheet" id="alarmLogForm">
     <h2 data-i18n="alarm.logsTitle">Логи звонков</h2>

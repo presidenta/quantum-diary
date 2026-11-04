@@ -1354,8 +1354,7 @@ async function boot() {
      галочки сохранённым, и сохраняем только по кнопке «Сохранить». */
   $('alarmMode').addEventListener('click', openAlarmDialog);
 
-  /* ВРЕМЕННО: окно «Логи». Убрать вместе с кнопкой #alarmLogs и самим
-     окном в index.html, когда звонки подтвердятся (METHODOLOGY, 9.7). */
+  // Окно «Логи»: кнопка внизу профиля (выкладка 215)
   $('alarmLogs').addEventListener('click', async () => {
     await showAlarmPending();
     $('alarmLogDialog').showModal();
