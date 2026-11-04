@@ -27,7 +27,7 @@ import { initScroll, syncScroll } from './views/scroll/index.js';
 import { initSport, syncSport, openSport } from './views/sport/index.js';
 import { initWidgets, openWidgets } from './widgets-ui.js';
 import { initSupport } from './support.js';
-import { ACCESS_ENABLED, AccessController } from './core/access-controller.js';
+import { AccessController } from './core/access-controller.js';
 import {
   cancelAll as cancelAllReminders, isNative, openAlarmSettings, testAlarm,
   takeAlarmTarget, moveToBack, pendingAlarms, askBatteryFreedom, openOverlaySettings,
@@ -292,7 +292,8 @@ function openSettings() {
 const LOGIN_ERRORS = {
   invalid_credentials: 'auth.wrongCredentials',
   pending_approval: 'auth.pending',
-  blocked: 'auth.blocked'
+  blocked: 'auth.blocked',
+  access_expired: 'access.expired'
 };
 
 function showGate() {
@@ -995,6 +996,7 @@ async function открытьПоЗвонку(изПуша = '') {
 }
 
 let syncStarted = false;
+let контрольДоступа = null;
 // Цели нажатия на пуш (выкладка 205): момент, моменты, пространство — и ничего больше
 const ЦЕЛЬ_ПУША = /^(space|moments|moment:[\w-]{1,80})$/;
 let pushListening = false;
@@ -1033,24 +1035,30 @@ async function записатьОткрытие() {
   window.addEventListener('offline', () => logEvent('NET', { m: 'offline' }));
 }
 
+function завестиСинхронизацию() {
+  syncStarted = true;
+  initSync({
+    status: s => { $('syncStatus').textContent = STATUS_KEY[s] ? t(STATUS_KEY[s]) : ''; },
+    data: async () => { await reload(); changed(); },
+    authLost: showGate,
+    // Настройки с других устройств: час Наблюдателя, тихий час, последний прыжок (выкладка 158)
+    synced: async known => { if (await syncPrefs(known)) changed(); },
+    // Приложение для компьютера спрятано в трей и на вкладку не возвращается: правки с
+    // телефона виджеты на столе получают к следующему сроку на виджете или раз в час
+    wakeAt: navigator.userAgent.includes('KvantDesktop/') ? следующийСрокНаСтоле : undefined
+  });
+}
+
 async function start() {
   if (!isNative()) записатьОткрытие();
   await reload();
+  // Вход только что принят: прежняя блокировка и чужой срок забыты (auth.js), сервер назовёт настоящий
+  контрольДоступа?.checkNow();
   /* Сервер не отвечает — синхронизацию не заводим вовсе. Иначе она сама
      обнаружит отсутствие входа и покажет экран входа, который в этом
      случае бесполезен: войти всё равно некуда. */
   if (!syncStarted && !state.serverDown) {
-    syncStarted = true;
-    initSync({
-      status: s => { $('syncStatus').textContent = STATUS_KEY[s] ? t(STATUS_KEY[s]) : ''; },
-      data: async () => { await reload(); changed(); },
-      authLost: showGate,
-      // Настройки с других устройств: час Наблюдателя, тихий час, последний прыжок (выкладка 158)
-      synced: async known => { if (await syncPrefs(known)) changed(); },
-      // Приложение для компьютера спрятано в трей и на вкладку не возвращается: правки с
-      // телефона виджеты на столе получают к следующему сроку на виджете или раз в час
-      wakeAt: navigator.userAgent.includes('KvantDesktop/') ? следующийСрокНаСтоле : undefined
-    });
+    завестиСинхронизацию();
   } else if (syncStarted) {
     // После повторного входа start() зовётся снова, а обработчики событий
     // синхронизации вешать второй раз нельзя
@@ -1263,18 +1271,20 @@ async function boot() {
   initWidgets();
   initSupport();
 
-  // Ежедневная проверка прав и «рубильник». Пока ACCESS_ENABLED = false,
-  // этот блок не делает ничего: ни запросов, ни блокировок.
-  // Включать только после проверки, что сервер отвечает всем устройствам —
-  // иначе через сутки без связи заблокируются сразу все.
-  if (ACCESS_ENABLED) {
-    new AccessController({
-      apiBase: API_BASE,
-      getToken: () => getMeta('token'),
-      // Закрытое приложение не должно будить человека
-      cancelAlarms: cancelAllReminders
-    }).start();
-  }
+  /* Срок доступа и «рубильник» (включено решением владельца 04.11.2026, выкладка 214): безлимит работает всегда,
+     срок телефон сверяет сам, без связи. Правила и почему блокировка не наступит ложно — в core/access-controller.js. */
+  контрольДоступа = new AccessController({
+    apiBase: API_BASE,
+    getToken: () => getMeta('token'),
+    // Закрытое приложение не должно будить человека
+    cancelAlarms: cancelAllReminders,
+    // Доступ вернули — звонки ставим снова, иначе продлённый человек остался бы без них до следующего запуска
+    onAllowed: () => { planReminders().catch(err => console.warn('[напоминания]', err)); },
+    texts: вид => (вид === 'admin'
+      ? { title: t('auth.blocked'), hint: t('access.adminHint') }
+      : { title: t('access.expired'), hint: t('access.expiredHint') })
+  });
+  контрольДоступа.start();
   onChange(render);
 
   // Меню, язык, настройки
@@ -1719,21 +1729,56 @@ async function boot() {
   /* Сервер ещё не поднят — не встречаем человека экраном входа, который
      всё равно не работает. Приложение живёт на устройстве и говорит об
      этом строкой состояния. Как только сервер ответит, вход и синхронизация
-     включатся сами, без новой выкладки. */
-  if (API_BASE && !(await serverAlive())) {
+     включатся сами (ждатьСервер), без новой выкладки.
+
+     Кто уже вошёл, долго ждать незачем: цена ошибки — синхронизация на минуту позже, а не спрятанный вход, а
+     человека, которого разбудил звонок, ждёт момент. Сети нет совсем — не ждём вовсе. */
+  const вошли = await hasSession();
+  if (API_BASE && !(navigator.onLine && await serverAlive(вошли ? 3000 : undefined))) {
     state.serverDown = true;
     hideGate();
     await start();
     $('syncStatus').textContent = t('sync.local');
+    ждатьСервер();
     // Разрешения будильнику нужны и без сервера: в этой ветке их не спрашивали (журнал 29.10.2026)
     await проверитьГотовность();
     return;
   }
 
-  if (API_BASE && !(await hasSession())) { showGate(); return; }
+  if (API_BASE && !вошли) { showGate(); return; }
   hideGate();
   await start();
   await проверитьГотовность();
+}
+
+/* ИНТЕРНЕТ ПОЯВИЛСЯ — ПРИЛОЖЕНИЕ СВЯЗЫВАЕТСЯ С СЕРВЕРОМ САМО (выкладка 214).
+
+   Обещание из комментария выше не выполнялось: запустившись без сети, приложение не пробовало снова до следующего
+   запуска. Человек, который его не закрывает, оставался без синхронизации и входа при живой сети. День и звонки здесь
+   не трогаем: они уже стоят, и новые часы посреди дня переставили бы их. Срок доступа следит за сетью сам. */
+function ждатьСервер() {
+  let занято = false;
+  let таймер = null;
+  const проверить = async () => {
+    if (занято || !navigator.onLine) return;
+    занято = true;
+    try {
+      if (!(await serverAlive())) return;
+      clearInterval(таймер);
+      window.removeEventListener('online', проверить);
+      document.removeEventListener('visibilitychange', проверить);
+      state.serverDown = false;
+      if (!(await hasSession())) { showGate(); return; }
+      завестиСинхронизацию();
+      state.me = (await fetchMe()) || state.me;
+      renderUser();
+    } finally {
+      занято = false;
+    }
+  };
+  window.addEventListener('online', проверить);
+  document.addEventListener('visibilitychange', проверить);
+  таймер = setInterval(проверить, 60000);
 }
 
 /* ГОТОВНОСТЬ БУДИЛЬНИКА — САМА ПРИ СТАРТЕ (выкладка 203, ТЗ владельца 28.10.2026: «запрашивать все права

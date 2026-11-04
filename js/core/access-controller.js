@@ -17,16 +17,23 @@
    а не наличие связи.
 
    Безлимит: если сервер прислал accessUntil пустым, доступ бессрочный —
-   по дате приложение не заблокируется никогда.
+   приложение работает всегда, что бы ни случилось с сетью и часами телефона
+   (решение владельца 04.11.2026, выкладка 214). Срок: телефон сам сверяет
+   дату и закрывается и без интернета.
+
+   Истёкшая сессия — НЕ блокировка: сервер отвечает тем же 401, но это повод
+   войти заново (sync.js показывает вход). Иначе человек с действующим
+   доступом увидел бы экран без единой кнопки и лишился звонков. Нет входа —
+   нечего блокировать: вход сам спросит сервер и скажет, что срок вышел.
 
    Базу данных при блокировке НЕ чистим: ложное срабатывание уничтожило бы
-   записи дверей безвозвратно.
+   записи дверей безвозвратно. */
 
-   ВАЖНО. По умолчанию модуль ВЫКЛЮЧЕН (ACCESS_ENABLED = false) и не делает
-   ничего. Включать после проверки на живом сервере. */
+/* В установленном приложении запрос идёт родным способом — тем же, что вход
+   и синхронизация, — и со сроком: зависший запрос иначе остановил бы проверки. */
+import { request } from './net.js';
 
-/** Главный выключатель. Пока false — модуль спит. */
-export const ACCESS_ENABLED = false;
+const ЖДЁМ_СЕРВЕР_МС = 15000;
 
 /** Исходы проверки. */
 export const ALLOWED = 'allowed';
@@ -38,6 +45,7 @@ const SERVER_OK = 'ok';
 const SERVER_BLOCKED = 'blocked';        // администратор закрыл доступ
 const SERVER_EXPIRED = 'expired';        // сервер говорит: срок вышел
 const SERVER_UNREACHABLE = 'unreachable';
+const SERVER_NO_SESSION = 'no_session';  // не вошли
 
 const KEY_UNTIL = 'access_until';    // число, метка времени; пусто — безлимит
 const KEY_STATUS = 'access_status';  // active, blocked и т.п.
@@ -50,6 +58,25 @@ const KEY_CLOCK = 'access_clock';    // самое позднее время, к
 const CLOCK_TOLERANCE_MS = 12 * 60 * 60 * 1000;
 
 const UNLIMITED = 'unlimited';
+
+const КЛЮЧИ = [KEY_UNTIL, KEY_STATUS, KEY_BLOCK, KEY_CLOCK];
+
+/** Закрыт ли доступ на этом устройстве. Спрашивает расписание звонков: закрытое приложение не будит человека. */
+export function accessBlocked() {
+    return read(KEY_BLOCK) !== '';
+}
+
+/* Сервер только что принял вход — значит, доступ есть. Прежний срок на телефоне мог быть чужим: localStorage
+   переживает смену человека, и новый без связи закрылся бы по дате предыдущего. */
+export function forgetAccess() {
+    for (const ключ of КЛЮЧИ) {
+        try {
+            localStorage.removeItem(ключ);
+        } catch {
+            /* приватный режим браузера — переживём */
+        }
+    }
+}
 
 function read(key) {
     try {
@@ -83,6 +110,7 @@ export class AccessController {
      * @param {(kind: string) => void} [options.onBlocked]
      * @param {() => void} [options.onAllowed]
      * @param {boolean} [options.showScreen] показывать экран блокировки
+     * @param {(kind: string) => {title: string, hint: string}} [options.texts] слова экрана на языке человека
      */
     constructor(options = {}) {
         this.apiBase = options.apiBase || '';
@@ -91,6 +119,7 @@ export class AccessController {
         this.onBlocked = options.onBlocked || (() => {});
         this.onAllowed = options.onAllowed || (() => {});
         this.showScreen = options.showScreen !== false;
+        this.texts = options.texts || null;
 
         this.timer = null;
         this.listeners = [];
@@ -167,6 +196,20 @@ export class AccessController {
                 return BLOCKED_EXPIRED;
             }
 
+            /* Сервер сам отказывает по сроку, поэтому его «да» важнее часов телефона: они могли сбиться,
+               и закрывать из-за этого человека с действующим доступом нельзя. Сторож начинает заново. */
+            if (answer === SERVER_OK) {
+                write(KEY_CLOCK, Date.now());
+                this.allow();
+                return ALLOWED;
+            }
+
+            // Не вошли: блокировать некого, а без этого экран без кнопок заслонил бы вход
+            if (answer === SERVER_NO_SESSION) {
+                this.allow();
+                return ALLOWED;
+            }
+
             // Сервер не ответил — не беда, решает дата на устройстве
             return await this.decideByDate();
         } finally {
@@ -198,18 +241,19 @@ export class AccessController {
 
     /** Решение по локально сохранённой дате окончания. */
     async decideByDate() {
+        const until = this.accessUntil();
+
+        /* Безлимит, либо сервер ещё ни разу не отвечал: по дате не блокируем. Раньше часов: телефон, потерявший
+           дату (батарея, сброс), иначе закрыл бы безлимитный кабинет без связи — и держал закрытым, пока связи нет. */
+        if (until === UNLIMITED) {
+            this.allow();
+            return ALLOWED;
+        }
+
         // Часы перевели назад — автономное решение больше не принимаем
         if (!this.clockTrustworthy()) {
             await this.block('expired');
             return BLOCKED_EXPIRED;
-        }
-
-        const until = this.accessUntil();
-
-        // Безлимит, либо сервер ещё ни разу не отвечал: по дате не блокируем
-        if (until === UNLIMITED) {
-            this.allow();
-            return ALLOWED;
         }
 
         if (Date.now() < until) {
@@ -223,7 +267,7 @@ export class AccessController {
 
     /**
      * Один запрос к серверу. Наружу не бросает.
-     * @returns {Promise<'ok'|'denied'|'unreachable'>}
+     * @returns {Promise<'ok'|'blocked'|'expired'|'unreachable'|'no_session'>}
      */
     async askServer() {
         if (!this.apiBase) return SERVER_UNREACHABLE;
@@ -235,20 +279,22 @@ export class AccessController {
             return SERVER_UNREACHABLE;
         }
         // Не вошли — блокировать нечего, вход и так закрыт своим экраном
-        if (!token) return SERVER_UNREACHABLE;
+        if (!token) return SERVER_NO_SESSION;
 
         let response;
         try {
-            response = await fetch(this.apiBase + '/api/me', {
+            response = await request(this.apiBase + '/api/me', {
                 cache: 'no-store',
-                headers: { Authorization: 'Bearer ' + token }
+                headers: { Authorization: 'Bearer ' + token },
+                timeoutMs: ЖДЁМ_СЕРВЕР_МС,
+                signal: AbortSignal.timeout(ЖДЁМ_СЕРВЕР_МС)
             });
         } catch {
             return SERVER_UNREACHABLE;   // сети нет
         }
 
-        // Явный отказ. Сервер различает два случая, и нам они тоже нужны:
-        // access_expired — вышел срок, остальное — закрыл администратор.
+        // Явный отказ. access_expired — вышел срок. Прочий 401 — сессии больше нет, это вход, а не блокировка
+        // (см. начало файла). 403 — закрыл администратор.
         if (response.status === 401 || response.status === 403) {
             let reason = '';
             try {
@@ -257,7 +303,8 @@ export class AccessController {
             } catch {
                 reason = '';
             }
-            return reason === 'access_expired' ? SERVER_EXPIRED : SERVER_BLOCKED;
+            if (reason === 'access_expired') return SERVER_EXPIRED;
+            return response.status === 401 ? SERVER_UNREACHABLE : SERVER_BLOCKED;
         }
 
         // Сервер упал — это не отказ, это молчание
@@ -311,6 +358,7 @@ export class AccessController {
     /* ---------- Экран блокировки ---------- */
 
     blockText() {
+        if (this.texts) return this.texts(this.blockKind);
         if (this.blockKind === 'admin') {
             return {
                 title: 'Доступ ограничен администратором',

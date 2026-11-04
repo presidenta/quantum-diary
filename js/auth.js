@@ -5,6 +5,7 @@ import { request } from './core/net.js';
 import { getMeta, setMeta, clearAll } from './db.js';
 import { sessionChange } from './core/session.js';
 import { forgetMedia } from './core/media.js';
+import { forgetAccess } from './core/access-controller.js';
 
 async function api(path, body, token = null) {
   const res = await request(API_BASE + path, {
@@ -52,6 +53,7 @@ export async function login(login, password) {
     // отдельном хранилище, и clearAll() до них не достаёт
     await forgetMedia();
   }
+  forgetAccess();
   await setMeta('token', token);
   await setMeta('userId', userId);
   return token;

@@ -72,6 +72,7 @@ async function api(path, options = {}) {
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`);
     err.status = res.status;
+    err.code = (await res.json().catch(() => null))?.error;
     throw err;
   }
   return res.status === 204 ? null : res.json();
@@ -122,6 +123,13 @@ async function run() {
       });
     } catch (err) {
       if (err.status !== 401) throw err;
+      /* Срок вышел — сессия цела и снова заработает после продления. Экран показывает контроль доступа;
+         сотри мы токен, он не смог бы спросить сервер, и продлённый человек остался бы закрытым навсегда. */
+      if (err.code === 'access_expired') {
+        logEvent('AUTH', { m: 'срок доступа вышел' });
+        onStatus('idle');
+        return false;
+      }
       // Сессия больше не действует (администратор заблокировал, или вышел срок) —
       // правки остаются помеченными dirty и дождутся следующего входа этой же записью
       await setMeta('token', null);

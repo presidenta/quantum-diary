@@ -1,6 +1,6 @@
 // Работа без сети. Сначала сеть, кэш — только запасной: так телефон не застревает
 // на старой версии приложения. Запросы к серверу Планера не кэшируются.
-const RELEASE = 213;
+const RELEASE = 214;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -38,7 +38,15 @@ const SHELL = [
   'js/core/net.js', 'js/core/media-box.js', 'js/core/access-controller.js', 'js/core/reminders.js', 'js/core/reminder-rules.js', 'js/core/observer-clock.js', 'js/core/live-update.js',
   'js/core/push.js', 'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js',
   // Без этих модулей страница без сети не запускалась: один не найденный модуль останавливает все (замок — test/oflayn-prilozheniya.test.js)
-  'js/core/web-journal.js', 'js/core/alarm-journal.js', 'js/core/sectors.js', 'js/views/quantum-figures.js', 'js/prefs.js'
+  'js/core/web-journal.js', 'js/core/alarm-journal.js', 'js/core/sectors.js', 'js/views/quantum-figures.js', 'js/prefs.js',
+  // Золото кнопок и подложки: заданы в стилях, и без сети на их месте была бы пустота
+  'img/gold/n01.jpg', 'img/gold/n02.jpg', 'img/gold/n03.jpg', 'img/gold/n04.jpg', 'img/gold/n05.jpg', 'img/gold/n06.jpg', 'img/gold/n07.jpg', 'img/gold/n08.jpg', 'img/gold/n09.jpg', 'img/gold/n10.jpg', 'img/gold/n11.jpg', 'img/gold/n12.jpg', 'img/gold/sv-big.jpg', 'img/gold/sv-c2.jpg', 'img/gold/sv-l.jpg', 'img/widget/gold-button.webp', 'img/widget/gold-tray.webp'
+];
+
+/* Картинки виджетов (2 МБ) нужны редко. В установку не берём: она либо скачивает всё, либо не состоится совсем, и на
+   слабой связи приложение осталось бы без запаса из-за картинок. Догружаются по одной при запуске. */
+const ПОТОМ = [
+  'img/widget-mirror/bath-sunset.jpg', 'img/widget-mirror/blue-moon.jpg', 'img/widget-mirror/blue-sea.jpg', 'img/widget-mirror/couple-candles.jpg', 'img/widget-mirror/embrace.jpg', 'img/widget-mirror/golden-buddha.jpg', 'img/widget-mirror/golden-fort.jpg', 'img/widget-mirror/green-jungle.jpg', 'img/widget-mirror/krabi-bay.jpg', 'img/widget-mirror/lake-town.jpg', 'img/widget-mirror/lilac-lake.jpg', 'img/widget-mirror/lofoten.jpg', 'img/widget-mirror/lovers-waves.jpg', 'img/widget-mirror/night-mountains.jpg', 'img/widget-mirror/norway-valley.jpg', 'img/widget-mirror/orange-palms.jpg', 'img/widget-mirror/pool-party.jpg', 'img/widget-mirror/pyramid-city.jpg', 'img/widget-mirror/red-passion.jpg', 'img/widget-mirror/red-silhouettes.jpg', 'img/widget-mirror/red-sunset.jpg', 'img/widget-mirror/taj-fountain.jpg', 'img/widget-mirror/yellow-sky.jpg'
 ];
 
 /* Сколько ждать сеть при открытии страницы, если есть своя копия. Телефон мог проснуться от звонка на слабой
@@ -72,7 +80,7 @@ self.addEventListener('install', event => {
    запуске, поэтому по одному, а не addAll: на слабой связи тот падает целиком. */
 async function дополнитьЗапас() {
   const кэш = await caches.open(CACHE);
-  for (const путь of SHELL) {
+  for (const путь of [...SHELL, ...ПОТОМ]) {
     const адрес = вАдрес(путь);
     if (await кэш.match(адрес)) continue;
     try {

@@ -121,8 +121,10 @@ function techLines(client, server) {
 async function wipeCaches() {
   try {
     if (window.caches?.keys) {
+      /* Только запас страниц (его заполнит следующий запуск). Скачанные практики лежат рядом, в своём хранилище:
+         без них момент без сети остался бы без звука и картинок. */
       const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
+      await Promise.all(keys.filter(k => k.startsWith('planner-')).map(k => caches.delete(k)));
     }
   } catch { /* запаса может не быть вовсе */ }
   try {

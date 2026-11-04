@@ -42,6 +42,7 @@ import { publishPref, prefValue, prefMissing, takeRemotePrefs } from './prefs.js
 import { logEvent } from './core/web-journal.js';
 import { CONFIG } from './views/space/config.js';
 import { sendPushPlan } from './core/push.js';
+import { accessBlocked } from './core/access-controller.js';
 
 /* ТИХИЙ ЧАС.
 
@@ -489,6 +490,8 @@ function записатьСрокиВиджетам(кадры, now) {
  * @returns {Promise<boolean>} поставлено ли хоть одно напоминание
  */
 export async function planReminders() {
+    // Доступ закрыт: звонки уже сняты, и экран за экраном блокировки не должен ставить их снова
+    if (accessBlocked()) return false;
     // Прыгнули здесь — остальные устройства должны узнать (prefs.js); сбой не держит расписание
     await отдатьПрыжок().catch(err => console.warn('[настройки] прыжок не ушёл:', err));
     // В браузере ставить нечего — но окну виджета на компьютере нужны свежие сроки
