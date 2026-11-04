@@ -662,6 +662,13 @@ async function собратьЗвонки(now, quiet, alarm, день) {
             });
     }
 
+    /* Надписи «Выключить» и «Отложить» — на языке человека (выкладка 212): без них окно будильника
+       брало запасные русские слова, а кнопка «Выключить» в окне теперь есть у каждого звонка. */
+    for (const item of ring) {
+        item.stopLabel = t('alarm.stop');
+        item.snoozeLabel = t('alarm.snooze');
+    }
+
     return { ring, silence, впереди };
 }
 
