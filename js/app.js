@@ -43,6 +43,7 @@ import { formatJournal, formatPending, standbyName, androidVersion } from './cor
 import { logEvent, readJournal } from './core/web-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
+import { startPhotoBackup } from './photo-backup/index.js';
 import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
@@ -1252,6 +1253,9 @@ async function start() {
       .catch(err => console.warn('[sw]', err.message));
     ждатьНовуюВыкладку();
   }
+
+  // Копия фотографий на сервере: вернёт их на новом телефоне (photo-backup/README.md, сервер 16)
+  startPhotoBackup();
 }
 
 /* НОВАЯ ВЫКЛАДКА ВСТАЛА — ПЕРЕХОДИМ НА НЕЁ, КОГДА ЧЕЛОВЕК УШЁЛ С ЭКРАНА (выкладка 216).

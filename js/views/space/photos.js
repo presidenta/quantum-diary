@@ -2,10 +2,15 @@
 
    Часть раздела «Квант» — вторая вкладка «Пространство вариантов».
 
-   Устроено так же, как аудио: файлы лежат только на устройстве, в IndexedDB
-   этого приложения, на сервер не уходит ничего. Привязка идёт по неизменному
-   id двери, поэтому переименование и перестановка дверей фотографии не
-   теряют.
+   Файлы лежат на устройстве, в IndexedDB этого приложения, в полном
+   качестве. Привязка идёт по неизменному id двери, поэтому переименование и
+   перестановка дверей фотографии не теряют.
+
+   КОПИЯ НА СЕРВЕРЕ (сервер 16). Прежде на сервер не уходило ничего, и сброс
+   телефона уносил снимки насовсем. Копию ведёт отдельный модуль
+   (web/js/photo-backup/): он читает всё отсюда (allPhotos), возвращает снимки
+   на новом телефоне (restorePhoto) и узнаёт о новых и удалённых снимках по
+   событиям ниже — этот файл о сервере не знает. Аудио в копию пока не идёт.
 
    Одна запись на дверь, внутри — список до трёх снимков. Так проще, чем
    отдельная запись на каждый снимок: весь набор двери читается и
@@ -55,6 +60,17 @@ function makePhotoId() {
     return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+/* События для копии на сервере: снимки добавили — отправить; человек удалил — удалить и там. Удаление
+   называется поимённо и только здесь, по действию человека: снимка «нет на телефоне» после сброса копия
+   не должна принять за удаление и стереть себя. */
+export const PHOTOS_ADDED = 'kvant-photos-added';
+export const PHOTOS_REMOVED = 'kvant-photos-removed';
+
+function сообщить(событие, ids) {
+    if (ids.length === 0 || typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent(событие, { detail: { ids } }));
+}
+
 /**
  * Снимки двери.
  * @param {string} doorId
@@ -97,6 +113,7 @@ export async function addDoorPhotos(doorId, files) {
 
     if (taken.length > 0) {
         await runTransaction('readwrite', store => store.put({ doorId, photos }));
+        сообщить(PHOTOS_ADDED, photos.slice(-taken.length).map(photo => photo.id));
     }
 
     return { photos, skipped: incoming.length - taken.length };
@@ -114,6 +131,7 @@ export async function deleteDoorPhoto(doorId, photoId) {
     } else {
         await runTransaction('readwrite', store => store.put({ doorId, photos }));
     }
+    сообщить(PHOTOS_REMOVED, [photoId]);
 
     return photos;
 }
@@ -121,8 +139,41 @@ export async function deleteDoorPhoto(doorId, photoId) {
 /** Убрать все снимки двери. */
 export async function deleteDoorPhotos(doorId) {
     try {
+        const ids = (await getDoorPhotos(doorId)).map(photo => photo.id);
         await runTransaction('readwrite', store => store.delete(doorId));
+        сообщить(PHOTOS_REMOVED, ids);
     } catch (err) {
         console.error('[space] не удалось удалить фотографии:', err);
     }
+}
+
+/**
+ * Все снимки устройства — для копии на сервере.
+ * @returns {Promise<Array<{key: string, id: string, blob: Blob, fileName: string, position: number}>>}
+ */
+export async function allPhotos() {
+    const records = await runTransaction('readonly', store => store.getAll());
+    const all = [];
+    for (const record of records || []) {
+        (record.photos || []).forEach((photo, position) => {
+            all.push({ key: record.doorId, id: photo.id, blob: photo.blob, fileName: photo.fileName, position });
+        });
+    }
+    return all;
+}
+
+/**
+ * Вернуть снимок из копии на его место. Уже есть — ничего; место занято тремя снимками — тоже ничего:
+ * человек успел добавить свои, и вытеснять их копией нельзя. О возвращённом событий не шлём — он и так на
+ * сервере.
+ * @returns {Promise<boolean>} вернулся ли
+ */
+export async function restorePhoto(key, { id, blob, fileName, position = 0 }) {
+    // Не getDoorPhotos: та на сбое чтения отдаёт пустой список, и запись ниже стёрла бы снимки двери
+    const record = await runTransaction('readonly', store => store.get(key));
+    const photos = Array.isArray(record?.photos) ? record.photos : [];
+    if (photos.some(photo => photo.id === id) || photos.length >= PHOTO_LIMIT) return false;
+    photos.splice(Math.min(position, photos.length), 0, { id, blob, fileName: fileName || 'photo' });
+    await runTransaction('readwrite', store => store.put({ doorId: key, photos }));
+    return true;
 }

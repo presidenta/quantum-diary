@@ -1,6 +1,6 @@
 // Работа без сети. Файлы выкладки — из её запаса, сразу и всегда (выкладка 216); свежесть — новым работником,
 // который ставит запас новой выкладки целиком. Запросы к серверу Планера не кэшируются.
-const RELEASE = 216;
+const RELEASE = 217;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -39,6 +39,8 @@ const SHELL = [
   'js/core/push.js', 'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js',
   // Без этих модулей страница без сети не запускалась: один не найденный модуль останавливает все (замок — test/oflayn-prilozheniya.test.js)
   'js/core/web-journal.js', 'js/core/alarm-journal.js', 'js/core/sectors.js', 'js/views/quantum-figures.js', 'js/prefs.js',
+  // Копия фотографий на сервере (сервер 16)
+  'js/photo-backup/index.js',
   // Золото кнопок и подложки: заданы в стилях, и без сети на их месте была бы пустота
   'img/gold/n01.jpg', 'img/gold/n02.jpg', 'img/gold/n03.jpg', 'img/gold/n04.jpg', 'img/gold/n05.jpg', 'img/gold/n06.jpg', 'img/gold/n07.jpg', 'img/gold/n08.jpg', 'img/gold/n09.jpg', 'img/gold/n10.jpg', 'img/gold/n11.jpg', 'img/gold/n12.jpg', 'img/gold/sv-big.jpg', 'img/gold/sv-c2.jpg', 'img/gold/sv-l.jpg', 'img/widget/gold-button.webp', 'img/widget/gold-tray.webp'
 ];
