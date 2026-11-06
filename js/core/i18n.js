@@ -679,6 +679,9 @@ const DICT = {
     'alarm.pendingNext': 'Поставлено звонков: {n}. Ближайший — {at}.',
     'alarm.pendingStale': 'Поставлено звонков: {n}, но все сроки уже прошли.',
     'alarm.stop': 'Выключить',
+    'boot.failed': 'Квант не запустился',
+    'boot.slow': 'Запуск затянулся',
+    'boot.restart': 'Перезапустить',
     'alarm.snooze': 'Отложить на 10 минут',
 
     'common.cancel': 'Отмена',
@@ -1347,6 +1350,9 @@ const DICT = {
     'alarm.pendingNext': 'Поставлено дзвінків: {n}. Найближчий — {at}.',
     'alarm.pendingStale': 'Поставлено дзвінків: {n}, але всі терміни минули.',
     'alarm.stop': 'Вимкнути',
+    'boot.failed': 'Квант не запустився',
+    'boot.slow': 'Запуск затягнувся',
+    'boot.restart': 'Перезапустити',
     'alarm.snooze': 'Відкласти на 10 хвилин',
 
     'common.cancel': 'Скасувати',
@@ -2015,6 +2021,9 @@ const DICT = {
     'alarm.pendingNext': 'Alarms set: {n}. The next one is {at}.',
     'alarm.pendingStale': 'Alarms set: {n}, but all of them are past due.',
     'alarm.stop': 'Dismiss',
+    'boot.failed': 'Kvant did not start',
+    'boot.slow': 'Start is taking too long',
+    'boot.restart': 'Restart',
     'alarm.snooze': 'Snooze for 10 minutes',
 
     'common.cancel': 'Cancel',

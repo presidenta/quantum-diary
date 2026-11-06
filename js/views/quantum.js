@@ -187,7 +187,12 @@ async function whoAmI() {
   try { return String((await getMeta('userId')) || ''); } catch { return ''; }
 }
 
-export async function loadQuantum() {
+/**
+ * @param {object} [options]
+ * @param {number} [options.ждатьСерверМс] сколько ждать серверный день (по умолчанию — до ответа). Вышел срок —
+ *        возвращаемся с днём из памяти телефона, а ответ сервера, придя позже, переставит день и звонки сам.
+ */
+export async function loadQuantum({ ждатьСерверМс = Infinity } = {}) {
   /* СНАЧАЛА ПОКАЗЫВАЕМ ДЕНЬ, ПОТОМ СПРАШИВАЕМ СЕРВЕР.
 
      Порядок здесь важнее, чем кажется. Раньше первым шёл запрос к
@@ -203,6 +208,12 @@ export async function loadQuantum() {
   state.quantum = (await cachedQuantum()) || await svoyDen();
   renderQuantum();
 
+  const сервер = деньССервера();
+  if (!Number.isFinite(ждатьСерверМс)) return сервер;
+  await Promise.race([сервер, new Promise(готово => setTimeout(готово, ждатьСерверМс))]);
+}
+
+async function деньССервера() {
   try {
     if (!API_BASE) throw new Error('сервер не задан');
     // Сервер не ответил при запуске — не ждём его снова: остаётся показанный день

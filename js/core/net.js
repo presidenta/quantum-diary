@@ -75,9 +75,9 @@ function asResponse(res) {
  */
 export async function request(url, options = {}) {
   const http = nativeHttp();
-  if (!http) return fetch(url, options);
-
   const wait = options.timeoutMs || 15000;
+  if (!http) return fetchНеДольше(url, options, wait);
+
   const res = await http.request({
     url,
     method: (options.method || 'GET').toUpperCase(),
@@ -87,4 +87,23 @@ export async function request(url, options = {}) {
     readTimeout: wait
   });
   return asResponse(res);
+}
+
+/* В БРАУЗЕРЕ СРОК ТОЖЕ СОБЛЮДАЕТСЯ (выкладка 216). fetch о timeoutMs не знает и ждёт, пока сеть не сдастся, — на
+   слабой связи минуты. Так висела проверка сервера при запуске на iPhone и компьютере: обещанные 3 секунды, а экран
+   чёрный, пока не решится. Чужой signal (кнопка «Обновить» шлёт свой) по-прежнему обрывает запрос. */
+async function fetchНеДольше(url, options, wait) {
+  const { timeoutMs, ...параметры } = options;
+  const обрыв = new AbortController();
+  const таймер = setTimeout(() => обрыв.abort(), wait);
+  const чужой = параметры.signal;
+  if (чужой) {
+    if (чужой.aborted) обрыв.abort();
+    else чужой.addEventListener('abort', () => обрыв.abort(), { once: true });
+  }
+  try {
+    return await fetch(url, { ...параметры, signal: обрыв.signal });
+  } finally {
+    clearTimeout(таймер);
+  }
 }
