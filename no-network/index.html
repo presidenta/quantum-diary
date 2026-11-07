@@ -1,0 +1,127 @@
+<!doctype html>
+<!-- НЕТ СВЯЗИ — страница из самого APK (выкладка 218).
+
+     Приложение открывает сайт (server.url в capacitor.config.json), а без сети его страницу отдаёт запас
+     служебного работника (web/sw.js). Запаса нет — самое первое открытие или стёртые данные — и раньше на
+     экране была системная страница ERR_INTERNET_DISCONNECTED. Теперь Capacitor показывает эту (server.errorPath).
+
+     Мост отдаёт с телефона ровно этот адрес и ничего рядом с ним, поэтому стили и скрипт — внутри файла.
+     Подробнее — README.md рядом. -->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Квант</title>
+<style>
+  :root { --bg: #07070A; --surface: #121114; --ink: #EDE6DA; --ink-2: #A09A92; --gold: #E3C77C; --gold-ink: #231703; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .mark { font-size: 40px; line-height: 1; color: var(--gold); }
+  h1 { margin: 0; font-size: 19px; color: var(--gold); }
+  p { margin: 0; width: 100%; max-width: 360px; color: var(--ink-2); }
+  button {
+    min-height: 46px; padding: 0 22px; margin-top: 6px;
+    border: 0; border-radius: 23px; background: var(--gold); color: var(--gold-ink);
+    font: inherit; font-weight: 700; cursor: pointer;
+  }
+  button:disabled { opacity: .6; }
+  #state { min-height: 1.45em; font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="mark" aria-hidden="true">⚛</div>
+  <h1 id="title"></h1>
+  <p id="why"></p>
+  <p id="alarms"></p>
+  <button id="again" type="button"></button>
+  <p id="state" role="status" aria-live="polite"></p>
+<script>
+  /* Адрес сайта — тот же, что server.url в capacitor.config.json: замок в test/bez-seti-pervoe-otkrytie.test.js.
+     Связь проверяем файлом version.json: GitHub Pages отдаёт его любому адресу (Access-Control-Allow-Origin: *),
+     и ответ «ok» значит, что сайт отвечает, а не просто что телефон видит какую-то сеть. Иначе при сбое
+     самого сайта страница гоняла бы человека туда и обратно каждые несколько секунд. */
+  const САЙТ = 'https://presidenta.github.io/quantum-diary/';
+  const ПРОВЕРКА_КАЖДЫЕ_МС = 5000;
+  const ЖДАТЬ_ОТВЕТ_МС = 6000;
+
+  const ТЕКСТЫ = {
+    ru: {
+      title: 'Нет связи с интернетом',
+      why: 'В первый раз Квант загружается из сети — после этого он работает и без неё. На этом телефоне его ещё нет. Как только появится интернет, приложение откроется само.',
+      alarms: 'Будильники, уже поставленные на телефоне, звонят и без связи.',
+      again: 'Попробовать снова',
+      checking: 'Проверяю связь…',
+      waiting: 'Связи пока нет — проверяю каждые 5 секунд'
+    },
+    ua: {
+      title: 'Немає зв’язку з інтернетом',
+      why: 'Уперше Квант завантажується з мережі — після цього він працює і без неї. На цьому телефоні його ще немає. Щойно з’явиться інтернет, застосунок відкриється сам.',
+      alarms: 'Будильники, вже поставлені на телефоні, дзвонять і без зв’язку.',
+      again: 'Спробувати знову',
+      checking: 'Перевіряю зв’язок…',
+      waiting: 'Зв’язку поки немає — перевіряю кожні 5 секунд'
+    },
+    en: {
+      title: 'No internet connection',
+      why: 'The first time, Kvant loads from the network — after that it works without it. It is not on this phone yet. As soon as the internet is back, the app will open by itself.',
+      alarms: 'Alarms already set on the phone ring without a connection.',
+      again: 'Try again',
+      checking: 'Checking the connection…',
+      waiting: 'No connection yet — checking every 5 seconds'
+    }
+  };
+
+  // Язык, выбранный в приложении, хранит сайт — отсюда его не видно; берём язык телефона
+  const язык = (navigator.language || '').toLowerCase();
+  let код = 'ru';
+  if (язык.startsWith('uk')) код = 'ua';
+  else if (язык.startsWith('en')) код = 'en';
+  const т = ТЕКСТЫ[код];
+  document.documentElement.lang = код === 'ua' ? 'uk' : код;
+  for (const ключ of ['title', 'why', 'alarms', 'again']) document.getElementById(ключ).textContent = т[ключ];
+  const кнопка = document.getElementById('again');
+  const состояние = document.getElementById('state');
+
+  let идёт = false;
+  async function сайтОтвечает() {
+    const стоп = new AbortController();
+    const срок = setTimeout(() => стоп.abort(), ЖДАТЬ_ОТВЕТ_МС);
+    try {
+      const ответ = await fetch(САЙТ + 'version.json?t=' + Date.now(), { cache: 'no-store', signal: стоп.signal });
+      return ответ.ok;
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(срок);
+    }
+  }
+
+  async function проверить() {
+    if (идёт) return;
+    идёт = true;
+    кнопка.disabled = true;
+    состояние.textContent = т.checking;
+    if (await сайтОтвечает()) {
+      // replace — чтобы «назад» не возвращала на эту страницу
+      location.replace(САЙТ);
+      return;
+    }
+    состояние.textContent = т.waiting;
+    кнопка.disabled = false;
+    идёт = false;
+  }
+
+  кнопка.addEventListener('click', проверить);
+  addEventListener('online', проверить);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) проверить(); });
+  setInterval(() => { if (!document.hidden) проверить(); }, ПРОВЕРКА_КАЖДЫЕ_МС);
+  проверить();
+</script>
+</body>
+</html>
