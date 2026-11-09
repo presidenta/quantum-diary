@@ -6,6 +6,7 @@
 
 import { CONFIG } from './config.js';
 import { statKey, chronicleRows } from './chronicle-stats.js';
+import { FEAR, loadKinds, saveKinds, kindOf, kindsSummary, openedShares, buildKindToggle, kindDotHtml } from './door-kinds/index.js';
 import { NotificationManager } from './notifications.js';
 import { QuantumCorridorScene } from './scene.js';
 import {
@@ -44,6 +45,10 @@ export class QuantumApp {
         this.doorIds = JSON.parse(localStorage.getItem('quantum_doors_ids') || '[]');
         this.syncDoorIds(this.realities.length);
         this.clearStoredPlaceholders();
+
+        // Отметки «светлая / страх» (door-kinds/): сохранённые и черновик открытой настройки
+        this.doorKinds = loadKinds();
+        this.kindDraft = null;
 
         this.doorMediaFlags = {};        // что лежит в каждой двери
         this.screenBeforeSetup = 'screen-1';  // куда вернуть из настройки
@@ -787,8 +792,10 @@ export class QuantumApp {
     }
 
     openSettingsScreen() {
-        const count = Math.max(CONFIG.doors.min, Math.min(CONFIG.doors.max, this.realities.length || 7));
+        const count = Math.max(CONFIG.doors.min, Math.min(CONFIG.doors.max, this.realities.length || CONFIG.doors.defaultCount));
         document.getElementById('doors-count-select').value = count.toString();
+        // Отметки правятся в черновике: «Отмена» их не сохраняет, смена языка не теряет
+        this.kindDraft = { ...this.doorKinds };
         this.renderSetupInputs(count);
         this.showScreen('screen-setup');
     }
@@ -799,6 +806,7 @@ export class QuantumApp {
        сцена не пересобирается, пройденное не теряется. */
     closeSettingsScreen() {
         const back = this.screenBeforeSetup;
+        this.kindDraft = null;
 
         if (back === null && this.scene3D) {
             this.showScreen(null);
@@ -824,6 +832,15 @@ export class QuantumApp {
 
             const head = document.createElement('div');
             head.className = 'qm-door-head';
+
+            /* Отметка двери: светлая или страх — цветом строки и переключателем над полем. Над, а не рядом:
+               на телефоне рядом с «Готово» поле намерения сжималось до пары слов. */
+            const kinds = this.kindDraft || this.doorKinds;
+            const doorId = this.doorIds[i];
+            row.classList.toggle('qm-door-fear', kindOf(kinds, doorId) === FEAR);
+            row.appendChild(buildKindToggle(kindOf(kinds, doorId), key => this.t(key), kind => {
+                this.kindDraft = { ...(this.kindDraft || this.doorKinds), [doorId]: kind };
+            }));
 
             // Поле создаётся элементом, а не строкой HTML: кавычки и угловые
             // скобки в тексте намерения больше не ломают разметку.
@@ -1356,6 +1373,8 @@ export class QuantumApp {
         this.doorIds = kept.map(door => door.id);
         localStorage.setItem('quantum_doors_texts', JSON.stringify(this.realities));
         localStorage.setItem('quantum_doors_ids', JSON.stringify(this.doorIds));
+        this.doorKinds = saveKinds(this.kindDraft || this.doorKinds, this.doorIds);
+        this.kindDraft = null;
         this.startCorridorScreen();
     }
 
@@ -1525,7 +1544,10 @@ export class QuantumApp {
         this.currentDoorId = this.doorIds[slot] || null;
         // Дверь выбрана — суперпозиция пройдена, окно закрыто
         this.rememberJump();
-        document.getElementById('txt-s3-chosen-reality').innerText = this.currentChosenText;
+        const chosenBox = document.getElementById('txt-s3-chosen-reality');
+        chosenBox.innerText = this.currentChosenText;
+        // Цвет открытой двери: золото — светлая, сиреневый — страх (door-kinds/)
+        chosenBox.classList.toggle('qm-chosen-fear', kindOf(this.doorKinds, this.currentDoorId) === FEAR);
         this.updateSpeedUI();
         this.showScreen('screen-3');
         this.prepareDoorAudio();
@@ -1740,6 +1762,8 @@ export class QuantumApp {
             ts: Date.now(),
             slot: Number.isInteger(this.currentSlot) ? this.currentSlot : null,
             doorId: this.currentDoorId || null,
+            // Отметка на момент открытия: переписанный потом страх не перекрашивает прошлое
+            kind: this.currentDoorId ? kindOf(this.doorKinds, this.currentDoorId) : null,
             dateStr: new Date().toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }),
             reality: this.currentChosenText,
             trace: trace || this.t('emptyTrace')
@@ -1932,7 +1956,7 @@ export class QuantumApp {
                 ? ` title="${this.escapeHtml(this.t('chroniclesLastHint').replace('{n}', row.gain))}"` : ''}>
                 <div class="qm-stat-top">
                     <span class="qm-stat-num">${номер}</span>
-                    <span class="qm-stat-name">${this.escapeHtml(name)}</span>
+                    <span class="qm-stat-name">${row.slot !== null ? kindDotHtml(kindOf(this.doorKinds, this.doorIds[row.slot])) : ''}${this.escapeHtml(name)}</span>
                     <span class="qm-stat-count">${row.count} ${this.escapeHtml(this.plural(row.count))} · ${row.share}%${прирост}${было}</span>
                 </div>
                 <div class="qm-stat-bar">${шкала}</div>
@@ -1944,6 +1968,7 @@ export class QuantumApp {
         const пояснение = lastKey
             ? `<p class="qm-stats-legend"><span class="qm-stats-legend-dot"></span>${this.escapeHtml(this.t('chroniclesLastLegend'))}</p>`
             : '';
+        const отметки = this.renderKindsSummary();
         /* Строка о прошлом периоде: сколько тогда было открытий — по одному числу видно, весомы ли проценты
            (два открытия — 50% одно; двадцать — 50% десять). Открытий не было — сравнивать не с чем. */
         const месяц = this.statsPeriod() === 'month';
@@ -1971,9 +1996,33 @@ export class QuantumApp {
                 <button type="button" class="qm-stats-reset" data-stats-reset>${this.escapeHtml(this.t('chroniclesReset'))}</button>
             </div>
             ${сКакого}
+            ${отметки.summary}
             ${body}
-            ${пояснение || прошлое ? `<div class="qm-stats-legends">${пояснение}${прошлое}</div>` : ''}
+            ${пояснение || прошлое || отметки.legend ? `<div class="qm-stats-legends">${пояснение}${прошлое}${отметки.legend}</div>` : ''}
         </section>`;
+    }
+
+    /* СВЕТЛЫЕ И СТРАХИ В СВОДКЕ (выкладка 219, door-kinds/). Пока ни одна дверь не отмечена страхом, сводка
+       прежняя — без строк и пояснения. Над списком: сколько сейчас светлых дверей и страхов и какую долю
+       открытий выбранного периода дали те и другие — по ней видно, начали ли светлые открываться чаще. */
+    renderKindsSummary() {
+        const { doors, opened } = kindsSummary({
+            history: this.history, doorIds: this.statDoorIds(), kinds: this.doorKinds, since: this.statsSince()
+        });
+        if (!doors.fear && !opened.fear) return { summary: '', legend: '' };
+
+        const строка = (ключ, светлые, страхи) => this.escapeHtml(this.t(ключ)
+            .replace('{light}', светлые).replace('{fear}', страхи));
+        const доли = openedShares(opened);
+        const открытия = opened.total
+            ? `<p class="qm-kinds-line">${строка('kindsOpened', доли.light, доли.fear)}</p>` : '';
+        return {
+            summary: `<div class="qm-kinds-summary">
+                <p class="qm-kinds-line">${строка('kindsNow', doors.light, doors.fear)}</p>
+                ${открытия}
+            </div>`,
+            legend: `<p class="qm-stats-legend">${kindDotHtml('light')}${kindDotHtml(FEAR)}${this.escapeHtml(this.t('kindsLegend'))}</p>`
+        };
     }
 
     /* Склонение числа открытий: русскому и украинскому нужны три формы,

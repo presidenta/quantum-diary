@@ -7,10 +7,12 @@
    Здесь правятся формулировки экранов и время кулдауна. */
 
 export const CONFIG = {
+    /* ДВЕНАДЦАТЬ ДВЕРЕЙ (выкладка 219, владелец 08.11.2026): «до 12 активных — 6 с одной стороны, 6 с другой;
+       человек пишет и хорошие моменты, и свои страхи, примерно поровну». Было до 7 из восьми нарисованных. */
     doors: {
         min: 2,
-        max: 7,
-        defaultCount: 7
+        max: 12,
+        defaultCount: 12
     },
     timing: {
         quantumWindowSeconds: 33.3,
@@ -83,6 +85,12 @@ export const CONFIG = {
             doorTitlePhoto: "Фото",
             doorTitleAudio: "Запись",
             doorTitleEmpty: "Без названия",
+            kindLight: "Светлая",
+            kindFear: "Страх",
+            kindToggle: "Отметка двери: светлая или страх — нажми, чтобы сменить",
+            kindsNow: "Сейчас дверей: светлых — {light}, страхов — {fear}",
+            kindsOpened: "Открывались: светлые — {light}%, страхи — {fear}%",
+            kindsLegend: "Золотая точка — светлая дверь, сиреневая — дверь-страх",
             chronicles24h: "За последние 24 часа",
             chroniclesAll: "За всё время",
             chroniclesWeek: "За неделю",
@@ -109,7 +117,7 @@ export const CONFIG = {
             btnSettings: "Изменить варианты реальностей",
             multiverse: "Мультивселенная",
             setupTitle: "Настройка Реальностей",
-            setupSub: "Выбери от 2 до 7 дверей и опиши намерения:",
+            setupSub: "Выбери от 2 до 12 дверей и опиши намерения:",
             doorsCount: "Количество дверей:",
             btnSave: "Войти в суперпозицию",
             btnCancel: "Отмена",
@@ -177,6 +185,12 @@ export const CONFIG = {
             doorTitlePhoto: "Photo",
             doorTitleAudio: "Recording",
             doorTitleEmpty: "Untitled",
+            kindLight: "Light",
+            kindFear: "Fear",
+            kindToggle: "Door mark: light or fear — tap to switch",
+            kindsNow: "Doors now: light — {light}, fear — {fear}",
+            kindsOpened: "Opened: light — {light}%, fear — {fear}%",
+            kindsLegend: "Gold dot — a light door, violet — a fear door",
             chronicles24h: "Last 24 hours",
             chroniclesAll: "All time",
             chroniclesWeek: "Week",
@@ -203,7 +217,7 @@ export const CONFIG = {
             btnSettings: "Change Reality Variants",
             multiverse: "Multiverse",
             setupTitle: "Reality Setup",
-            setupSub: "Choose from 2 to 7 doors and describe your intentions:",
+            setupSub: "Choose from 2 to 12 doors and describe your intentions:",
             doorsCount: "Number of doors:",
             btnSave: "Enter Superposition",
             btnCancel: "Cancel",
@@ -271,6 +285,12 @@ export const CONFIG = {
             doorTitlePhoto: "Фото",
             doorTitleAudio: "Запис",
             doorTitleEmpty: "Без назви",
+            kindLight: "Світлі",
+            kindFear: "Страх",
+            kindToggle: "Позначка дверей: світлі чи страх — натисни, щоб змінити",
+            kindsNow: "Зараз дверей: світлих — {light}, страхів — {fear}",
+            kindsOpened: "Відчинялися: світлі — {light}%, страхи — {fear}%",
+            kindsLegend: "Золота крапка — світлі двері, бузкова — двері-страх",
             chronicles24h: "За останні 24 години",
             chroniclesAll: "За весь час",
             chroniclesWeek: "За тиждень",
@@ -297,7 +317,7 @@ export const CONFIG = {
             btnSettings: "Змінити варіанти реальностей",
             multiverse: "Мультивсесвіт",
             setupTitle: "Налаштування Реальностей",
-            setupSub: "Обери від 2 до 7 дверей і опиши наміри:",
+            setupSub: "Обери від 2 до 12 дверей і опиши наміри:",
             doorsCount: "Кількість дверей:",
             btnSave: "Увійти в суперпозицію",
             btnCancel: "Скасувати",

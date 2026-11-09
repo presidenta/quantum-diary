@@ -9,10 +9,13 @@
    2. fitCorridorWidth и места, где берётся ширина коридора — подгонка
       под узкий экран телефона. На широком экране значения прежние:
       стена 6, дверь 5.9, отход камеры 3.0.
+   3. Двенадцать мест для дверей вместо восьми и коридор длиннее под них
+      (выкладка 219, см. CORRIDOR_END и setupRealities).
 
    Частицы, материалы, цвета, камера, туннель и вспышка не изменены. */
 
 import { logEvent } from '../../core/web-journal.js';
+import { CONFIG } from './config.js';
 
 /* Пороги управления пальцем. Вынесены наверх, чтобы подкручивать в одном месте. */
 const TAP_SLOP = 12;                      // px: дальше этого — уже жест, а не тап
@@ -21,7 +24,6 @@ const LOOK_SPEED = 0.003;                 // радиан поворота на 
 const WALK_SPEED = 0.015;                 // единиц сцены на пиксель
 const LOOK_LIMIT = (85 * Math.PI) / 180;  // дальше голова не поворачивается
 const WALK_BACK = 7;                      // дальше назад камера не отходит
-const WALK_FORWARD = -22;                 // дальше вперёд не уходит: там кончается пол
 const PARTICLE_NEAR = 3;                  // ближе этого к камере пылинок не бывает
 
 /* РАСПРЕДЕЛЕНИЕ ЗВЁЗД.
@@ -63,13 +65,20 @@ const CLEAR_CONE = 0.06;
    стены доходят ровно до неё, квадрат с рамкой лежит на ней, а звёзды не
    доживают до неё двух единиц. Стена непрозрачна и пишет глубину, поэтому
    за неё ничего не просачивается. */
-const CORRIDOR_END = -38;                 // плоскость задней стены
+/* ДВЕНАДЦАТЬ ДВЕРЕЙ (выкладка 219, владелец 08.11.2026: «коридор не меняем — просто дверей больше, коридор
+   будет больше»). Шаг между дверями прежний (на телефоне 8, на широком экране 6), по шесть дверей на стене:
+   последняя на телефоне встаёт на z = -43. За ней до задней стены — те же 11 единиц, что были при семи
+   дверях (-27 → -38). Пол, стены, звёзды и предел шага считаются от CORRIDOR_END и удлиняются вместе с ним. */
+const CORRIDOR_END = -54;                 // плоскость задней стены (при семи дверях было -38)
 const CORRIDOR_BACK = 10;                 // передний край пола, за спиной
 const CORRIDOR_LEN = CORRIDOR_BACK - CORRIDOR_END;
 const CORRIDOR_MID = (CORRIDOR_BACK + CORRIDOR_END) / 2;
 const CORRIDOR_WIDE = 16;                 // ширина пола и задней стены
 const CORRIDOR_TALL = 7;                  // высота стен
 const CORRIDOR_FAR = CORRIDOR_END + 2;    // дальше звёзды не залетают
+const WALK_FORWARD = CORRIDOR_END + 16;   // дальше вперёд не уходит (при -38 было -22)
+/* Звёзд — по длине коридора: густота та же, что была в коридоре длиной 48. */
+const STARS_PER_LENGTH = CORRIDOR_LEN / 48;
 
 /* ТУННЕЛЬ ПРЫЖКА.
 
@@ -508,7 +517,7 @@ export class QuantumCorridorScene {
             { count: 1100, size: 0.035, color: 0xbfd0ff, slow: 0.25, fast: 0.70 },
             { count: 550,  size: 0.055, color: 0xffe9b5, slow: 0.50, fast: 1.40 },
             { count: 150,  size: 0.090, color: 0xfff6de, slow: 0.95, fast: 2.30 }
-        ];
+        ].map(kind => ({ ...kind, count: Math.round(kind.count * STARS_PER_LENGTH) }));
 
         const sprite = this.createParticleSprite();
         this.starLayers = [];
@@ -817,13 +826,15 @@ export class QuantumCorridorScene {
         
         const doorXDist = this.doorX; 
         
-        for (let i = 0; i < 8; i++) {
+        /* Мест в коридоре — сколько дверей можно завести (CONFIG.doors.max, двенадцать: по шесть на стене).
+           До выкладки 219 мест было восемь, и восьмое всегда стояло тёмным при семи возможных дверях. Места
+           сверх заведённых дверей — тёмные, как и прежде. */
+        for (let i = 0; i < CONFIG.doors.max; i++) {
             const isLeft = i % 2 === 0;
             const zPos = -3 - Math.floor(i / 2) * (this.isMobile ? 8 : 6); 
             const xPos = isLeft ? -doorXDist : doorXDist;
             
-            const isEighthDoor = (i === 7);
-            const isActive = i < realitiesArray.length && !isEighthDoor;
+            const isActive = i < realitiesArray.length;
             const doorColor = isActive ? colors[i % colors.length] : '#222222';
 
             const group = new THREE.Group();
@@ -852,7 +863,7 @@ export class QuantumCorridorScene {
 
             const doorMat = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.6, metalness: 0.3 });
             const leafMesh = new THREE.Mesh(new THREE.BoxGeometry(2.4, 4.2, 0.1), doorMat);
-            leafMesh.userData = { isEighth: isEighthDoor, index: i, isActive }; 
+            leafMesh.userData = { index: i, isActive }; 
             
             leafMesh.position.set(-hingeX, 0, 0); 
             doorLeaf.add(leafMesh);

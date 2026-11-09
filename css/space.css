@@ -2942,3 +2942,59 @@
     .qm-root .qm-fold-text { --fold-lh: 1.6; }
     .qm-root .qm-rule { margin: 18px auto; }
 }
+
+/* ===== Отметка двери: светлая или страх (выкладка 219, js/views/space/door-kinds/) =====================
+   Владелец 08.11.2026: «отмечать просто разным цветом». Светлая — золото раздела, страх — сиреневый: он
+   отличим от золота и от зелёного «последней двери» в сводке и не читается тревогой, как красный. Цвет
+   есть в настройке дверей, на экране открытой двери и в сводке; на дверях коридора его нет — выбор слепой. */
+.qm-root { --qm-fear: #B79CFF; --qm-fear-soft: rgba(183, 156, 255, 0.12); --qm-fear-line: rgba(183, 156, 255, 0.55); }
+
+/* Строка двери в настройке — цветная кромка слева */
+.qm-root .qm-door-row { border-left: 3px solid var(--qm-gold-line); padding-left: 10px; }
+.qm-root .qm-door-row.qm-door-fear { border-left-color: var(--qm-fear); }
+
+/* Переключатель над полем: точка и слово */
+.qm-root .qm-kind {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    margin-bottom: 8px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid var(--qm-gold-line);
+    background: var(--qm-gold-soft);
+    color: var(--qm-gold);
+    font-family: var(--qm-font);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.qm-root .qm-kind[data-kind="fear"] { border-color: var(--qm-fear-line); background: var(--qm-fear-soft); color: var(--qm-fear); }
+
+.qm-root .qm-kind-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--qm-gold);
+    vertical-align: middle;
+}
+.qm-root .qm-kind[data-kind="fear"] .qm-kind-dot,
+.qm-root .qm-kind-dot.qm-kind-dot-fear { background: var(--qm-fear); }
+.qm-root .qm-stat-name .qm-kind-dot { margin: 0 7px 2px 0; }
+.qm-root .qm-stats-legend .qm-kind-dot + .qm-kind-dot { margin-left: -4px; }
+
+/* Сводка: сколько светлых и страхов и чья доля открытий */
+.qm-root .qm-kinds-summary { display: grid; gap: 4px; margin: 0 0 12px; }
+.qm-root .qm-kinds-line { margin: 0; font-size: 12px; color: var(--qm-muted); }
+
+/* Открытая дверь-страх — сиреневая рамка и надпись */
+.qm-root .chosen-reality-box-clean.qm-chosen-fear {
+    color: var(--qm-fear);
+    border-color: var(--qm-fear-line);
+    background: var(--qm-fear-soft);
+}
