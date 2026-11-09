@@ -3029,3 +3029,99 @@
     border-color: var(--qm-fear-line);
     background: var(--qm-fear-soft);
 }
+
+/* ----- Кнопка «Сохранить» в настройке дверей (выкладка 221) ----- */
+/* Владелец 09.11.2026: «маленький кружочек „Сохранить“ — нажал, и уже
+   сохранилось». Сохраняет и оставляет в настройке. */
+.qm-root .qm-save-only-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin: 10px 0 12px;
+}
+
+.qm-root .qm-save-only {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 6px 16px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--qm-gold);
+    background: var(--qm-gold-soft);
+    border: 1px solid var(--qm-gold-line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.qm-root .qm-save-only:hover { border-color: var(--qm-gold); }
+
+.qm-root .qm-save-only.qm-saved {
+    color: #7fe3a8;
+    background: rgba(127, 227, 168, 0.1);
+    border-color: rgba(127, 227, 168, 0.35);
+}
+
+/* ----- Ползунок записи (выкладка 221, модуль audio-seek) ----- */
+.qm-root .qm-seek {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.qm-root .qm-seek[hidden] { display: none; }
+
+.qm-root .qm-seek-range {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 22px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Дорожка: пройденное — красным, как горящий ▶, остальное — тусклое */
+.qm-root .qm-seek-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, #FF4D4D 0 var(--qm-seek-fill, 0%), var(--qm-border) var(--qm-seek-fill, 0%) 100%);
+}
+
+.qm-root .qm-seek-range::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, #FF4D4D 0 var(--qm-seek-fill, 0%), var(--qm-border) var(--qm-seek-fill, 0%) 100%);
+}
+
+.qm-root .qm-seek-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: #FF4D4D;
+    box-shadow: 0 0 8px rgba(255, 77, 77, 0.6);
+}
+
+.qm-root .qm-seek-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: 0;
+    border-radius: 50%;
+    background: #FF4D4D;
+    box-shadow: 0 0 8px rgba(255, 77, 77, 0.6);
+}
+
+.qm-root .qm-seek-time {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--qm-muted);
+    white-space: nowrap;
+}

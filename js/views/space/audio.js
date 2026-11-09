@@ -65,16 +65,24 @@ export function readDurationMs(blob) {
             resolve(ms);
         };
 
+        /* Запись с микрофона (webm из MediaRecorder) не несёт длительности в
+           заголовке: браузер говорит «бесконечность». Узнать её можно, только
+           пройдя файл до конца, — просим перейти далеко за конец, браузер
+           доходит до последнего кадра и сообщает настоящую длительность. */
+        const known = () => Number.isFinite(probe.duration) && probe.duration > 0;
         probe.preload = 'metadata';
         probe.onloadedmetadata = () => {
-            const d = probe.duration;
-            finish(Number.isFinite(d) ? Math.round(d * 1000) : 0);
+            if (known()) finish(Math.round(probe.duration * 1000));
+            else probe.currentTime = Number.MAX_SAFE_INTEGER;
+        };
+        probe.ondurationchange = () => {
+            if (known()) finish(Math.round(probe.duration * 1000));
         };
         probe.onerror = () => finish(0);
 
-        // Некоторые записи с микрофона не отдают длительность вовсе —
-        // не ждём их вечно, через три секунды считаем, что её нет.
-        setTimeout(() => finish(0), 3000);
+        // Не ждём вечно: длинную запись (15 минут) браузер проходит за доли
+        // секунды, десять секунд — с большим запасом.
+        setTimeout(() => finish(0), 10000);
 
         probe.src = url;
     });
@@ -142,6 +150,14 @@ export async function getDoorAudio(doorId) {
 /** Только метаданные: есть ли запись, как называется, сколько длится. */
 export async function getDoorAudioMeta(doorId) {
     const record = await getDoorAudio(doorId);
+    // Записи до выкладки 221 сохранены без длительности — узнаём её один раз
+    // и дописываем, дальше она читается сразу
+    // (не вышло — помечаем и больше не ждём на каждом открытии настройки)
+    if (record && !record.durationMs && !record.durationProbed) {
+        record.durationMs = await readDurationMs(record.blob);
+        record.durationProbed = true;
+        await runTransaction('readwrite', store => store.put(record)).catch(() => {});
+    }
     return describe(record);
 }
 

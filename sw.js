@@ -1,6 +1,6 @@
 // Работа без сети. Файлы выкладки — из её запаса, сразу и всегда (выкладка 216); свежесть — новым работником,
 // который ставит запас новой выкладки целиком. Запросы к серверу Планера не кэшируются.
-const RELEASE = 220;
+const RELEASE = 221;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -26,7 +26,7 @@ const SHELL = [
   'css/space.css',
   'js/views/space/index.js', 'js/views/space/app.js', 'js/views/space/config.js',
   'js/views/space/audio.js', 'js/views/space/photos.js', 'js/views/space/chronicle-stats.js',
-  'js/views/space/notifications.js', 'js/views/space/door-kinds/index.js', 'js/views/space/scene.js', 'js/views/space/template.js',
+  'js/views/space/notifications.js', 'js/views/space/door-kinds/index.js', 'js/views/space/audio-seek/index.js', 'js/views/space/scene.js', 'js/views/space/template.js',
   'js/vendor/three.min.js',
   // Свиток «Мудрость дня»: модуль целиком, с базой посланий — чтобы открывался без сети
   'js/views/scroll/index.js', 'js/views/scroll/engine.js', 'js/views/scroll/texts.js', 'js/views/scroll/wisdom.js',

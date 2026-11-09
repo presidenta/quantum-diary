@@ -16,6 +16,7 @@ import {
 import {
     getDoorPhotos, countDoorPhotos, addDoorPhotos, deleteDoorPhoto, PHOTO_LIMIT
 } from './photos.js';
+import { buildSeekBar, bindSeekBar } from './audio-seek/index.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
    значит, он же и переставляет напоминание, когда это время меняется. */
 import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSetAt, observerQuiet, observerArchitect } from '../../reminder-plan.js';
@@ -613,6 +614,7 @@ export class QuantumApp {
             if (row) this.updateDoorStatus(row);
         });
         document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());
+        document.getElementById('btn-save-only').addEventListener('click', () => this.saveSetupOnly());
         document.getElementById('btn-cancel-setup').addEventListener('click', () => this.closeSettingsScreen());
 
         // Переключения табов скорости на экране Настройка реальности
@@ -877,9 +879,14 @@ export class QuantumApp {
         return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
-    // Список id всегда не короче списка дверей
+    /* Список id всегда не короче списка дверей. Новые номера пишутся сразу:
+       запись в новой строке ложится в хранилище под её номером, и строка
+       должна получить тот же номер после перезапуска, даже если двери ещё
+       не сохраняли (09.11.2026 записи «слетели» именно так). */
     syncDoorIds(count) {
+        if (this.doorIds.length >= count) return;
         while (this.doorIds.length < count) this.doorIds.push(this.makeDoorId());
+        localStorage.setItem('quantum_doors_ids', JSON.stringify(this.doorIds));
     }
 
     /* Панель под полем двери: запись с микрофона, звуковой файл,
@@ -938,6 +945,7 @@ export class QuantumApp {
         state.appendChild(this.buildIconButton('stop', 'qm-audio-stop', this.t('audioStopAria')));
         state.appendChild(this.buildIconButton('remove', 'qm-audio-remove', this.t('audioRemove')));
         box.appendChild(state);
+        box.appendChild(buildSeekBar(this.t('audioSeek')));
 
         const strip = document.createElement('div');
         strip.className = 'qm-photo-strip';
@@ -1229,6 +1237,7 @@ export class QuantumApp {
         // Пауза от системы (звонок) — тоже конец: подсветка не должна остаться
         this.audioEl.onpause = () => this.stopDoorAudio();
         this.audioEl.play().catch(() => this.stopDoorAudio());
+        this.previewDurationMs = record.durationMs || 0;
         this.markPreviewRow(row);
     }
 
@@ -1247,6 +1256,14 @@ export class QuantumApp {
         const stop = row.querySelector('.qm-audio-stop');
         if (preview) preview.classList.toggle('qm-audio-playing', playing);
         if (stop) stop.hidden = !playing;
+
+        // Ползунок: где сейчас звук, сколько всего, перемотка
+        if (this.unbindSeek) {
+            this.unbindSeek();
+            this.unbindSeek = null;
+        }
+        const bar = row.querySelector('.qm-seek');
+        if (playing && bar && this.audioEl) this.unbindSeek = bindSeekBar(bar, this.audioEl, this.previewDurationMs);
     }
 
     async removeDoorAudio(row) {
@@ -1370,9 +1387,36 @@ export class QuantumApp {
     }
 
     saveSettingsAndStart() {
+        if (this.previewRow) this.stopDoorAudio();
+        if (!this.saveDoors()) return;
+        this.kindDraft = null;
+        this.startCorridorScreen();
+    }
+
+    /* Кнопка «Сохранить» (владелец 09.11.2026: «маленький кружочек
+       „Сохранить“ — нажал, и уже сохранилось, закреплено за дверью»).
+       Сохраняет то же, что «Войти в суперпозицию», но остаётся в настройке:
+       можно дальше писать и записывать. Играющая запись не прерывается. */
+    saveSetupOnly() {
+        if (!this.saveDoors()) return;
+        // Черновик отметок продолжается от сохранённого
+        this.kindDraft = { ...this.doorKinds };
+
+        const button = document.getElementById('btn-save-only');
+        if (!button) return;
+        button.classList.add('qm-saved');
+        button.textContent = '✓ ' + this.t('savedOk');
+        clearTimeout(this.savedTimer);
+        this.savedTimer = setTimeout(() => {
+            button.classList.remove('qm-saved');
+            button.textContent = this.t('btnSaveOnly');
+        }, 2000);
+    }
+
+    // Записывает двери из строк настройки; false — дверей меньше минимума
+    saveDoors() {
         // Идём по строкам, а не по полям: так текст двери и её id остаются
         // одной парой, и пустые двери выпадают вместе со своими id.
-        if (this.previewRow) this.stopDoorAudio();
         const rows = Array.from(document.querySelectorAll('.qm-door-row'));
         const kept = [];
 
@@ -1399,16 +1443,20 @@ export class QuantumApp {
 
         if (kept.length < CONFIG.doors.min) {
             alert(this.t('doorMinAlert').replace('{min}', CONFIG.doors.min));
-            return;
+            return false;
         }
 
         this.realities = kept.map(door => door.text);
-        this.doorIds = kept.map(door => door.id);
+        /* Номера незанятых строк остаются в списке после дверей: запись,
+           сделанная в такой строке, не теряет её и после перезапуска
+           (09.11.2026 записи в несохранённых дверях «слетели» — номер строки
+           жил только в памяти). */
+        const keptIds = kept.map(door => door.id);
+        this.doorIds = [...keptIds, ...this.doorIds.filter(id => !keptIds.includes(id))];
         localStorage.setItem('quantum_doors_texts', JSON.stringify(this.realities));
         localStorage.setItem('quantum_doors_ids', JSON.stringify(this.doorIds));
         this.doorKinds = saveKinds(this.kindDraft || this.doorKinds, this.doorIds);
-        this.kindDraft = null;
-        this.startCorridorScreen();
+        return true;
     }
 
     startCorridorScreen() {
