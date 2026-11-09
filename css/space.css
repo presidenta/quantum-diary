@@ -3192,15 +3192,43 @@
     border-radius: 999px;
 }
 
-/* Номер и отметка — слева, дискета — справа */
+/* Номер и отметка — слева, «Готово» — справа (выкладка 224) */
 .qm-root .qm-door-top .qm-kind { margin-right: auto; }
 
-/* Дискета — последней в ряду «Записать · Файл · Фото», прижата к правому краю (выкладка 223) */
-.qm-root .qm-media-actions .qm-door-save { margin-left: auto; }
+/* ----- Дискета у поля (выкладка 224) ----- */
+/* Владелец 09.11.2026: дискета в ряду «Записать · Файл · Фото» на телефоне
+   «смотрится ужасно»; «„Сохранить“ — вместо „Готово“, строка для текста —
+   больше». Дискета — квадрат ростом с поле, справа от него: поле и его
+   сохранение читаются одной парой, а «Готово» ушло в строку над полем. */
+.qm-root .qm-door-head { align-items: stretch; }
 
-/* Узкий телефон: чуть плотнее плашки, чтобы дискета встала в тот же ряд */
-@media (max-width: 420px) {
-    .qm-root .qm-media-actions { gap: 4px; }
-    .qm-root .qm-media-actions .qm-chip { padding: 8px 7px; gap: 4px; }
-    .qm-root .qm-media-actions .qm-door-save { width: 30px; height: 30px; }
+.qm-root .qm-door-head .qm-door-save {
+    width: 48px;
+    height: auto;
+    min-height: 44px;
+    border-radius: var(--qm-radius-sm);
+}
+
+.qm-root .qm-door-head .qm-door-save-ico {
+    width: 20px;
+    height: 20px;
+}
+
+.qm-root .qm-door-head .qm-door-save[data-state="saved"]::after {
+    right: -4px;
+    bottom: -4px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    line-height: 16px;
+}
+
+/* «Готово» в строке над полем — того же роста, что и отметка */
+.qm-root .qm-door-top .qm-door-badge { padding: 4px 10px; }
+
+/* Пустая строка: дискета на месте, но бледная и не нажимается */
+.qm-root .qm-door-save[data-state="empty"] {
+    opacity: 0.35;
+    cursor: default;
+    box-shadow: none;
 }

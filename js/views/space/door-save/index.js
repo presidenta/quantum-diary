@@ -63,10 +63,11 @@ export function buildSaveButton() {
     return button;
 }
 
-/** Вид дискеты: пусто — не видна; не сохранено — золотая; сохранено — зелёная с галочкой. */
+/** Вид дискеты: пусто — бледная, не нажимается; не сохранено — золотая; сохранено — зелёная с галочкой.
+    Пустую не прячем: иначе с первой буквой поле рядом сужалось бы скачком. */
 export function showSaveState(button, state, t) {
     if (!button) return;
-    button.hidden = state === EMPTY;
+    button.disabled = state === EMPTY;
     button.dataset.state = state;
     const подпись = t(state === SAVED ? 'doorSaved' : 'doorSave');
     button.title = подпись;

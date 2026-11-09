@@ -843,7 +843,7 @@ export class QuantumApp {
             const kinds = this.kindDraft || this.doorKinds;
             const doorId = this.doorIds[i];
             row.classList.toggle('qm-door-fear', kindOf(kinds, doorId) === FEAR);
-            // Строка над полем: номер и отметка
+            // Строка над полем: номер, отметка, справа — «Готово»
             const top = document.createElement('div');
             top.className = 'qm-door-top';
             /* Номер строки (владелец 09.11.2026: «пронумеруй 1, 2, 3 до 12 — чтобы не сбиваться, какая по
@@ -856,6 +856,18 @@ export class QuantumApp {
                 this.kindDraft = { ...(this.kindDraft || this.doorKinds), [doorId]: kind };
                 this.updateDoorStatus(row);
             }));
+
+            /* Значок готовности. Загорается, как только в двери появилось
+               хоть что-то: текст, запись или фотография. С 224 — в строке
+               над полем, справа: это состояние двери, как номер и отметка,
+               а место у поля отдано дискете (владелец 09.11.2026: «„Готово“ —
+               наверх, к „Светлая / Страх“, „Сохранить“ — вместо „Готово“,
+               строка для текста — больше»). */
+            const badge = document.createElement('span');
+            badge.className = 'qm-door-badge';
+            badge.textContent = this.t('doorReady');
+            badge.hidden = true;
+            top.appendChild(badge);
             row.appendChild(top);
 
             // Поле создаётся элементом, а не строкой HTML: кавычки и угловые
@@ -867,13 +879,8 @@ export class QuantumApp {
             input.value = val;
             head.appendChild(input);
 
-            // Значок готовности. Загорается, как только в двери появилось
-            // хоть что-то: текст, запись или фотография.
-            const badge = document.createElement('span');
-            badge.className = 'qm-door-badge';
-            badge.textContent = this.t('doorReady');
-            badge.hidden = true;
-            head.appendChild(badge);
+            // Дискета — справа от поля, ростом с него (модуль door-save)
+            head.appendChild(buildSaveButton());
 
             row.appendChild(head);
             row.appendChild(this.buildDoorMedia());
@@ -940,11 +947,6 @@ export class QuantumApp {
         counter.textContent = '0/' + PHOTO_LIMIT;
         photoChip.appendChild(counter);
         actions.appendChild(photoChip);
-
-        /* Дискета — последней в ряду (владелец 09.11.2026: «сначала записал
-           или добавил файл, фото, а потом нажал дискетку — и сохранилось»).
-           Модуль door-save. */
-        actions.appendChild(buildSaveButton());
 
         box.appendChild(actions);
 
@@ -1273,7 +1275,8 @@ export class QuantumApp {
             this.stopRecTimer();
             this.recorder = null;
             this.recordingDoorId = null;
-            alert(this.t('audioNoMic'));
+            // Запрещено человеком или телефоном — сказать, где разрешить
+            alert(this.t(err && err.name === 'NotAllowedError' ? 'audioMicDenied' : 'audioNoMic'));
         }
     }
 
