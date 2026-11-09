@@ -154,6 +154,12 @@ export const TEMPLATE = [
     '            <span class="gold-cut" data-i18n="btnSave">Сохранить и войти</span>',
     '        </button>',
     '        <button id="btn-cancel-setup" class="btn-link qm-block" data-i18n="btnCancel">Отмена</button>',
+    /* Перенос дверей файлом на другое устройство (модуль door-transfer) */
+    '        <div class="qm-transfer">',
+    '            <button type="button" id="btn-doors-export" class="qm-transfer-link" data-i18n="doorsExport">Выгрузить двери в файл</button>',
+    '            <button type="button" id="btn-doors-import" class="qm-transfer-link" data-i18n="doorsImport">Загрузить двери из файла</button>',
+    '            <input type="file" id="doors-import-file" hidden>',
+    '        </div>',
     '    </div>',
     '</div>',
 
