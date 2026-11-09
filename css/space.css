@@ -1352,7 +1352,38 @@
 .qm-root .qm-icon-btn[hidden] { display: none; }
 
 .qm-root .qm-audio-preview::before { content: "\25B6"; }
+.qm-root .qm-audio-stop::before { content: "\25A0"; font-size: 12px; }
 .qm-root .qm-audio-remove::before { content: "\2715"; }
+
+/* Играющая запись: ▶ горит красным, чтобы среди двенадцати дверей было
+   видно, какую остановить квадратом рядом */
+.qm-root .qm-audio-preview.qm-audio-playing,
+.qm-root .qm-audio-preview.qm-audio-playing:hover {
+    color: #FF4D4D;
+    border-color: rgba(255, 77, 77, 0.75);
+    background: rgba(255, 77, 77, 0.14);
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.55);
+    animation: qm-play-glow 1.2s ease-in-out infinite;
+}
+
+.qm-root .qm-audio-stop {
+    color: var(--qm-gold);
+    border-color: var(--qm-gold-line);
+}
+
+.qm-root .qm-audio-stop:hover {
+    color: #FF4D4D;
+    border-color: rgba(255, 77, 77, 0.75);
+}
+
+@keyframes qm-play-glow {
+    0%, 100% { box-shadow: 0 0 6px rgba(255, 77, 77, 0.35); }
+    50%      { box-shadow: 0 0 14px rgba(255, 77, 77, 0.75); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .qm-audio-preview.qm-audio-playing { animation: none; }
+}
 
 /* ----- Счётчик и лента фотографий ----- */
 .qm-root .qm-photo-count {

@@ -56,7 +56,8 @@ export class QuantumApp {
         this.currentAudioRecord = null;  // её запись, если она есть
         this.audioEl = null;             // проигрыватель
         this.audioUrl = null;            // ссылка на blob, её надо освобождать
-        this.recorder = null;            // активный диктофон
+        this.previewRow = null;          // строка настройки, чья запись сейчас играет
+        this.recorder = null;           // активный диктофон
         this.recordingDoorId = null;     // дверь, которую сейчас записываем
         this.recTimer = null;            // отсчёт секунд во время записи
         this.smileyLocked = false;       // смайлик зажмурился и остался таким
@@ -807,6 +808,7 @@ export class QuantumApp {
     closeSettingsScreen() {
         const back = this.screenBeforeSetup;
         this.kindDraft = null;
+        if (this.previewRow) this.stopDoorAudio();
 
         if (back === null && this.scene3D) {
             this.showScreen(null);
@@ -817,6 +819,8 @@ export class QuantumApp {
 
     renderSetupInputs(count) {
         const container = document.getElementById('doors-inputs-container');
+        // Строки строятся заново — у играющей записи пропал бы «стоп»
+        if (this.previewRow) this.stopDoorAudio();
         container.innerHTML = '';
         this.syncDoorIds(count);
 
@@ -930,6 +934,8 @@ export class QuantumApp {
         state.appendChild(info);
 
         state.appendChild(this.buildIconButton('preview', 'qm-audio-preview', this.t('audioPlay')));
+        // Квадрат «стоп» виден только у той двери, что сейчас играет
+        state.appendChild(this.buildIconButton('stop', 'qm-audio-stop', this.t('audioStopAria')));
         state.appendChild(this.buildIconButton('remove', 'qm-audio-remove', this.t('audioRemove')));
         box.appendChild(state);
 
@@ -1131,6 +1137,7 @@ export class QuantumApp {
         const act = button.dataset.act;
         if (act === 'record') this.toggleRecording(row);
         else if (act === 'preview') this.previewDoorAudio(row);
+        else if (act === 'stop') this.stopDoorAudio();
         else if (act === 'remove') this.removeDoorAudio(row);
         else if (act === 'photo-remove') this.removeDoorPhoto(row, button.dataset.photoId);
     }
@@ -1194,6 +1201,9 @@ export class QuantumApp {
 
         if (this.recorder) return;   // уже пишем другую дверь
 
+        // Играющая запись попала бы в микрофон
+        if (this.previewRow) this.stopDoorAudio();
+
         try {
             this.recorder = await startRecording();
             this.recordingDoorId = doorId;
@@ -1216,10 +1226,31 @@ export class QuantumApp {
         this.audioUrl = URL.createObjectURL(record.blob);
         this.audioEl = new Audio(this.audioUrl);
         this.audioEl.onended = () => this.stopDoorAudio();
+        // Пауза от системы (звонок) — тоже конец: подсветка не должна остаться
+        this.audioEl.onpause = () => this.stopDoorAudio();
         this.audioEl.play().catch(() => this.stopDoorAudio());
+        this.markPreviewRow(row);
+    }
+
+    /* Владелец 09.11.2026: в настройке дверей не было видно, какая из
+       записей играет, и нечем было её остановить. Играющая дверь: ▶ горит
+       красным, рядом — квадрат «стоп». Играет всегда одна: новая
+       останавливает прежнюю. */
+    markPreviewRow(row) {
+        if (this.previewRow && this.previewRow !== row) this.setPreviewPlaying(this.previewRow, false);
+        this.previewRow = row;
+        if (row) this.setPreviewPlaying(row, true);
+    }
+
+    setPreviewPlaying(row, playing) {
+        const preview = row.querySelector('.qm-audio-preview');
+        const stop = row.querySelector('.qm-audio-stop');
+        if (preview) preview.classList.toggle('qm-audio-playing', playing);
+        if (stop) stop.hidden = !playing;
     }
 
     async removeDoorAudio(row) {
+        if (this.previewRow === row) this.stopDoorAudio();
         await deleteDoorAudio(row.dataset.doorId);
         if (this._destroyed || !row.isConnected) return;
         this.applyAudioState(row, null);
@@ -1333,6 +1364,7 @@ export class QuantumApp {
             URL.revokeObjectURL(this.audioUrl);
             this.audioUrl = null;
         }
+        if (this.previewRow) this.markPreviewRow(null);
         // Запись кончилась или её остановили — на кнопке снова треугольник
         if (this.currentAudioRecord) this.setPlayButtonState('ready');
     }
@@ -1340,6 +1372,7 @@ export class QuantumApp {
     saveSettingsAndStart() {
         // Идём по строкам, а не по полям: так текст двери и её id остаются
         // одной парой, и пустые двери выпадают вместе со своими id.
+        if (this.previewRow) this.stopDoorAudio();
         const rows = Array.from(document.querySelectorAll('.qm-door-row'));
         const kept = [];
 
