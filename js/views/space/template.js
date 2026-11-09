@@ -150,10 +150,6 @@ export const TEMPLATE = [
     '            </select>',
     '        </div>',
     '        <div id="doors-inputs-container" class="inputs-scroll-area"></div>',
-    /* «Сохранить» — сохранить двери и остаться в настройке (владелец 09.11.2026) */
-    '        <div class="qm-save-only-bar">',
-    '            <button type="button" id="btn-save-only" class="qm-save-only" data-i18n="btnSaveOnly">Сохранить</button>',
-    '        </div>',
     '        <button id="btn-save-setup" class="btn-gold qm-block">',
     '            <span class="gold-cut" data-i18n="btnSave">Сохранить и войти</span>',
     '        </button>',

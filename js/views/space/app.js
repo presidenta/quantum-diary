@@ -17,6 +17,7 @@ import {
     getDoorPhotos, countDoorPhotos, addDoorPhotos, deleteDoorPhoto, PHOTO_LIMIT
 } from './photos.js';
 import { buildSeekBar, bindSeekBar } from './audio-seek/index.js';
+import { doorState, saveOneDoor, buildSaveButton, showSaveState } from './door-save/index.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
    значит, он же и переставляет напоминание, когда это время меняется. */
 import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSetAt, observerQuiet, observerArchitect } from '../../reminder-plan.js';
@@ -613,9 +614,7 @@ export class QuantumApp {
             const row = e.target.closest('.qm-door-row');
             if (row) this.updateDoorStatus(row);
         });
-        document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());
-        document.getElementById('btn-save-only').addEventListener('click', () => this.saveSetupOnly());
-        document.getElementById('btn-cancel-setup').addEventListener('click', () => this.closeSettingsScreen());
+        document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());        document.getElementById('btn-cancel-setup').addEventListener('click', () => this.closeSettingsScreen());
 
         // Переключения табов скорости на экране Настройка реальности
         document.querySelectorAll('.speed-tab').forEach(tab => {
@@ -844,9 +843,15 @@ export class QuantumApp {
             const kinds = this.kindDraft || this.doorKinds;
             const doorId = this.doorIds[i];
             row.classList.toggle('qm-door-fear', kindOf(kinds, doorId) === FEAR);
-            row.appendChild(buildKindToggle(kindOf(kinds, doorId), key => this.t(key), kind => {
+            // Справа от отметки — дискета: сохранить эту дверь (модуль door-save)
+            const top = document.createElement('div');
+            top.className = 'qm-door-top';
+            top.appendChild(buildKindToggle(kindOf(kinds, doorId), key => this.t(key), kind => {
                 this.kindDraft = { ...(this.kindDraft || this.doorKinds), [doorId]: kind };
+                this.updateDoorStatus(row);
             }));
+            top.appendChild(buildSaveButton());
+            row.appendChild(top);
 
             // Поле создаётся элементом, а не строкой HTML: кавычки и угловые
             // скобки в тексте намерения больше не ломают разметку.
@@ -1005,6 +1010,41 @@ export class QuantumApp {
 
         row.classList.toggle('qm-door-ready', ready);
         if (badge) badge.hidden = !ready;
+
+        // Дискета: сохранена ли дверь такой, какая она на экране
+        const doorId = row.dataset.doorId;
+        const state = doorState(this.savedDoors(), doorId, input ? input.value.trim() : '',
+            kindOf(this.kindDraft || this.doorKinds, doorId), ready);
+        showSaveState(row.querySelector('.qm-door-save'), state, key => this.t(key));
+    }
+
+    savedDoors() {
+        return { texts: this.realities, ids: this.doorIds, kinds: this.doorKinds };
+    }
+
+    /* Дискета (владелец 09.11.2026: «к каждой двери отдельно: нажал —
+       и сохранилось»). Сохраняет только эту дверь: текст и отметку.
+       Запись и фото уже лежат в хранилище под номером строки. */
+    saveDoorRow(row) {
+        const input = row.querySelector('.door-text-input');
+        const doorId = row.dataset.doorId;
+        const saved = saveOneDoor(this.savedDoors(), doorId, input ? input.value.trim() : '',
+            kindOf(this.kindDraft || this.doorKinds, doorId), row.classList.contains('qm-door-ready'));
+
+        this.realities = saved.texts;
+        this.doorIds = saved.ids;
+        localStorage.setItem('quantum_doors_texts', JSON.stringify(this.realities));
+        localStorage.setItem('quantum_doors_ids', JSON.stringify(this.doorIds));
+        this.doorKinds = saveKinds(saved.kinds, this.doorIds);
+        this.updateDoorStatus(row);
+
+        // Короткая вспышка — нажатие дошло
+        const button = row.querySelector('.qm-door-save');
+        if (button) {
+            button.classList.remove('qm-door-save-flash');
+            void button.offsetWidth;
+            button.classList.add('qm-door-save-flash');
+        }
     }
 
     /* Лента снимков двери с кнопкой «убрать» на каждом. */
@@ -1146,6 +1186,7 @@ export class QuantumApp {
         if (act === 'record') this.toggleRecording(row);
         else if (act === 'preview') this.previewDoorAudio(row);
         else if (act === 'stop') this.stopDoorAudio();
+        else if (act === 'save-door') this.saveDoorRow(row);
         else if (act === 'remove') this.removeDoorAudio(row);
         else if (act === 'photo-remove') this.removeDoorPhoto(row, button.dataset.photoId);
     }
@@ -1391,26 +1432,6 @@ export class QuantumApp {
         if (!this.saveDoors()) return;
         this.kindDraft = null;
         this.startCorridorScreen();
-    }
-
-    /* Кнопка «Сохранить» (владелец 09.11.2026: «маленький кружочек
-       „Сохранить“ — нажал, и уже сохранилось, закреплено за дверью»).
-       Сохраняет то же, что «Войти в суперпозицию», но остаётся в настройке:
-       можно дальше писать и записывать. Играющая запись не прерывается. */
-    saveSetupOnly() {
-        if (!this.saveDoors()) return;
-        // Черновик отметок продолжается от сохранённого
-        this.kindDraft = { ...this.doorKinds };
-
-        const button = document.getElementById('btn-save-only');
-        if (!button) return;
-        button.classList.add('qm-saved');
-        button.textContent = '✓ ' + this.t('savedOk');
-        clearTimeout(this.savedTimer);
-        this.savedTimer = setTimeout(() => {
-            button.classList.remove('qm-saved');
-            button.textContent = this.t('btnSaveOnly');
-        }, 2000);
     }
 
     // Записывает двери из строк настройки; false — дверей меньше минимума

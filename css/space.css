@@ -3030,39 +3030,87 @@
     background: var(--qm-fear-soft);
 }
 
-/* ----- Кнопка «Сохранить» в настройке дверей (выкладка 221) ----- */
-/* Владелец 09.11.2026: «маленький кружочек „Сохранить“ — нажал, и уже
-   сохранилось». Сохраняет и оставляет в настройке. */
-.qm-root .qm-save-only-bar {
+/* ----- Дискета двери (выкладка 222, модуль door-save) ----- */
+/* Владелец 09.11.2026: «Сохранить» — к каждой двери отдельно, «как дискетка».
+   Строка над полем: отметка слева, дискета справа. */
+.qm-root .qm-door-top {
     display: flex;
-    justify-content: flex-end;
-    margin: 10px 0 12px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
-.qm-root .qm-save-only {
+.qm-root .qm-door-top .qm-kind { margin-bottom: 0; }
+
+.qm-root .qm-door-save {
+    position: relative;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 34px;
-    padding: 6px 16px;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    color: var(--qm-gold);
+    justify-content: center;
+    padding: 0;
     background: var(--qm-gold-soft);
     border: 1px solid var(--qm-gold-line);
-    border-radius: 999px;
+    border-radius: 9px;
+    color: var(--qm-gold);
     cursor: pointer;
-    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
-.qm-root .qm-save-only:hover { border-color: var(--qm-gold); }
+.qm-root .qm-door-save[hidden] { display: none; }
 
-.qm-root .qm-save-only.qm-saved {
+.qm-root .qm-door-save:hover {
+    border-color: var(--qm-gold);
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.35);
+}
+
+/* Дискета рисуется маской: цвет берёт от кнопки — золото или зелёный */
+.qm-root .qm-door-save-ico {
+    width: 17px;
+    height: 17px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M5 3h11.2L21 7.8V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2 2v4.5h8.5V5H7zm5 8.5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M5 3h11.2L21 7.8V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2 2v4.5h8.5V5H7zm5 8.5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Сохранено ровно то, что на экране: зелёная, с галочкой в углу */
+.qm-root .qm-door-save[data-state="saved"] {
     color: #7fe3a8;
     background: rgba(127, 227, 168, 0.1);
     border-color: rgba(127, 227, 168, 0.35);
+    cursor: default;
+}
+
+.qm-root .qm-door-save[data-state="saved"]:hover { box-shadow: none; }
+
+.qm-root .qm-door-save[data-state="saved"]::after {
+    content: "\2713";
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+    color: #0b0a0f;
+    background: #7fe3a8;
+}
+
+.qm-root .qm-door-save-flash { animation: qm-door-saved 0.6s ease-out; }
+
+@keyframes qm-door-saved {
+    0%   { box-shadow: 0 0 0 0 rgba(127, 227, 168, 0.7); }
+    100% { box-shadow: 0 0 0 10px rgba(127, 227, 168, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qm-root .qm-door-save-flash { animation: none; }
 }
 
 /* ----- Ползунок записи (выкладка 221, модуль audio-seek) ----- */
