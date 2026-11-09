@@ -18,7 +18,6 @@ import {
 } from './photos.js';
 import { buildSeekBar, bindSeekBar } from './audio-seek/index.js';
 import { doorState, saveOneDoor, buildSaveButton, showSaveState } from './door-save/index.js';
-import { exportDoors, parseDoorsFile, importDoors } from './door-transfer/index.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
    значит, он же и переставляет напоминание, когда это время меняется. */
 import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSetAt, observerQuiet, observerArchitect } from '../../reminder-plan.js';
@@ -617,19 +616,6 @@ export class QuantumApp {
         });
         document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());        document.getElementById('btn-cancel-setup').addEventListener('click', () => this.closeSettingsScreen());
 
-        // Перенос дверей файлом (модуль door-transfer). В приложении для
-        // телефона скачать файл WebView не умеет — там только загрузка.
-        const exportButton = document.getElementById('btn-doors-export');
-        exportButton.hidden = Boolean(window.Capacitor?.isNativePlatform?.());
-        exportButton.addEventListener('click', () => this.exportDoorsFile());
-        const importFile = document.getElementById('doors-import-file');
-        document.getElementById('btn-doors-import').addEventListener('click', () => importFile.click());
-        importFile.addEventListener('change', () => {
-            const file = importFile.files && importFile.files[0];
-            importFile.value = '';
-            if (file) this.importDoorsFile(file);
-        });
-
         // Переключения табов скорости на экране Настройка реальности
         document.querySelectorAll('.speed-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -1046,47 +1032,6 @@ export class QuantumApp {
 
     savedDoors() {
         return { texts: this.realities, ids: this.doorIds, kinds: this.doorKinds };
-    }
-
-    /* Перенос дверей (владелец 09.11.2026: «скопировать всё — фото, аудио —
-       из кабинета администратора в кабинет Ладомира на его телефоне»).
-       Выгружаются сохранённые двери с записями и фото в полном качестве. */
-    async exportDoorsFile() {
-        const blob = await exportDoors(this.savedDoors());
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'Двери Квант ' + new Date().toLocaleDateString('ru-RU') + '.json';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(link.href), 60000);
-    }
-
-    async importDoorsFile(file) {
-        let doors;
-        try {
-            doors = parseDoorsFile(await file.text());
-        } catch {
-            alert(this.t('doorsImportBad'));
-            return;
-        }
-        const question = this.t('doorsImportConfirm')
-            .replace('{now}', this.realities.length).replace('{file}', doors.doors.length);
-        if (!confirm(question)) return;
-
-        if (this.previewRow) this.stopDoorAudio();
-        const saved = await importDoors(doors);
-        if (this._destroyed) return;
-        this.realities = saved.texts;
-        this.doorIds = saved.ids;
-        this.doorKinds = saved.kinds;
-        this.kindDraft = { ...saved.kinds };
-
-        const count = Math.max(CONFIG.doors.min, Math.min(CONFIG.doors.max, saved.texts.length));
-        const select = document.getElementById('doors-count-select');
-        if (select) select.value = String(count);
-        this.renderSetupInputs(count);
-        alert(this.t('doorsImported').replace('{n}', saved.texts.length));
     }
 
     /* Дискета (владелец 09.11.2026: «к каждой двери отдельно: нажал —
