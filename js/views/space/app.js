@@ -614,7 +614,7 @@ export class QuantumApp {
             const row = e.target.closest('.qm-door-row');
             if (row) this.updateDoorStatus(row);
         });
-        document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());        document.getElementById('btn-cancel-setup').addEventListener('click', () => this.closeSettingsScreen());
+        document.getElementById('btn-save-setup').addEventListener('click', () => this.saveSettingsAndStart());
 
         // Переключения табов скорости на экране Настройка реальности
         document.querySelectorAll('.speed-tab').forEach(tab => {
@@ -640,10 +640,15 @@ export class QuantumApp {
 
         // Крестик не закрывает раздел сам: он лишь сообщает об этом наружу,
         // а что делать дальше — решает тот, кто модуль подключил.
+        // В настройке дверей крестик вместо «Отмены» (владелец 10.11.2026):
+        // выход без сохранения — туда, откуда настройку открыли.
         const closeBtn = document.getElementById('btn-space-close');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                if (this.rootEl) {
+                const setup = this.$('screen-setup');
+                if (setup && !setup.classList.contains('hidden')) {
+                    this.closeSettingsScreen();
+                } else if (this.rootEl) {
                     this.rootEl.dispatchEvent(new CustomEvent('qm-close', { bubbles: true }));
                 }
             });
@@ -2279,7 +2284,7 @@ export class QuantumApp {
            Прежде она жила только на главном экране, и из коридора или с
            экрана выбора попасть в настройку дверей было нельзя — только
            пройдя переход до конца. Теперь настройка открывается откуда
-           угодно, а «Отмена» возвращает ровно туда, откуда её позвали. */
+           угодно, а крестик возвращает ровно туда, откуда её позвали. */
         const gear = this.$('btn-gear');
         if (gear) gear.hidden = screenKey === 'screen-setup';
 

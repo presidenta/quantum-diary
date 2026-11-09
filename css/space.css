@@ -478,19 +478,18 @@
 
 .qm-root textarea { resize: vertical; min-height: 150px; margin-bottom: 16px; }
 
-.qm-root .inputs-scroll-area {
-    /* Строки дверей стали выше — плашки записи, фото и значок готовности.
-       При прежних 38% третья дверь обрезалась ровно под кнопкой входа. */
-    max-height: 46vh;
-    overflow-y: auto;
-    margin-bottom: 16px;
-    padding-right: 4px;
-}
+/* Двери — без своего окошка прокрутки (владелец 10.11.2026): листается весь
+   экран, «Войти в суперпозицию» стоит в самом конце, после последней двери.
+   Окошко в 46% высоты на телефоне сжимало карточку, а кнопка висела под ним
+   на одном месте. */
+.qm-root .inputs-scroll-area { margin-bottom: 16px; }
 
-.qm-root .inputs-scroll-area::-webkit-scrollbar { width: 6px; }
-.qm-root .inputs-scroll-area::-webkit-scrollbar-thumb {
-    background: var(--qm-panel-3);
-    border-radius: 6px;
+/* Телефон: карточка настройки — во всю высоту экрана, кнопка входа — у нижнего
+   края, даже когда дверей мало. Дверей много — карточка длиннее экрана, и
+   кнопка просто идёт после последней двери. */
+@media (max-width: 480px) {
+    .qm-root #screen-setup .card-panel { min-height: 100%; }
+    .qm-root #btn-save-setup { margin-top: auto; }
 }
 
 /* ===== HUD-таймер квантового окна (виден только в погружении) ============= */

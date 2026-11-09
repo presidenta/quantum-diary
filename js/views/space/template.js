@@ -153,7 +153,6 @@ export const TEMPLATE = [
     '        <button id="btn-save-setup" class="btn-gold qm-block">',
     '            <span class="gold-cut" data-i18n="btnSave">Сохранить и войти</span>',
     '        </button>',
-    '        <button id="btn-cancel-setup" class="btn-link qm-block" data-i18n="btnCancel">Отмена</button>',
     '    </div>',
     '</div>',
 
