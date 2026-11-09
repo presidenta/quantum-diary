@@ -843,14 +843,19 @@ export class QuantumApp {
             const kinds = this.kindDraft || this.doorKinds;
             const doorId = this.doorIds[i];
             row.classList.toggle('qm-door-fear', kindOf(kinds, doorId) === FEAR);
-            // Справа от отметки — дискета: сохранить эту дверь (модуль door-save)
+            // Строка над полем: номер и отметка
             const top = document.createElement('div');
             top.className = 'qm-door-top';
+            /* Номер строки (владелец 09.11.2026: «пронумеруй 1, 2, 3 до 12 — чтобы не сбиваться, какая по
+               счёту заполняется»). Только на этом экране: в дверь не пишется и никуда не идёт. */
+            const number = document.createElement('span');
+            number.className = 'qm-door-num';
+            number.textContent = String(i + 1);
+            top.appendChild(number);
             top.appendChild(buildKindToggle(kindOf(kinds, doorId), key => this.t(key), kind => {
                 this.kindDraft = { ...(this.kindDraft || this.doorKinds), [doorId]: kind };
                 this.updateDoorStatus(row);
             }));
-            top.appendChild(buildSaveButton());
             row.appendChild(top);
 
             // Поле создаётся элементом, а не строкой HTML: кавычки и угловые
@@ -935,6 +940,11 @@ export class QuantumApp {
         counter.textContent = '0/' + PHOTO_LIMIT;
         photoChip.appendChild(counter);
         actions.appendChild(photoChip);
+
+        /* Дискета — последней в ряду (владелец 09.11.2026: «сначала записал
+           или добавил файл, фото, а потом нажал дискетку — и сохранилось»).
+           Модуль door-save. */
+        actions.appendChild(buildSaveButton());
 
         box.appendChild(actions);
 
