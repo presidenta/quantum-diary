@@ -52,6 +52,18 @@ function вТотЖеДень(минуты, миг) {
    стоял на 05:00 при тишине до 06:00. Теперь назначенный час, попавший в тишину, звонит с её концом:
    так его ставит расписание (nextRingPlan, namedHorizon), так считают таймер, плашка и виджеты. */
 
+/* ЧАС, ПОСТАВЛЕННЫЙ ЧЕЛОВЕКОМ, ЗВОНИТ В СВОЙ СРОК (выкладка 229). Владелец 10.11.2026: «если человек сам
+   наводит время — даже на тихий час, — звонит всегда; всё остальное, что ставит программа, — только после
+   окончания тихого часа». Правило 177 («попал в тишину — с её концом, для всех») было ответом на звонок в 05:00,
+   который поставил не человек: час Наблюдателя переехал туда сам, за циклом (157). Теперь тишина не двигает
+   только час, назначенный вручную, — час Архитектора в «Режиме будильника» и час Наблюдателя, пока его не
+   передвинула автоматика (windowAuto). Окна, моменты, переехавший час, «Отложить» — по-прежнему с концом тишины. */
+
+/** Тишина для назначенного часа: поставлен человеком вручную — тишины для него нет. */
+export function namedQuiet(manual, quiet) {
+    return manual ? null : quiet;
+}
+
 /** Миг, перенесённый за тихий час: попал в тишину — её конец, иначе как есть. */
 export function afterQuiet(миг, quiet) {
     if (!quiet || quiet.on === false || !миг) return миг;
@@ -151,6 +163,7 @@ export function nextNamedAt(hhmm, миг, quiet = null) {
  * @param {number} [p.setAt]    когда час Наблюдателя назначили вручную, мс (0 — не знаем): назначенное
  *                              после последней опоры и позже расчётного окна — ближайший срок, см. РУЧНОЙ ЧАС
  * @param {number[]} [p.architect] звонки Архитектора, мс: открытие окна не ближе получаса к ним (выкладка 209)
+ * @param {boolean} [p.namedManual] час назначен человеком вручную: тишина его не двигает (выкладка 229)
  * @returns {{phase: 'never'|'cooldown'|'open'|'missed', anchor: number, opens: number,
  *            closes: number, nextNamed: number, next: number}}
  *   phase  — never: опоры нет (не было ни прыжка, ни звонка) — окно открыто с начала;
@@ -159,10 +172,11 @@ export function nextNamedAt(hhmm, миг, quiet = null) {
  *            0 — неизвестен (окно открыто или прошло, а часа не назначено);
  *   skipped — сколько пропущенных окон цикл досчитал сам от опоры (выкладка 228).
  */
-export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null, setAt = 0, architect = [] }) {
+export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null, setAt = 0, architect = [], namedManual = false }) {
     const прыжок = Number(lastJump) > 0 ? Number(lastJump) : 0;
-    const опора = Math.max(прыжок, lastNamedAt(named, now, quiet));
-    const nextNamed = nextNamedAt(named, now, quiet);
+    const тишинаЧаса = namedQuiet(namedManual, quiet);
+    const опора = Math.max(прыжок, lastNamedAt(named, now, тишинаЧаса));
+    const nextNamed = nextNamedAt(named, now, тишинаЧаса);
 
     if (!опора) {
         return { phase: 'never', anchor: 0, opens: 0, closes: 0, nextNamed, next: 0 };
@@ -224,13 +238,13 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
    окно впереди (cooldown): открытое или прошедшее окно часа не даёт.
 
    @returns {string} новый час «ЧЧ:ММ» или '' — оставить как есть */
-export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs, quiet = null, architect = [] }) {
+export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, cooldownMs, windowMs, quiet = null, architect = [], namedManual = false }) {
     if (!named) return '';
-    const прозвучал = lastNamedAt(named, now, quiet);
+    const прозвучал = lastNamedAt(named, now, namedQuiet(namedManual, quiet));
     if (!прозвучал || прозвучал < setAt) return '';
 
     // Переезжает на открытие, уже разведённое с Архитектором (выкладка 209)
-    const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs, quiet, architect });
+    const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs, quiet, architect, namedManual });
     // Окно после пропущенных (выкладка 228) — не следствие звонка: час остаётся, как назначен
     if (часы.phase !== 'cooldown' || часы.skipped) return '';
     const открытие = new Date(часы.opens);

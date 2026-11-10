@@ -118,7 +118,7 @@ async function следоватьЦиклу(alarm, now = Date.now()) {
     запомнитьАрхитектора(звонки);
     if (!alarm.on || alarm.windowMode === 'off') return alarm;
     const новый = cycleNamedHour({
-        named: alarm.windowAt, setAt: alarm.windowSetAt, lastJump: lastJumpTime(), now,
+        named: alarm.windowAt, setAt: alarm.windowSetAt, lastJump: lastJumpTime(), now, namedManual: !alarm.windowAuto,
         cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs,
         quiet, architect: звонки
     });
@@ -166,11 +166,18 @@ export function observerArchitect() {
    плашке (core/observer-clock.js). Обновляется при каждом чтении и сохранении режима. */
 let часНаблюдателя = '';
 let часНаблюдателяНазначен = 0;
+let часНаблюдателяВручную = true;
 
 function запомнитьЧас(alarm) {
     часНаблюдателя = назначенныеЧасы(alarm).window || '';
     часНаблюдателяНазначен = Number(alarm.windowSetAt) || 0;
+    часНаблюдателяВручную = !alarm.windowAuto;
     return alarm;
+}
+
+/** Час Наблюдателя поставлен человеком, а не автоматикой: тишина его не двигает (выкладка 229). */
+export function observerNamedManual() {
+    return часНаблюдателяВручную;
 }
 
 /** Когда назначен час Наблюдателя (мс), для таймеров: назначенный вручную вытесняет окно от прыжка. */
@@ -369,7 +376,9 @@ function guardFramesFor(now, alarm, день, заготовка = {}, quiet = �
             // Окно, попавшее в тихий час, — с её концом (core/observer-clock.js, выкладка 160)
             quiet,
             // Час, назначенный вручную, сразу на экране, даже если он позже окна (выкладка 164)
-            windowSetAt: alarm.windowSetAt
+            windowSetAt: alarm.windowSetAt,
+            // и звонит в свой срок даже в тихий час (выкладка 229)
+            windowAuto: alarm.windowAuto
         }).map(кадр => ({
             from: кадр.from,
             text: guardText(кадр, t),
@@ -588,6 +597,7 @@ async function собратьЗвонки(now, quiet, alarm, день) {
         // Назначенный звонок Наблюдателя перезапускает цикл (core/observer-clock.js)
         named: назначенныеЧасы(alarm).window || '',
         windowSetAt: alarm.windowSetAt,
+        windowAuto: alarm.windowAuto,       // ручной час тишина не двигает (выкладка 229)
         architect: архитектор,
         quiet,
         off: modeOf(KEY_WINDOW, alarm) === 'off'

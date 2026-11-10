@@ -20,7 +20,7 @@ import { buildSeekBar, bindSeekBar } from './audio-seek/index.js';
 import { doorState, saveOneDoor, buildSaveButton, showSaveState } from './door-save/index.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
    значит, он же и переставляет напоминание, когда это время меняется. */
-import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSetAt, observerQuiet, observerArchitect } from '../../reminder-plan.js';
+import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSetAt, observerNamedManual, observerQuiet, observerArchitect } from '../../reminder-plan.js';
 import { observerClock, countdownText } from '../../core/observer-clock.js';
 import { logEvent } from '../../core/web-journal.js';
 
@@ -2208,7 +2208,7 @@ export class QuantumApp {
             const last = parseInt(localStorage.getItem('last_quantum_jump_time') || '0');
             const now = Date.now();
             const часы = observerClock({
-                lastJump: last, named: observerNamedHour(), now, setAt: observerNamedSetAt(),
+                lastJump: last, named: observerNamedHour(), now, setAt: observerNamedSetAt(), namedManual: observerNamedManual(),
                 cooldownMs: CONFIG.timing.jumpCooldownMs, windowMs: CONFIG.timing.opportunityWindowMs,
                 quiet: observerQuiet(),
                 architect: observerArchitect()   // не ближе получаса к Архитектору (выкладка 209)

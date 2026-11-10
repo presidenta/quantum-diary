@@ -35,7 +35,7 @@ import {
 } from './core/reminders.js';
 import {
   initReminders, planReminders, loadQuiet, saveQuiet, normalizeQuiet,
-  loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet, observerNamedHour, observerNamedSetAt,
+  loadAlarm, saveAlarm, alarmState, syncPrefs, observerQuiet, observerNamedHour, observerNamedSetAt, observerNamedManual,
   observerArchitect
 } from './reminder-plan.js';
 import { minutesOfDay, normalizeAlarm, isWindowKey, atNext, momentIdOfKey } from './core/reminder-rules.js';
@@ -843,7 +843,9 @@ function показатьЧасыНаблюдателя() {
     // Окно в тихий час — с её концом, как у плашки и звонка (выкладка 160)
     quiet: observerQuiet(),
     // И не ближе получаса к звонкам Архитектора (выкладка 209)
-    architect: observerArchitect()
+    architect: observerArchitect(),
+    // Час в поле, ещё не сохранённый, человек ставит сам — тишина его не двигает (выкладка 229)
+    namedManual: named === observerNamedHour() ? observerNamedManual() : true
   });
 
   let время = '--:--:--';
