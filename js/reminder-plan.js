@@ -26,7 +26,7 @@ import {
     hasAlarmMode, alarmFullScreen, alarmOverlay, setGuard, pendingAlarms
 } from './core/reminders.js';
 import {
-    momentPlan, windowPlan, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT, momentTarget,
+    momentPlan, windowPlan, windowHorizon, normalizeQuiet as normalize, KEY_WINDOW, KEY_MOMENT, momentTarget,
     normalizeAlarm, ringsAsAlarm, nextRingPlan, isWindowKey, modeOf, lateUntil,
     guardFrames, guardText, guardTerm, namedHorizon, anchorHours, freshDay, orphanKeys, architectRings
 } from './core/reminder-rules.js';
@@ -582,7 +582,7 @@ async function собратьЗвонки(now, quiet, alarm, день) {
     // Окно Наблюдателя не ближе получаса к звонкам Архитектора (выкладка 209)
     const архитектор = await звонкиАрхитектора(now, alarm, quiet, день);
     запомнитьАрхитектора(архитектор);
-    const window = windowPlan(lastJumpTime(), now, {
+    const опцииОкна = {
         cooldownMs: CONFIG.timing.jumpCooldownMs,
         windowMs: CONFIG.timing.opportunityWindowMs,
         // Назначенный звонок Наблюдателя перезапускает цикл (core/observer-clock.js)
@@ -591,7 +591,10 @@ async function собратьЗвонки(now, quiet, alarm, день) {
         architect: архитектор,
         quiet,
         off: modeOf(KEY_WINDOW, alarm) === 'off'
-    });
+    };
+    const window = windowPlan(lastJumpTime(), now, опцииОкна);
+    // За первым окном — ещё несколько, каждое от закрытия предыдущего (выкладка 228)
+    const окнаВперёд = windowHorizon(window, lastJumpTime(), опцииОкна);
 
     /* ВРЕМЯ, НАЗНАЧЕННОЕ ЧЕЛОВЕКОМ.
        Своё у окна возможностей, своё у девяти моментов дня — поля в окне
@@ -609,7 +612,7 @@ async function собратьЗвонки(now, quiet, alarm, день) {
        больше нет — и его. Фасад снимает только те ключи, которые ему
        передали на постановку, и про остальные знать не может. */
     const silence = (window ? moments.silence : moments.silence.concat(KEY_WINDOW))
-        .concat(следующие.silence, впереди.silence);
+        .concat(окнаВперёд.silence, следующие.silence, впереди.silence);
 
     const totalSec = Math.floor(CONFIG.timing.opportunityWindowMs / 1000);
 
@@ -628,9 +631,9 @@ async function собратьЗвонки(now, quiet, alarm, день) {
         openTarget: momentTarget(item.key)
     }));
 
-    if (window) {
+    for (const окно of window ? [window, ...окнаВперёд.ring] : []) {
         ring.push({
-            ...window,
+            ...окно,
             title: t('reminder.window.title'),
             body: t('reminder.window.body', {
                 min: Math.floor(totalSec / 60),

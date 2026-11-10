@@ -38,7 +38,7 @@ export const KEY_NEXT_MOMENTS = 'alarm-next-moments';
 
    Для решений «чей это звонок» важен базовый ключ, без суффикса. */
 export function baseKey(key) {
-    const match = /^(alarm-next-(?:window|moments))\+\d+$/.exec(String(key));
+    const match = /^(alarm-next-(?:window|moments)|quantum-window)\+\d+$/.exec(String(key));
     return match ? match[1] : String(key);
 }
 
@@ -625,13 +625,7 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
     /* Тихий час (выкладка 160): окно, попавшее в тишину, открывается с её концом и звонит
        будильником утром, а не беззвучной плашкой посреди ночи. */
     /* Открытие окна не ближе получаса к звонкам Архитектора (выкладка 209, windowOpensAfter). */
-    const часы = observerClock({ lastJump, named, now: now.getTime(), cooldownMs, windowMs, quiet, setAt: windowSetAt, architect });
-    let когда = 0;
-    if (часы.phase === 'cooldown') {
-        когда = часы.nextNamed && часы.nextNamed < часы.opens ? windowOpensAfter(часы.nextNamed, cooldownMs, quiet, architect) : часы.opens;
-    } else if (часы.phase !== 'never' && часы.nextNamed) {
-        когда = windowOpensAfter(часы.nextNamed, cooldownMs, quiet, architect);
-    }
+    const когда = следующееОкно({ lastJump, named, now: now.getTime(), cooldownMs, windowMs, quiet, setAt: windowSetAt, architect });
     if (!когда) return null;
 
     const at = new Date(когда);
@@ -640,6 +634,46 @@ export function windowPlan(lastJump, now = new Date(), options = {}) {
     return underQuiet(at, quiet)
         ? { key: KEY_WINDOW, at, quiet: true }
         : { key: KEY_WINDOW, at };
+}
+
+/* Миг следующего открытия окна, которое ещё надо прозвонить; 0 — звонить нечем.
+   Окно открыто сейчас — его звонок уже прозвенел, и следующий считается от его закрытия: прыжка
+   не будет — с закрытия пойдёт новый цикл (выкладка 228, observerClock). */
+function следующееОкно(вход) {
+    let часы = observerClock(вход);
+    if (часы.phase === 'open') часы = observerClock({ ...вход, now: часы.closes });
+    const { cooldownMs, quiet, architect } = вход;
+    if (часы.phase === 'cooldown') {
+        return часы.nextNamed && часы.nextNamed < часы.opens ? windowOpensAfter(часы.nextNamed, cooldownMs, quiet, architect) : часы.opens;
+    }
+    if (часы.phase !== 'never' && часы.nextNamed) return windowOpensAfter(часы.nextNamed, cooldownMs, quiet, architect);
+    return 0;
+}
+
+/* ОКНА НАБЛЮДАТЕЛЯ ВПЕРЁД (выкладка 228). Владелец 10.11.2026: «Наблюдатель не включается целый
+   день — один раз включился, и всё». В системе лежал один звонок окна: прозвенел — следующий
+   ставило только приложение, а прошивка его закрывает. Теперь за первым окном (windowPlan) идут ещё
+   WINDOW_AHEAD — каждое от закрытия предыдущего, как будто прыжка не было (прыжок переставит всё
+   заново). Ключи — «quantum-window+1», «+2», …: у одного ключа в системе один будильник.
+   Первого окна нет — копии снимаются: поставленные раньше живут в системе сами по себе. */
+export const WINDOW_AHEAD = 3;
+
+export function windowHorizon(first, lastJump, options = {}) {
+    const { cooldownMs = 0, windowMs = 0, quiet = null, named = '', windowSetAt = 0, architect = [] } = options;
+    const ключи = Array.from({ length: WINDOW_AHEAD }, (_, i) => `${KEY_WINDOW}+${i + 1}`);
+    const ring = [];
+    let прежнее = first && first.at ? first.at.getTime() : 0;
+    for (const ключ of ключи) {
+        if (!прежнее) break;
+        const когда = следующееОкно({
+            lastJump, named, now: прежнее + windowMs, cooldownMs, windowMs, quiet, setAt: windowSetAt, architect
+        });
+        if (!когда || когда <= прежнее) break;
+        const at = new Date(когда);
+        ring.push(underQuiet(at, quiet) ? { key: ключ, at, quiet: true } : { key: ключ, at });
+        прежнее = когда;
+    }
+    return { ring, silence: ключи.slice(ring.length) };
 }
 
 /* ПЛАШКА СТРАЖА: ЧТО НА НЕЙ НАПИСАНО В КАЖДЫЙ ЧАС ДНЯ.
@@ -819,6 +853,22 @@ export function guardFrames(moments, lastJump, now = new Date(), options = {}) {
     if (observerOn && прыгал) {
         границы.add(откроется);
         границы.add(откроется + windowMs);
+    }
+    /* Пропущенное окно начинает новый цикл само (выкладка 228): границы каждого следующего окна —
+       до конца завтрашнего дня, дальше кадров нет. */
+    if (observerOn) {
+        const конец = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2, 0, 0, 0, 0).getTime();
+        let миг = now.getTime();
+        for (let круг = 0; круг < 20 && миг < конец; круг++) {
+            const часы = observerClock({
+                lastJump: прыгал ? last : 0, named: named.window, now: миг, cooldownMs, windowMs, quiet, setAt: windowSetAt,
+                architect: звонкиАрхитектора
+            });
+            if (!(часы.closes > миг)) break;
+            границы.add(часы.opens);
+            границы.add(часы.closes);
+            миг = часы.closes;
+        }
     }
     // Назначенные часы — когда звонят на самом деле (тихий час переносит на конец) — и полночь
     for (const hhmm of [named.window, named.moments]) {

@@ -2256,7 +2256,7 @@ export class QuantumApp {
                     }
                     this.windowTriggered = true;
                 } else {
-                    // Окно пропущено, цикл сбрасывается
+                    // Окно пропущено, а опора старше OBSERVER_MAX_CYCLES окон (core/observer-clock.js) — цикл сбрасывается
                     localStorage.setItem('last_quantum_jump_time', Date.now().toString());
                     this.windowTriggered = false;
                     this.hideOpportunityModal();

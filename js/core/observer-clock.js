@@ -75,6 +75,9 @@ export function afterQuiet(миг, quiet) {
    стоит где поставлен — «насколько он захотел». */
 export const OBSERVER_GAP_MS = 30 * 60 * 1000;
 
+/** Сколько пропущенных окон подряд цикл досчитывает сам (выкладка 228, см. observerClock). */
+export const OBSERVER_MAX_CYCLES = 200;
+
 /**
  * Миг Наблюдателя, разведённый со звонками Архитектора: ближе получаса к любому из них — переезжает
  * на полчаса после этого звонка (только вперёд: Наблюдатель идёт после Архитектора). Переехал в тихий
@@ -153,7 +156,8 @@ export function nextNamedAt(hhmm, миг, quiet = null) {
  *   phase  — never: опоры нет (не было ни прыжка, ни звонка) — окно открыто с начала;
  *            cooldown: ждём открытия; open: окно открыто; missed: окно прошло;
  *   next   — ближайший срок Наблюдателя после мига (открытие окна или назначенный звонок),
- *            0 — неизвестен (окно открыто или прошло, а часа не назначено).
+ *            0 — неизвестен (окно открыто или прошло, а часа не назначено);
+ *   skipped — сколько пропущенных окон цикл досчитал сам от опоры (выкладка 228).
  */
 export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windowMs, quiet = null, setAt = 0, architect = [] }) {
     const прыжок = Number(lastJump) > 0 ? Number(lastJump) : 0;
@@ -163,8 +167,8 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
     if (!опора) {
         return { phase: 'never', anchor: 0, opens: 0, closes: 0, nextNamed, next: 0 };
     }
-    const opens = windowOpensAfter(опора, cooldownMs, quiet, architect);
-    const closes = opens + windowMs;
+    let opens = windowOpensAfter(опора, cooldownMs, quiet, architect);
+    let closes = opens + windowMs;
 
     /* РУЧНОЙ ЧАС ПЕРЕНОСИТСЯ НА ЭКРАН СРАЗУ (выкладка 164). Владелец 19.10.2026 в 20:21: окно
        открылось в 19:12, он назначил Наблюдателю 21:00 — а на виджете осталось «после 19:12».
@@ -183,11 +187,28 @@ export function observerClock({ lastJump = 0, named = '', now, cooldownMs, windo
         };
     }
 
+    /* ПРОПУЩЕННОЕ ОКНО НАЧИНАЕТ НОВЫЙ ЦИКЛ САМО (выкладка 228). Владелец 10.11.2026: «Архитектор
+       работает, а Наблюдатель не включается целый день — один раз включился, и всё». Прыжок в 22:18,
+       окно в 06:30 прозвенело, прыжка не было — и цикл стоял: сброс пропущенного окна делал только
+       открытый раздел «Пространство», а до тех пор окно считалось прошедшим и звонить было нечем.
+       Правило из самого окна: «если пропустишь окно, цикл сбросится и начнётся новое ожидание».
+       Новый цикл идёт от закрытия пропущенного окна: через cooldownMs откроется следующее (за тихим
+       часом, не ближе получаса к Архитектору) — срок известен заранее, одинаков на всех устройствах,
+       и телефон ставит его звонком, не дожидаясь, пока приложение откроют. Кругов не больше
+       OBSERVER_MAX_CYCLES (около полутора месяцев): опора старше — окно «прошло», как до 228. */
+    let опораЦикла = опора;
+    let skipped = 0;
+    for (; now >= closes && skipped < OBSERVER_MAX_CYCLES; skipped++) {
+        опораЦикла = closes;
+        opens = windowOpensAfter(опораЦикла, cooldownMs, quiet, architect);
+        closes = opens + windowMs;
+    }
+
     if (now < opens) {
         const next = nextNamed && nextNamed < opens ? nextNamed : opens;
-        return { phase: 'cooldown', anchor: опора, opens, closes, nextNamed, next };
+        return { phase: 'cooldown', anchor: опораЦикла, opens, closes, nextNamed, next, skipped };
     }
-    return { phase: now < closes ? 'open' : 'missed', anchor: опора, opens, closes, nextNamed, next: nextNamed };
+    return { phase: now < closes ? 'open' : 'missed', anchor: опораЦикла, opens, closes, nextNamed, next: nextNamed, skipped };
 }
 
 /* ЧАС НАБЛЮДАТЕЛЯ СЛЕДУЕТ ЗА ЦИКЛОМ (выкладка 157).
@@ -210,7 +231,8 @@ export function cycleNamedHour({ named = '', setAt = 0, lastJump = 0, now, coold
 
     // Переезжает на открытие, уже разведённое с Архитектором (выкладка 209)
     const часы = observerClock({ lastJump, named, now, cooldownMs, windowMs, quiet, architect });
-    if (часы.phase !== 'cooldown') return '';
+    // Окно после пропущенных (выкладка 228) — не следствие звонка: час остаётся, как назначен
+    if (часы.phase !== 'cooldown' || часы.skipped) return '';
     const открытие = new Date(часы.opens);
     const час = `${String(открытие.getHours()).padStart(2, '0')}:${String(открытие.getMinutes()).padStart(2, '0')}`;
     return час === named ? '' : час;
