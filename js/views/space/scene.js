@@ -266,13 +266,16 @@ export class QuantumCorridorScene {
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
         
-        // Зеркальная черная плитка
-        ctx.fillStyle = '#020204';
+        /* ЧЁРНАЯ ПЛИТКА, КОТОРУЮ ВИДНО (выкладка 230). Владелец 10.11.2026: «пол плиткой чёрной — чтобы было
+           видно, что пол реально есть и человек как будто идёт». Прежняя плитка рисовалась почти чёрным по
+           почти чёрному, а металл без отражений съедал и швы: пола не было видно, и шаг по коридору ничем
+           не читался. Теперь швы светлее, а плитка крупнее — швы бегут под ногами, когда человек идёт. */
+        ctx.fillStyle = '#040406';
         ctx.fillRect(0, 0, 512, 512);
-        
+
         // Линии швов между плитками
-        ctx.strokeStyle = '#1a1e28';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#3a3e48';
+        ctx.lineWidth = 4;
         const tileSize = 64;
         for (let x = 0; x <= 512; x += tileSize) {
             ctx.beginPath();
@@ -302,7 +305,10 @@ export class QuantumCorridorScene {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(8, 50);
+        // Восемь плиток в текстуре: десять плиток поперёк пола, плитка — 1,6 единицы
+        texture.repeat.set(CORRIDOR_WIDE / 12.8, CORRIDOR_LEN / 12.8);
+        // Дальние швы не рассыпаются в рябь
+        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
         return texture;
     }
 
@@ -312,15 +318,13 @@ export class QuantumCorridorScene {
 
         // Зеркальная черная плитка для пола
         const tileTex = this.createBlackTileTexture();
+        // Глянец без металла: металл без отражений рисуется чёрным и прячет швы
         const floorMat = new THREE.MeshPhysicalMaterial({
             map: tileTex,
-            color: 0x010103,
-            roughness: 0.03,        
-            metalness: 0.95,
-            clearcoat: 1.0,        
-            clearcoatRoughness: 0.02,
-            reflectivity: 1.0,
-            transparent: false
+            roughness: 0.25,
+            metalness: 0.2,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.08
         });
 
         // Пол и потолок кончаются ровно на задней стене, не раньше
@@ -812,18 +816,44 @@ export class QuantumCorridorScene {
 
         ctx.shadowBlur = 10;
         ctx.lineWidth = 2.6;
-        ctx.strokeStyle = '#fff6e0';
+        ctx.strokeStyle = '#fff1c8';   // светлое золото того же оттенка (выкладка 230)
         trace();
 
         return new THREE.CanvasTexture(canvas);
+    }
+
+    /* ЗЕРКАЛЬНОЕ ЗОЛОТО (выкладка 230, на пробу). Отблеск полированного металла: полосы светлого и тёмного
+       золота одного оттенка. Рисуется без света (MeshBasicMaterial) — металл с настоящим отражением в
+       тёмном коридоре был бы почти чёрным, отражать ему нечего. Одна текстура на все двери. */
+    mirrorGoldTexture() {
+        if (this.goldTex) return this.goldTex;
+        const canvas = document.createElement('canvas');
+        canvas.width = 16;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        const grad = ctx.createLinearGradient(0, 0, 0, 256);
+        grad.addColorStop(0.00, '#7a5418');
+        grad.addColorStop(0.18, '#e5a93c');
+        grad.addColorStop(0.32, '#fff1c8');
+        grad.addColorStop(0.46, '#d29a35');
+        grad.addColorStop(0.62, '#8a611f');
+        grad.addColorStop(0.78, '#f3cf7a');
+        grad.addColorStop(1.00, '#a8772a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 16, 256);
+        this.goldTex = new THREE.CanvasTexture(canvas);
+        return this.goldTex;
     }
 
     setupRealities(realitiesArray) {
         this.activeDoorMeshes.forEach(d => this.corridorGroup.remove(d.group));
         this.activeDoorMeshes = [];
 
-        const colors = ['#00f0ff', '#ff007f', '#e5a93c', '#00ff88', '#9d00ff', '#ff3300', '#0044ff'];
-        
+        /* Подсветка дверей — одно золото (владелец 10.11.2026: «все двери одного оттенка, золотые зеркальные:
+           значки, ручки, свечение; сама дверь чёрная, как была»). Прежде — семь неоновых цветов по месту двери
+           в ряду: цвет ничего не значил, а глаз искал в нём подсказку. */
+        const GOLD = '#e5a93c';
+                
         const doorXDist = this.doorX; 
         
         /* Мест в коридоре — сколько дверей можно завести (CONFIG.doors.max, двенадцать: по шесть на стене).
@@ -835,13 +865,17 @@ export class QuantumCorridorScene {
             const xPos = isLeft ? -doorXDist : doorXDist;
             
             const isActive = i < realitiesArray.length;
-            const doorColor = isActive ? colors[i % colors.length] : '#222222';
+            const doorColor = isActive ? GOLD : '#222222';
+            // Подсветка живой двери — зеркальное золото; тёмные места — как были
+            const glowMat = () => (isActive
+                ? new THREE.MeshBasicMaterial({ map: this.mirrorGoldTexture() })
+                : new THREE.MeshBasicMaterial({ color: new THREE.Color(doorColor) }));
 
             const group = new THREE.Group();
             group.position.set(xPos, -0.4, zPos);
             group.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2; 
 
-            const frameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(doorColor) });
+            const frameMat = glowMat();
             const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 4.4, 0.2), frameMat);
             frameL.position.set(-1.25, 0, -0.1);
             const frameR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 4.4, 0.2), frameMat);
@@ -868,14 +902,14 @@ export class QuantumCorridorScene {
             leafMesh.position.set(-hingeX, 0, 0); 
             doorLeaf.add(leafMesh);
 
-            const edgeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(doorColor) });
+            const edgeMat = glowMat();
             const edgeMesh = new THREE.Mesh(new THREE.BoxGeometry(2.42, 4.22, 0.02), edgeMat);
             edgeMesh.position.set(-hingeX, 0, 0);
             doorLeaf.add(edgeMesh);
 
             const handle = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.05, 0.05, 0.4),
-                new THREE.MeshStandardMaterial({ color: doorColor, emissive: isActive ? doorColor : 0x000 })
+                isActive ? glowMat() : new THREE.MeshStandardMaterial({ color: doorColor })
             );
             handle.position.set(isLeft ? -2.1 : 2.1, 0, 0.15);
             doorLeaf.add(handle);
