@@ -39,7 +39,9 @@ const PARTICLE_NEAR = 3;                  // ближе этого к камер
    скопление в конце при пустых стенах. */
 const SHELL_DEPTH = 0.6;                  // насколько вглубь от поверхности
 const FLOOR_Y = -2.5;
-const CEIL_Y = 4.5;
+/* Потолок — на 1,2 выше верха дверей (выкладка 231). Владелец 10.11.2026: «потолок опусти пониже, он сильно
+   высоко — я даже не понимаю, где он». На 4,5 он стоял на 3,5 выше глаз и в кадр телефона не попадал. */
+const CEIL_Y = 3.0;
 const SURFACE_GAP = 0.05;                 // чтобы точка не лежала в самой плоскости
 /* Пустая воронка вдоль взгляда.
 
@@ -74,7 +76,8 @@ const CORRIDOR_BACK = 10;                 // передний край пола,
 const CORRIDOR_LEN = CORRIDOR_BACK - CORRIDOR_END;
 const CORRIDOR_MID = (CORRIDOR_BACK + CORRIDOR_END) / 2;
 const CORRIDOR_WIDE = 16;                 // ширина пола и задней стены
-const CORRIDOR_TALL = 7;                  // высота стен
+const CORRIDOR_TALL = CEIL_Y - FLOOR_Y;   // высота стен — от пола до потолка
+const CORRIDOR_MID_Y = (CEIL_Y + FLOOR_Y) / 2;
 const CORRIDOR_FAR = CORRIDOR_END + 2;    // дальше звёзды не залетают
 const WALK_FORWARD = CORRIDOR_END + 16;   // дальше вперёд не уходит (при -38 было -22)
 /* Звёзд — по длине коридора: густота та же, что была в коридоре длиной 48. */
@@ -260,7 +263,8 @@ export class QuantumCorridorScene {
         this.doorX = this.wallX - 0.1;
     }
 
-    createBlackTileTexture() {
+    /* Плитка одного размера на любой поверхности: ширина и длина поверхности — в единицах сцены. */
+    createBlackTileTexture(ширина, длина) {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
@@ -305,27 +309,29 @@ export class QuantumCorridorScene {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        // Восемь плиток в текстуре: десять плиток поперёк пола, плитка — 1,6 единицы
-        texture.repeat.set(CORRIDOR_WIDE / 12.8, CORRIDOR_LEN / 12.8);
+        // Восемь плиток в текстуре, плитка — 1,6 единицы: десять поперёк пола
+        texture.repeat.set(ширина / 12.8, длина / 12.8);
         // Дальние швы не рассыпаются в рябь
         texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
         return texture;
     }
 
     buildCorridorStructure() {
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x07090e, roughness: 0.8 });
-        const ceilMat = new THREE.MeshPhysicalMaterial({ color: 0x040507, roughness: 0.2, metalness: 0.85, clearcoat: 1 });
-
-        // Зеркальная черная плитка для пола
-        const tileTex = this.createBlackTileTexture();
-        // Глянец без металла: металл без отражений рисуется чёрным и прячет швы
-        const floorMat = new THREE.MeshPhysicalMaterial({
-            map: tileTex,
+        /* ВЕСЬ КОРИДОР — ЧЁРНАЯ ПЛИТКА (выкладка 231). Владелец 10.11.2026 по снимку пола из 230: «сделай в таком
+           стиле полностью всё — потолок, стены, чтобы было видно, что это конкретно коридор». Пол, стены и потолок —
+           одна плитка со швами; глянец без металла: металл без отражений рисуется чёрным и прячет швы. */
+        const плитка = (ширина, длина, глянец = {}) => new THREE.MeshPhysicalMaterial({
+            map: this.createBlackTileTexture(ширина, длина),
             roughness: 0.25,
             metalness: 0.2,
             clearcoat: 1.0,
-            clearcoatRoughness: 0.08
+            clearcoatRoughness: 0.08,
+            ...глянец
         });
+        const floorMat = плитка(CORRIDOR_WIDE, CORRIDOR_LEN);
+        // Потолок матовый: глянцевый ловил свет яркой лампой прямо за текстом наверху экрана
+        const ceilMat = плитка(CORRIDOR_WIDE, CORRIDOR_LEN, { roughness: 0.7, clearcoat: 0 });
+        const wallMat = плитка(CORRIDOR_LEN, CORRIDOR_TALL);
 
         // Пол и потолок кончаются ровно на задней стене, не раньше
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_WIDE, CORRIDOR_LEN), floorMat);
@@ -339,11 +345,11 @@ export class QuantumCorridorScene {
         const wallX = this.wallX;
         const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_LEN, CORRIDOR_TALL), wallMat);
         leftWall.rotation.y = Math.PI / 2;
-        leftWall.position.set(-wallX, 1, CORRIDOR_MID);
+        leftWall.position.set(-wallX, CORRIDOR_MID_Y, CORRIDOR_MID);
 
         const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(CORRIDOR_LEN, CORRIDOR_TALL), wallMat);
         rightWall.rotation.y = -Math.PI / 2;
-        rightWall.position.set(wallX, 1, CORRIDOR_MID);
+        rightWall.position.set(wallX, CORRIDOR_MID_Y, CORRIDOR_MID);
 
         /* Конец коридора — чистая чернота.
 
@@ -364,7 +370,7 @@ export class QuantumCorridorScene {
         const endWallMat = new THREE.MeshBasicMaterial({ color: 0x050506 });
         const endWall = new THREE.Mesh(
             new THREE.PlaneGeometry(CORRIDOR_WIDE, CORRIDOR_TALL + 1), endWallMat);
-        endWall.position.set(0, 1, CORRIDOR_END);
+        endWall.position.set(0, CORRIDOR_MID_Y, CORRIDOR_END);
 
         /* Сам конец — вертикальный чёрный прямоугольник, и только он.
 
@@ -376,8 +382,9 @@ export class QuantumCorridorScene {
            она читается отдельной плитой, висящей в конце. Сам проём —
            чистый ноль. */
         const endGateMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const endGate = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 5.0), endGateMat);
-        endGate.position.set(0, 1, CORRIDOR_END + 0.05);
+        // Проём — от пола почти до потолка: с потолком ниже (231) он не торчит над ним
+        const endGate = new THREE.Mesh(new THREE.PlaneGeometry(2.2, CORRIDOR_TALL - 0.5), endGateMat);
+        endGate.position.set(0, FLOOR_Y + (CORRIDOR_TALL - 0.5) / 2, CORRIDOR_END + 0.05);
 
         this.leftWall = leftWall;
         this.rightWall = rightWall;
