@@ -7,6 +7,7 @@
 import { CONFIG } from './config.js';
 import { statKey, chronicleRows } from './chronicle-stats.js';
 import { FEAR, loadKinds, saveKinds, kindOf, kindsSummary, openedShares, buildKindToggle, kindDotHtml } from './door-kinds/index.js';
+import { SPAN_TABS, SPAN_DEFAULT, parseSpan, spanTab, spanSince, spanBefore, spanLabel, spanShortLabel, spanPastLabel } from './stats-span/index.js';
 import { NotificationManager } from './notifications.js';
 import { QuantumCorridorScene } from './scene.js';
 import {
@@ -1909,6 +1910,8 @@ export class QuantumApp {
     renderChronicles() {
         const list = document.getElementById('chronicles-list');
         if (!list) return;
+        // Хроники открываются заново — список сроков у табов свёрнут (stats-span/)
+        this.statsMenu = null;
 
         /* Имена дверей без текста зависят от содержимого. Снимок флагов
            уходит в базу и возвращается позже — тогда список перерисуется
@@ -1944,10 +1947,13 @@ export class QuantumApp {
        сразу при смене таба, отдельной кнопки «Обновить» нет. Кнопка «Сброс» одна на все табы:
        после подтверждения запоминает миг сброса (analytics_reset_timestamp), и все три периода
        считают только с него. Записи Хроник при этом не трогаются — меняется только выборка
-       для шкал. Выбранный таб помнится на этом устройстве. */
-    statsPeriod() {
-        const сохранённый = localStorage.getItem('quantum_stats_period');
-        return ['week', 'month', 'all'].includes(сохранённый) ? сохранённый : 'all';
+       для шкал. Выбранный таб помнится на этом устройстве.
+
+       СРОК В КАЖДОМ ТАБЕ (выкладка 232, владелец 11.11.2026): таб с галочкой ▾ открывает список — неделя: 1…7 дней,
+       месяц: 1…4 недели, всё время: 1…6 месяцев, год и всё время. В памяти лежит выбранный вариант (d3, w2, m6…),
+       прежние «week» / «month» читаются как 7 дней и 4 недели. Что значит каждый вариант — stats-span/. */
+    statsSpan() {
+        return parseSpan(localStorage.getItem('quantum_stats_period'));
     }
 
     statsBaseline() {
@@ -1957,26 +1963,34 @@ export class QuantumApp {
 
     /* С какого мига считать сводку: начало периода или сброс — что позже; 0 — со всех записей */
     statsSince(now = Date.now()) {
-        const сутки = 24 * 60 * 60 * 1000;
-        const период = { week: 7 * сутки, month: 30 * сутки }[this.statsPeriod()];
-        return Math.max(this.statsBaseline(), период ? now - период : 0);
+        return Math.max(this.statsBaseline(), spanSince(this.statsSpan(), now));
     }
 
-    /* ПРОШЛЫЙ ПЕРИОД ДЛЯ СРАВНЕНИЯ (выкладка 187): неделя — 7 дней перед последними семью, месяц — 30 перед
-       последними тридцатью. «За всё время» сравнивать не с чем — null. Прошлое окно начинается раньше
-       «Сброса» — тоже null: старый отсчёт с новым не смешиваем. */
+    /* ПРОШЛЫЙ ПЕРИОД ДЛЯ СРАВНЕНИЯ (выкладка 187): срок той же длины вплотную перед нынешним — за 3 дня с тремя
+       днями до них (с 232; до неё — только неделя и месяц). «За всё время» сравнивать не с чем — null. Прошлое окно
+       начинается раньше «Сброса» — тоже null: старый отсчёт с новым не смешиваем. */
     statsBefore(now = Date.now()) {
-        const сутки = 24 * 60 * 60 * 1000;
-        const период = { week: 7 * сутки, month: 30 * сутки }[this.statsPeriod()];
-        if (!период) return null;
-        const окно = { since: now - 2 * период, until: now - период };
-        return this.statsBaseline() > окно.since ? null : окно;
+        return spanBefore(this.statsSpan(), now, this.statsBaseline());
     }
 
+    /* Клик по табу открывает его список сроков (второй клик — закрывает), выбор в списке пересчитывает сводку
+       сразу. Клик в любом другом месте сводки закрывает открытый список, ничего не выбирая. */
     onStatsClick(событие, list) {
-        const таб = событие.target.closest('[data-stats-period]');
+        const вариант = событие.target.closest('[data-stats-span]');
+        if (вариант) {
+            localStorage.setItem('quantum_stats_period', вариант.dataset.statsSpan);
+            this.statsMenu = null;
+            this.paintChronicles(list);
+            return;
+        }
+        const таб = событие.target.closest('[data-stats-tab]');
         if (таб) {
-            localStorage.setItem('quantum_stats_period', таб.dataset.statsPeriod);
+            this.statsMenu = this.statsMenu === таб.dataset.statsTab ? null : таб.dataset.statsTab;
+            this.paintChronicles(list);
+            return;
+        }
+        if (this.statsMenu) {
+            this.statsMenu = null;
             this.paintChronicles(list);
             return;
         }
@@ -2090,17 +2104,31 @@ export class QuantumApp {
             : '';
         const отметки = this.renderKindsSummary();
         /* Строка о прошлом периоде: сколько тогда было открытий — по одному числу видно, весомы ли проценты
-           (два открытия — 50% одно; двадцать — 50% десять). Открытий не было — сравнивать не с чем. */
-        const месяц = this.statsPeriod() === 'month';
+           (два открытия — 50% одно; двадцать — 50% десять). Открытий не было — сравнивать не с чем.
+           Срок назван словами («предыдущие 3 дня») — с 232 сроков много, «прошлая неделя» подходила не всем. */
+        const срок = this.statsSpan();
+        const прошлыйСрок = spanPastLabel(срок, this.lang);
         const прошлое = beforeTotal === null ? ''
             : beforeTotal === 0
-                ? `<p class="qm-stats-legend">${this.escapeHtml(this.t(месяц ? 'chroniclesWasNoneMonth' : 'chroniclesWasNoneWeek'))}</p>`
-                : `<p class="qm-stats-legend"><span class="qm-stats-legend-was"></span>${this.escapeHtml(this.t(месяц ? 'chroniclesWasLegendMonth' : 'chroniclesWasLegendWeek')
-                    .replace('{n}', `${beforeTotal} ${this.plural(beforeTotal)}`))}</p>`;
+                ? `<p class="qm-stats-legend">${this.escapeHtml(this.t('chroniclesWasNoneSpan').replace('{span}', прошлыйСрок))}</p>`
+                : `<p class="qm-stats-legend"><span class="qm-stats-legend-was"></span>${this.escapeHtml(this.t('chroniclesWasLegendSpan')
+                    .replace('{span}', прошлыйСрок).replace('{n}', `${beforeTotal} ${this.plural(beforeTotal)}`))}</p>`;
 
-        const период = this.statsPeriod();
-        const таб = (ключ, слово) => `<button type="button" class="qm-stats-tab" data-stats-period="${ключ}"
-            aria-pressed="${период === ключ}">${this.escapeHtml(this.t(слово))}</button>`;
+        /* Таб подписан выбранным сроком коротко («3 дня»); на сроке по умолчанию — прежним словом («За неделю»).
+           Список сроков — под своим табом, только у открытого (this.statsMenu). */
+        const таб = (ключ, слово) => {
+            const выбран = spanTab(срок) === ключ;
+            const подпись = выбран && срок !== SPAN_DEFAULT[ключ] ? spanShortLabel(срок, this.lang) : this.t(слово);
+            const открыт = this.statsMenu === ключ;
+            const список = открыт
+                ? `<div class="qm-stats-menu" role="menu">${SPAN_TABS[ключ].map(вариант => `<button type="button"
+                    class="qm-stats-option" role="menuitemradio" data-stats-span="${вариант}" aria-checked="${вариант === срок}"
+                    >${this.escapeHtml(spanLabel(вариант, this.lang))}</button>`).join('')}</div>`
+                : '';
+            return `<div class="qm-stats-tab-wrap"><button type="button" class="qm-stats-tab" data-stats-tab="${ключ}"
+                aria-pressed="${выбран}" aria-haspopup="menu" aria-expanded="${открыт}"><span class="qm-stats-tab-text"
+                >${this.escapeHtml(подпись)}</span><span class="qm-stats-chev" aria-hidden="true">▾</span></button>${список}</div>`;
+        };
         const сброс = this.statsBaseline();
         const сКакого = сброс
             ? `<p class="qm-stats-since">${this.escapeHtml(this.t('chroniclesSince').replace('{date}',
