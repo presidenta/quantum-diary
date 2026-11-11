@@ -25,14 +25,6 @@ import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSe
 import { observerClock, countdownText } from '../../core/observer-clock.js';
 import { logEvent } from '../../core/web-journal.js';
 
-/* Языки раздела — те же и в том же порядке, что в Ежедневнике.
-   Название языка пишется на нём самом, поэтому переводить его не нужно. */
-const LANGS = [
-    { code: 'ru', flag: '\u{1F1F7}\u{1F1FA}', label: 'Рус', name: 'Русский' },
-    { code: 'uk', flag: '\u{1F1FA}\u{1F1E6}', label: 'Укр', name: 'Українська' },
-    { code: 'en', flag: '\u{1F1EC}\u{1F1E7}', label: 'Eng', name: 'English' }
-];
-
 export class QuantumApp {
     constructor(rootEl) {
         this.rootEl = rootEl || null;   // корень модуля (.qm-root)
@@ -83,7 +75,6 @@ export class QuantumApp {
         this.safely('кнопки раздела', () => this.initUI());
         this.safely('песочная анимация', () => this.initSandFX());
         this.safely('частицы заголовка', () => this.initInnerQuantums());
-        this.safely('переключатель языков', () => this.initLangSwitcher());
         this.safely('смайлик', () => this.initSmiley());
         this.safely('длинные вступления', () => this.initFolds());
         this.safely('подписи', () => this.applyLang());
@@ -256,80 +247,6 @@ export class QuantumApp {
             this._raf = requestAnimationFrame(animateQ);
         };
         animateQ();
-    }
-
-    /* Переключатель языков: одна кнопка с текущим языком, по нажатию —
-       список остальных.
-
-       Раздел занимает весь экран и перекрывает кнопку языка Ежедневника,
-       поэтому своя здесь обязательна. Выбор уходит наружу событием: язык в
-       Ежедневнике и в разделе должен остаться одним, а менять чужое
-       состояние напрямую модуль не вправе. */
-    initLangSwitcher() {
-        const button = this.$('qm-lang-btn');
-        const menu = this.$('qm-lang-menu');
-        if (!button || !menu) return;
-
-        /* Список собирается по одному элементу, без replaceChildren:
-           эта команда появилась в браузерах недавно, а раздел должен
-           открываться и на старом движке. */
-        menu.innerHTML = '';
-
-        for (const item of LANGS) {
-            const row = document.createElement('button');
-            row.type = 'button';
-            row.className = 'qm-lang-item';
-            row.dataset.lang = item.code;
-
-            const name = document.createElement('span');
-            name.className = 'qm-lang-name';
-            name.textContent = item.flag + ' ' + item.name;
-            row.appendChild(name);
-
-            const code = document.createElement('span');
-            code.className = 'qm-lang-code';
-            code.textContent = item.label;
-            row.appendChild(code);
-
-            row.addEventListener('click', () => {
-                this.closeLangMenu();
-                this.setLang(item.code);
-            });
-
-            menu.appendChild(row);
-        }
-
-        button.addEventListener('click', () => {
-            const open = menu.hidden;
-            menu.hidden = !open;
-            button.setAttribute('aria-expanded', String(open));
-        });
-
-        // Клик мимо списка закрывает его. Слушаем на корне раздела, чтобы
-        // не оставлять обработчик на всей странице после ухода отсюда.
-        if (this.rootEl) {
-            this.rootEl.addEventListener('click', e => {
-                if (!e.target.closest('#lang-switcher-container')) this.closeLangMenu();
-            });
-        }
-    }
-
-    closeLangMenu() {
-        const button = this.$('qm-lang-btn');
-        const menu = this.$('qm-lang-menu');
-        if (menu) menu.hidden = true;
-        if (button) button.setAttribute('aria-expanded', 'false');
-    }
-
-    setLang(code) {
-        if (!LANGS.some(item => item.code === code)) return;
-
-        this.lang = code;
-        localStorage.setItem('quantum_lang', code);
-        this.applyLang();
-
-        // Просим Ежедневник переключиться следом, чтобы язык был один
-        document.dispatchEvent(new CustomEvent('qm-lang-change', { detail: code }));
     }
 
     /* Смайлик жмурится от любого прикосновения.
@@ -517,17 +434,6 @@ export class QuantumApp {
     }
 
     applyLang() {
-        // Текущий язык на кнопке и отметка в списке
-        const current = LANGS.find(item => item.code === this.lang) || LANGS[0];
-        const label = this.$('qm-lang-label');
-        if (label) label.textContent = current.flag + ' ' + current.label;
-
-        this.$$('.qm-lang-item').forEach(item => {
-            const active = item.dataset.lang === this.lang;
-            item.classList.toggle('active', active);
-            item.setAttribute('aria-pressed', String(active));
-        });
-
         // Статичные тексты в разметке раздела — и только в ней
         this.$$('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
@@ -561,12 +467,6 @@ export class QuantumApp {
             closeBtn.title = this.t('btnCloseSection');
         }
 
-        const gear = this.$('btn-gear');
-        if (gear) {
-            gear.setAttribute('aria-label', this.t('btnSettings'));
-            gear.title = this.t('btnSettings');
-        }
-
         /* Шестерёнка в хрониках: слова живут в атрибуте, а не в кнопке.
            Подсказку рисует CSS по data-tip, поэтому ставить её через
            data-i18n нельзя — тот пишет в содержимое и выбросил бы значок.
@@ -598,9 +498,6 @@ export class QuantumApp {
         });
         document.getElementById('btn-edit-from-s5').addEventListener('click', () => this.openSettingsScreen());
 
-        // Шестерёнка на главном экране: тот же экран настройки
-        const gear = this.$('btn-gear');
-        if (gear) gear.addEventListener('click', () => this.openSettingsScreen());
         document.getElementById('doors-count-select').addEventListener('change', (e) => this.renderSetupInputs(parseInt(e.target.value)));
 
         // Панели аудио пересоздаются при каждой перерисовке дверей,
@@ -2299,7 +2196,6 @@ export class QuantumApp {
         document.querySelectorAll('.qm-screen').forEach(el => el.classList.add('hidden'));
 
         const timer = document.getElementById('hud-timer');
-        const langSwitcher = document.getElementById('lang-switcher-container');
 
         // Режим погружения: 3D-коридор занимает весь экран, остальные
         // экраны живут внутри карточки раздела «Квант».
@@ -2307,27 +2203,16 @@ export class QuantumApp {
             this.rootEl.classList.toggle('qm-immersive', screenKey === null);
         }
 
-        /* Шестерёнка стоит в шапке постоянно.
-
-           Прежде она жила только на главном экране, и из коридора или с
-           экрана выбора попасть в настройку дверей было нельзя — только
-           пройдя переход до конца. Теперь настройка открывается откуда
-           угодно, а крестик возвращает ровно туда, откуда её позвали. */
-        const gear = this.$('btn-gear');
-        if (gear) gear.hidden = screenKey === 'screen-setup';
-
         // Откуда пришли в настройку: null означает коридор
         if (screenKey !== 'screen-setup') this.screenBeforeSetup = screenKey;
 
         if (screenKey) {
             document.getElementById(screenKey).classList.remove('hidden');
             timer.classList.add('hidden');
-            if (langSwitcher) langSwitcher.classList.remove('hidden');
             // Экран показан — только теперь у абзацев есть высота
             this.measureFolds();
         } else {
             timer.classList.remove('hidden');
-            if (langSwitcher) langSwitcher.classList.add('hidden');
         }
     }
 

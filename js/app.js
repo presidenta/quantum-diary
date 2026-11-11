@@ -3,8 +3,8 @@
 
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
-import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, logoutAndClear, fetchMe, cachedMe, changeOwnPassword, saveAvatar } from './auth.js';
-import { shrinkPhoto, paintAvatar, watchInstall, installed } from './profile.js';
+import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, fetchMe, cachedMe, changeOwnPassword, saveAvatar } from './auth.js';
+import { shrinkPhoto, paintAvatar, watchInstall } from './profile.js';
 import { pushSupported, needsHomeScreen, pushStatus, enablePush, disablePush } from './core/push.js';
 import { API_BASE, serverAlive } from './config.js';
 import {
@@ -44,7 +44,7 @@ import { logEvent, readJournal } from './core/web-journal.js';
 import { shouldSeed, dedupeSectors } from './core/sectors.js';
 import { markStartedOk, checkForUpdate } from './core/live-update.js';
 import { startPhotoBackup } from './photo-backup/index.js';
-import { renderMoney, openEntry, saveEntry, fillCategorySelect } from './views/money.js';
+import { renderMoney, saveEntry, fillCategorySelect } from './views/money.js';
 import { weekWheel } from './core/calc.js';
 import { mondayOf, todayKey } from './core/dates.js';
 
@@ -1288,11 +1288,6 @@ function ждатьНовуюВыкладку() {
 async function boot() {
   watchErrors();
 
-  /* Раздел «Пространство вариантов» занимает весь экран и перекрывает
-     кнопку языка, поэтому у него своя. Переключить язык везде может только
-     Ежедневник — раздел лишь просит об этом событием. */
-  document.addEventListener('qm-lang-change', e => setLanguage(e.detail));
-
   /* Приложение поднялось — отчитываемся сразу, пока не истекли десять
      секунд, после которых плагин откатил бы выкладку назад. И тут же
      смотрим, не вышло ли новое: в браузере обе строчки ничего не делают. */
@@ -1549,7 +1544,6 @@ async function boot() {
     if ($('passwordDialog').returnValue !== 'save') return;
     const f = $('passwordForm').elements;
     const next = f.newPassword.value;
-    const msg = $('passwordMsg');
     if (next !== f.repeatPassword.value) { showPasswordError(t('password.mismatch')); return; }
     if (next.length < 8) { showPasswordError(t('password.tooShort')); return; }
     try {

@@ -724,17 +724,7 @@
     margin: 0 0 22px 0;
 }
 
-/* ===== Переключатель языков ============================================== */
-.qm-root .lang-switcher {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    z-index: 1000;
-    display: flex;
-    gap: 6px;
-}
-
-/* Шестерёнка настройки — рядом с переключателем языков */
+/* ===== Шестерёнка настройки дверей (в Хрониках) ======================== */
 .qm-root .qm-gear {
     display: inline-flex;
     align-items: center;
@@ -759,87 +749,6 @@
 }
 
 .qm-root .qm-gear[hidden] { display: none; }
-
-/* Одна кнопка с текущим языком, по нажатию — список остальных */
-.qm-root .qm-lang-current {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--qm-panel-2);
-    border: 1px solid var(--qm-border);
-    color: var(--qm-text);
-    font-family: var(--qm-font);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    padding: 7px 11px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: border-color 0.18s ease, color 0.18s ease;
-}
-
-.qm-root .qm-lang-current:hover { border-color: var(--qm-gold-line); }
-
-.qm-root .qm-lang-caret {
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid var(--qm-muted);
-}
-
-.qm-root .qm-lang-menu {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    min-width: 168px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 6px;
-    background: var(--qm-panel);
-    border: 1px solid var(--qm-border-strong);
-    border-radius: 12px;
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
-}
-
-.qm-root .qm-lang-menu[hidden] { display: none; }
-
-.qm-root .qm-lang-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    color: var(--qm-muted);
-    font-family: var(--qm-font);
-    font-size: 13px;
-    padding: 8px 10px;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.14s ease, color 0.14s ease;
-}
-
-.qm-root .qm-lang-item:hover {
-    background: var(--qm-panel-3);
-    color: var(--qm-text);
-}
-
-.qm-root .qm-lang-item.active {
-    color: var(--qm-gold);
-    border-color: var(--qm-gold-line);
-    background: var(--qm-gold-soft);
-}
-
-.qm-root .qm-lang-code {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    opacity: 0.75;
-}
 
 /* ===== Экран «Хроники Акаши» ============================================= */
 .qm-root #screen-5 {
@@ -1187,7 +1096,6 @@
     .qm-root .qm-hero-title { font-size: 27px; }
     .qm-root .qm-title-lg { font-size: 25px; }
     .qm-root .countdown-num { font-size: 5rem; }
-    .qm-root .lang-switcher { top: 12px; right: 12px; }
     .qm-root .qm-screen { padding: 56px 14px 24px; }
 }
 
