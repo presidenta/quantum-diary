@@ -158,48 +158,38 @@ async function saveApp(person, app, on, until) {
   person.apps = Object.fromEntries(Object.entries(result.apps).filter(([, v]) => v.on).map(([k, v]) => [k, v.until]));
 }
 
-function askTerm(person, app, label) {
-  const apps = person.apps || {};
-  const current = apps[app] ? String(apps[app]).slice(0, 10) : '';
-  const answer = prompt(
-    `${label}: до какой даты открыто для ${person.displayName}?\nФормат 2026-12-31, пусто — бессрочно`,
-    current
-  );
-  if (answer === null) return null;
-  const until = answer.trim() || null;
-  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) { showError('Дата в виде 2026-12-31'); return null; }
-  return { until };
-}
-
+/* Строка приложения: галочка и название со сроком; открыто — ниже календарь (дата, до которой открыто) и
+   «Бессрочно». Выбрала дату в календаре — сохранено сразу (владелец 13.11.2026: «выбирается в календаре»). */
 function renderApps(person) {
   const box = $('personApps');
   box.replaceChildren();
   const apps = person.apps || {};
+  const save = (app, on, until) => withBusy(async () => {
+    await saveApp(person, app, on, until);
+    renderApps(person);
+    loadPeople();
+  });
   for (const [app, key] of APP_ROWS) {
     const label = t(key);
     const on = app in apps;
+    const day = apps[app] ? String(apps[app]).slice(0, 10) : '';
     const check = h('input', { type: 'checkbox', checked: on, 'aria-label': label });
+    // Новая галочка — бессрочно; дата ставится календарём ниже
+    check.addEventListener('change', () => save(app, check.checked, null));
     const term = h('span', {
       class: 'app-row__term',
-      text: !on ? t('adm.appClosed') : apps[app] ? t('adm.accessUntilDate', { date: fmtDate(apps[app]).replace(/\.$/, '') }) : t('adm.accessForever')
+      text: !on ? t('adm.appClosed') : day ? t('adm.accessUntilDate', { date: fmtDate(apps[app]).replace(/\.$/, '') }) : t('adm.accessForever')
     });
-    const termBtn = h('button', { type: 'button', class: 'btn', text: t('adm.appTerm') });
-    check.addEventListener('change', () => withBusy(async () => {
-      // Новая галочка — бессрочно; срок ставится кнопкой рядом
-      await saveApp(person, app, check.checked, check.checked ? (apps[app] ?? null) : null);
-      renderApps(person);
-      loadPeople();
-    }));
-    termBtn.addEventListener('click', () => {
-      const answer = askTerm(person, app, label);
-      if (!answer) return;
-      withBusy(async () => {
-        await saveApp(person, app, true, answer.until);
-        renderApps(person);
-        loadPeople();
-      });
-    });
-    box.append(h('div', { class: 'app-row' }, check, h('div', {}, h('span', { class: 'app-row__name', text: label }), term), termBtn));
+    const row = h('div', { class: 'app-row' }, check, h('div', {}, h('span', { class: 'app-row__name', text: label }), term));
+    if (on) {
+      const date = h('input', { type: 'date', class: 'app-row__date', value: day, 'aria-label': `${label}: ${t('adm.appTerm')}` });
+      date.addEventListener('change', () => { if (date.value) save(app, true, date.value); });
+      const forever = h('button', { type: 'button', class: 'btn app-row__forever', text: t('adm.appForever') });
+      forever.disabled = !day;
+      forever.addEventListener('click', () => save(app, true, null));
+      row.append(h('div', { class: 'app-row__when' }, date, forever));
+    }
+    box.append(row);
   }
 }
 
