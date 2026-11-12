@@ -65,7 +65,11 @@ export async function openWoman({ install = false } = {}) {
   }
   const native = nativeBridge();
   // В браузере вкладку открываем сразу, пока нажатие свежее (как у спорта)
-  const tab = native ? null : window.open('', '_blank');
+  /* Настольный «Квант» (Electron) пустых окон не открывает: тогда окно «Кванта» само уходило на чужой сайт и
+     так и оставалось в трее (владелец 13.11.2026: «захожу в Квант на компьютере — открывается женское
+     приложение»). Там адрес отдаём сразу целиком — приложение откроет его в браузере компьютера. */
+  const desktop = navigator.userAgent.includes('KvantDesktop/');
+  const tab = native || desktop ? null : window.open('', '_blank');
   if (native) showNote(t.opening);
 
   const code = await passCode();
@@ -83,7 +87,9 @@ export async function openWoman({ install = false } = {}) {
     }
     return;
   }
-  if (tab) {
+  if (desktop) {
+    window.open(url, '_blank', 'noopener');
+  } else if (tab) {
     tab.opener = null;
     tab.location.href = url;
   } else {
