@@ -10,15 +10,33 @@
    открытия заработают сами: плитки и пункты меню уже спрашивают только hasAccess(). Тот же список
    проверяет сервер в /api/sport/* и /api/woman/* — без этого закрытый замочек был бы только картинкой. */
 
+import { KEY_APPS } from '../../core/access-controller.js';
+
 /** Отдельные приложения: ключ → название для подсказки. */
 export const APPS = {
   goldenfit: 'GoldenFit',
   'gsl-woman': 'GSL Woman+'
 };
 
-/** Открыто ли приложение этому человеку. Пока — всем. */
+/* Открыто ли приложение этому человеку — как сам «Квант» (core/access-controller.js): администратор ставит
+   галочку и срок (сервер, access/apps.js), телефон хранит их у себя (ключ access_apps) и решает по дате и
+   без интернета: галочки нет — закрыто, срок пустой — бессрочно, дата наступила — закрыто, пока при
+   следующей связи сервер не пришлёт новую. Сервер ни разу не ответил (старый сервер, первый запуск) —
+   открыто: закрывать по догадке нельзя, а сервер всё равно сам не пустит в закрытое. */
 export function hasAccess(app) {
-  return app in APPS;
+  if (!(app in APPS)) return false;
+  let apps = null;
+  try {
+    apps = JSON.parse(localStorage.getItem(KEY_APPS) || 'null');
+  } catch {
+    apps = null;
+  }
+  const entry = apps?.[app];
+  if (!apps || !entry) return true;
+  if (!entry.on) return false;
+  if (!entry.until) return true;
+  const until = Date.parse(entry.until);
+  return Number.isNaN(until) || Date.now() < until;
 }
 
 const SVG = 'http://www.w3.org/2000/svg';

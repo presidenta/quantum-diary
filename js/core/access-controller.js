@@ -51,6 +51,8 @@ const KEY_UNTIL = 'access_until';    // число, метка времени; �
 const KEY_STATUS = 'access_status';  // active, blocked и т.п.
 const KEY_BLOCK = 'access_block';    // '', 'admin' или 'expired'
 const KEY_CLOCK = 'access_clock';    // самое позднее время, которое мы видели
+// Доступ к отдельным приложениям ({ goldenfit: { on, until }, … }) — для замочков (views/apps/access.js)
+export const KEY_APPS = 'access_apps';
 
 /* Насколько часам устройства позволено отстать от уже виденного времени.
    Обычная правка часов или смена пояса укладывается в эти двенадцать часов,
@@ -59,7 +61,7 @@ const CLOCK_TOLERANCE_MS = 12 * 60 * 60 * 1000;
 
 const UNLIMITED = 'unlimited';
 
-const КЛЮЧИ = [KEY_UNTIL, KEY_STATUS, KEY_BLOCK, KEY_CLOCK];
+const КЛЮЧИ = [KEY_UNTIL, KEY_STATUS, KEY_BLOCK, KEY_CLOCK, KEY_APPS];
 
 /** Закрыт ли доступ на этом устройстве. Спрашивает расписание звонков: закрытое приложение не будит человека. */
 export function accessBlocked() {
@@ -323,6 +325,7 @@ export class AccessController {
         // Свежие данные в кэш: дальше ими пользуемся без сети
         write(KEY_UNTIL, normalizeUntil(profile.accessUntil));
         write(KEY_STATUS, profile.status || 'active');
+        if (profile.apps) write(KEY_APPS, JSON.stringify(profile.apps));
 
         return SERVER_OK;
     }

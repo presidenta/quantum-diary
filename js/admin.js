@@ -140,21 +140,67 @@ const fmtWhen = iso => new Intl.DateTimeFormat('ru', { day: 'numeric', month: 's
 const fmtDate = iso => new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: '2-digit' })
   .format(new Date(iso));
 
-/* Срок доступа к кабинету. Пусто — бессрочно; дата в прошлом закрывает вход
-   сразу, в том числе на уже открытом устройстве. */
-async function askAccess(person) {
-  const current = person.accessUntil ? String(person.accessUntil).slice(0, 10) : '';
+/* ДОСТУП ПО ПРИЛОЖЕНИЯМ (владелец 13.11.2026): у каждого — галочка и срок, как раньше у кабинета «Кванта».
+   Галочка — открыто; срок — до какой даты, пусто — бессрочно; дата в прошлом закрывает сразу, в том числе
+   на уже открытом устройстве. Телефон каждого приложения хранит дату у себя и закрывается сам, когда она
+   наступит (сервер — access/apps.js). person.apps — { приложение: срок или null }; нет ключа — закрыто. */
+const APP_ROWS = [
+  ['kvant', 'adm.appKvant'],
+  ['goldenfit', 'adm.appGoldenfit'],
+  ['gsl-woman', 'adm.appWoman'],
+  ['gsl-man', 'adm.appMan'],
+];
+
+async function saveApp(person, app, on, until) {
+  const result = await api(`/api/admin/users/${person.id}/apps`, {
+    method: 'POST', body: JSON.stringify({ app, on, until })
+  });
+  person.apps = Object.fromEntries(Object.entries(result.apps).filter(([, v]) => v.on).map(([k, v]) => [k, v.until]));
+}
+
+function askTerm(person, app, label) {
+  const apps = person.apps || {};
+  const current = apps[app] ? String(apps[app]).slice(0, 10) : '';
   const answer = prompt(
-    `До какой даты открыт кабинет ${person.displayName}?\nФормат 2026-12-31, пусто — бессрочно`,
+    `${label}: до какой даты открыто для ${person.displayName}?\nФормат 2026-12-31, пусто — бессрочно`,
     current
   );
-  if (answer === null) return;
+  if (answer === null) return null;
   const until = answer.trim() || null;
-  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) { showError('Дата в виде 2026-12-31'); return; }
-  await withBusy(async () => {
-    await api(`/api/admin/users/${person.id}/access`, { method: 'POST', body: JSON.stringify({ until }) });
-    await loadPeople();
-  });
+  if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) { showError('Дата в виде 2026-12-31'); return null; }
+  return { until };
+}
+
+function renderApps(person) {
+  const box = $('personApps');
+  box.replaceChildren();
+  const apps = person.apps || {};
+  for (const [app, key] of APP_ROWS) {
+    const label = t(key);
+    const on = app in apps;
+    const check = h('input', { type: 'checkbox', checked: on, 'aria-label': label });
+    const term = h('span', {
+      class: 'app-row__term',
+      text: !on ? t('adm.appClosed') : apps[app] ? t('adm.accessUntilDate', { date: fmtDate(apps[app]).replace(/\.$/, '') }) : t('adm.accessForever')
+    });
+    const termBtn = h('button', { type: 'button', class: 'btn', text: t('adm.appTerm') });
+    check.addEventListener('change', () => withBusy(async () => {
+      // Новая галочка — бессрочно; срок ставится кнопкой рядом
+      await saveApp(person, app, check.checked, check.checked ? (apps[app] ?? null) : null);
+      renderApps(person);
+      loadPeople();
+    }));
+    termBtn.addEventListener('click', () => {
+      const answer = askTerm(person, app, label);
+      if (!answer) return;
+      withBusy(async () => {
+        await saveApp(person, app, true, answer.until);
+        renderApps(person);
+        loadPeople();
+      });
+    });
+    box.append(h('div', { class: 'app-row' }, check, h('div', {}, h('span', { class: 'app-row__name', text: label }), term), termBtn));
+  }
 }
 
 async function loadPeople() {
@@ -479,9 +525,7 @@ function openPerson(person) {
     ? t('adm.passwordOwn')
     : t('adm.passwordIssuedStill');
 
-  $('personAccessState').textContent = person.accessUntil
-    ? t('adm.accessUntilDate', { date: fmtDate(person.accessUntil) })
-    : t('adm.accessForever');
+  renderApps(person);
 
   const blocked = person.status === 'blocked';
   $('personStatusState').textContent = blocked ? t('adm.isBlocked') : t('adm.isActive');
@@ -496,11 +540,6 @@ $('personNewPassword').addEventListener('click', () => withBusy(async () => {
   showPassword(result.password, `${result.displayName} · ${result.email}`);
   $('personPasswordState').textContent = t('adm.passwordIssuedStill');
 }));
-
-$('personAccess').addEventListener('click', () => {
-  $('personDialog').close();
-  askAccess(personOpen);
-});
 
 $('personBlock').addEventListener('click', () => withBusy(async () => {
   const blocked = personOpen.status === 'blocked';

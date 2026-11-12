@@ -22,6 +22,14 @@ body.admin .segmented { margin-bottom: 12px; }
 .row-check { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
 .row-check input { width: 20px; height: 20px; flex: none; }
 
+/* Доступ по приложениям в карточке человека: галочка · название и срок · кнопка «Срок» */
+.person-apps { display: grid; gap: 10px; margin-top: 10px; }
+.app-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.app-row input { width: 20px; height: 20px; }
+.app-row__name { display: block; font-weight: 600; }
+.app-row__term { display: block; font-size: 12px; color: var(--ink-2); }
+.app-row .btn { min-height: 36px; padding: 0 12px; }
+
 .password {
   margin: 4px 0; padding: 16px; border-radius: 12px; background: var(--bg);
   border: 1px solid var(--line-strong);
