@@ -1,6 +1,6 @@
 // Работа без сети. Файлы выкладки — из её запаса, сразу и всегда (выкладка 216); свежесть — новым работником,
 // который ставит запас новой выкладки целиком. Запросы к серверу Планера не кэшируются.
-const RELEASE = 235;
+const RELEASE = 236;
 const CACHE = `planner-v${RELEASE}`;
 const SHELL = [
   /* manifest.webmanifest отсюда убран вместе с самим файлом: сайт больше
@@ -34,6 +34,7 @@ const SHELL = [
   'js/views/scroll/fonts/marck-script-cyrillic.woff2', 'js/views/scroll/fonts/marck-script-latin.woff2',
   // GoldenFit: плитка на главной (сам спорт — отдельный сайт со своим кэшем)
   'js/views/sport/index.js', 'js/views/sport/texts.js', 'js/views/sport/sport.css', 'js/views/sport/goldenfit.png',
+  'js/views/woman/index.js', 'js/views/woman/texts.js', 'js/views/woman/gslwoman.png',
   'admin.html', 'css/admin.css', 'js/admin.js',
   'js/core/net.js', 'js/core/media-box.js', 'js/core/access-controller.js', 'js/core/reminders.js', 'js/core/reminder-rules.js', 'js/core/observer-clock.js', 'js/core/live-update.js',
   'js/core/push.js', 'js/core/money.js', 'js/core/media.js', 'js/core/calendar.js', 'js/core/dates.js', 'js/core/calc.js', 'js/core/session.js', 'js/core/diary.js', 'js/core/i18n.js', 'js/core/quantum.js',

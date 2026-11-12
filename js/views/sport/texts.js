@@ -4,7 +4,7 @@
 export const TEXTS = {
   ru: {
     name: 'GoldenFit',
-    about: 'Тренировки дома: счёт, дыхание, голос. Вход — ваш аккаунт Кванта, история сохраняется.',
+    about: 'Тренировки дома: счёт, дыхание, голос',
     open: 'Открыть',
     install: 'Значок на экран',
     menu: 'GoldenFit — спорт',
@@ -13,7 +13,7 @@ export const TEXTS = {
   },
   uk: {
     name: 'GoldenFit',
-    about: 'Тренування вдома: лік, дихання, голос. Вхід — ваш акаунт Кванта, історія зберігається.',
+    about: 'Тренування вдома: лік, дихання, голос',
     open: 'Відкрити',
     install: 'Значок на екран',
     menu: 'GoldenFit — спорт',
@@ -22,7 +22,7 @@ export const TEXTS = {
   },
   en: {
     name: 'GoldenFit',
-    about: 'Home workouts: counting, breathing, voice. Sign-in is your Kvant account; history is saved.',
+    about: 'Home workouts: counting, breathing, voice',
     open: 'Open',
     install: 'Icon on home screen',
     menu: 'GoldenFit — sport',

@@ -1,25 +1,35 @@
-/* Плитка GoldenFit на главной и пункт меню (модуль views/sport/) */
-#sportTile { grid-column: 1 / -1; margin-top: 14px; }
-#sportTile:empty { display: none; }
+/* Плитка GoldenFit на главной и пункт меню (модуль views/sport/).
+
+   Ряд отдельных приложений (выкладка 236, владелец: «одинаковые, в один ряд, чтобы не забирали много
+   места, разные подписи»): GoldenFit и GSL Woman (views/woman/) — две одинаковые плитки рядом. Вид
+   плитки — классы .sp-* ниже, общие для обеих. */
+.apps-row {
+  grid-column: 1 / -1; margin-top: 14px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+}
+.apps-row > :empty { display: none; }
+@media (max-width: 339px) { .apps-row { grid-template-columns: minmax(0, 1fr); } }
 
 .sp-tile {
-  display: grid; gap: 12px;
-  padding: 14px; border-radius: var(--edge-lg);
+  display: grid; gap: 10px; align-content: space-between; height: 100%;
+  padding: 12px; border-radius: var(--edge-lg);
   border: 1px solid var(--line-strong);
   background: var(--surface);
 }
 .sp-main {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 10px;
   padding: 0; border: 0; background: none; color: var(--ink);
   font: inherit; text-align: left; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.sp-icon { width: 48px; height: 48px; border-radius: 12px; flex: none; }
-.sp-body { display: grid; gap: 3px; min-width: 0; }
-.sp-name { font-size: 16px; color: var(--gold); }
-.sp-about { font-size: 13px; color: var(--ink-2); line-height: 1.35; }
-.sp-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.sp-actions .btn { min-width: 0; padding: 0 10px; }
+.sp-icon { width: 42px; height: 42px; border-radius: 11px; flex: none; }
+.sp-body { display: grid; gap: 2px; min-width: 0; }
+.sp-name { font-size: 15px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-about { font-size: 12px; color: var(--ink-2); line-height: 1.3; }
+/* В половине ширины кнопки — одна под другой; на широком экране плитка шире — рядом */
+.sp-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.sp-actions .btn { min-width: 0; min-height: 40px; padding: 0 8px; font-size: 13px; }
+@media (min-width: 760px) { .sp-actions { grid-template-columns: 1fr 1fr; } }
 .sp-note { margin: 0; font-size: 13px; color: var(--gold-bright); overflow-wrap: anywhere; }
 
 .sp-menu-icon { width: 19px; height: 19px; border-radius: 5px; flex: none; }

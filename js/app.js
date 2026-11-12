@@ -25,6 +25,7 @@ import { initSlit } from './views/quantum-slit.js';
 // Свиток «Мудрость дня» под арканом: весь модуль в views/scroll/
 import { initScroll, syncScroll } from './views/scroll/index.js';
 import { initSport, syncSport, openSport } from './views/sport/index.js';
+import { initWoman, syncWoman } from './views/woman/index.js';
 import { initWidgets, openWidgets } from './widgets-ui.js';
 import { initSupport } from './support.js';
 import { AccessController } from './core/access-controller.js';
@@ -164,6 +165,7 @@ function render() {
   if (state.view === 'quantum') renderQuantum();
   syncScroll();                // свиток «Мудрость дня»: рисуется только на «Кванте»
   syncSport();                 // плитка GoldenFit: перерисовывается при смене языка
+  syncWoman();                 // плитка GSL Woman рядом — так же
   syncSpace();                 // вторая вкладка «Кванта»: гаснет вне раздела
   if (state.view === 'money') renderMoney();
   renderDrawerSpheres();
@@ -1307,6 +1309,7 @@ async function boot() {
   initSpace();
   initScroll();
   initSport();
+  initWoman();
   initSlit();
   initWidgets();
   initSupport();
