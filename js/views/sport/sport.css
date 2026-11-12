@@ -34,11 +34,11 @@
 
 .sp-menu-icon { width: 19px; height: 19px; border-radius: 5px; flex: none; }
 
-/* Замочек доступа (../apps/access.js): в меню — справа у края, на плитке — рядом с названием.
-   Открытый — золотой, закрытый — серый. */
-.app-lock-wrap { display: inline-flex; flex: none; }
+/* Замочек доступа (../apps/access.js): золотой навесной замок. В меню — справа у края, на плитке — рядом с
+   названием. Цвета нарисованы в самом значке, поэтому общие правила для значков меню (.drawer-list svg:
+   обводка, без заливки) здесь отменяются. */
+.app-lock-wrap { display: inline-flex; flex: none; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%)); }
 .drawer-list .app-lock-wrap { margin-left: auto; }
-.app-lock { width: 15px; height: 15px; fill: none; stroke: var(--ink-3, var(--ink-2)); stroke-width: 1.7; stroke-linecap: round; }
-.app-lock.is-open { stroke: var(--gold); }
-.drawer-list .app-lock { width: 15px; height: 15px; }
-.sp-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.app-lock, .drawer-list .app-lock { width: 22px; height: 22px; stroke: none; fill: none; stroke-width: 0; }
+.app-lock.is-open { filter: drop-shadow(0 0 4px rgb(246 193 71 / 35%)); }
+.sp-name-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
