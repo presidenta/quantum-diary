@@ -9,6 +9,7 @@ export const TEXTS = {
     install: 'Значок на экран',
     menu: 'GoldenFit — спорт',
     opening: 'Открываем GoldenFit…',
+    locked: 'Доступ к GoldenFit откроет администратор.',
     updateApp: 'Чтобы открывать GoldenFit, обновите приложение «Квант»: presidenta.github.io/quantum-diary/app/'
   },
   uk: {
@@ -18,6 +19,7 @@ export const TEXTS = {
     install: 'Значок на екран',
     menu: 'GoldenFit — спорт',
     opening: 'Відкриваємо GoldenFit…',
+    locked: 'Доступ до GoldenFit відкриє адміністратор.',
     updateApp: 'Щоб відкривати GoldenFit, оновіть застосунок «Квант»: presidenta.github.io/quantum-diary/app/'
   },
   en: {
@@ -27,6 +29,7 @@ export const TEXTS = {
     install: 'Icon on home screen',
     menu: 'GoldenFit — sport',
     opening: 'Opening GoldenFit…',
+    locked: 'Access to GoldenFit is opened by the administrator.',
     updateApp: 'To open GoldenFit, update the Kvant app: presidenta.github.io/quantum-diary/app/'
   }
 };

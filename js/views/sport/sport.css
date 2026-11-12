@@ -33,3 +33,12 @@
 .sp-note { margin: 0; font-size: 13px; color: var(--gold-bright); overflow-wrap: anywhere; }
 
 .sp-menu-icon { width: 19px; height: 19px; border-radius: 5px; flex: none; }
+
+/* Замочек доступа (../apps/access.js): в меню — справа у края, на плитке — рядом с названием.
+   Открытый — золотой, закрытый — серый. */
+.app-lock-wrap { display: inline-flex; flex: none; }
+.drawer-list .app-lock-wrap { margin-left: auto; }
+.app-lock { width: 15px; height: 15px; fill: none; stroke: var(--ink-3, var(--ink-2)); stroke-width: 1.7; stroke-linecap: round; }
+.app-lock.is-open { stroke: var(--gold); }
+.drawer-list .app-lock { width: 15px; height: 15px; }
+.sp-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }

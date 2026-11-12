@@ -9,6 +9,7 @@ export const TEXTS = {
     install: 'Значок на экран',
     menu: 'GSL Woman+ — тренинги',
     opening: 'Открываем GSL Woman+…',
+    locked: 'Доступ к GSL Woman+ откроет администратор.',
     updateApp: 'Чтобы открывать GSL Woman, обновите приложение «Квант»: presidenta.github.io/quantum-diary/app/'
   },
   uk: {
@@ -18,6 +19,7 @@ export const TEXTS = {
     install: 'Значок на екран',
     menu: 'GSL Woman+ — тренінги',
     opening: 'Відкриваємо GSL Woman+…',
+    locked: 'Доступ до GSL Woman+ відкриє адміністратор.',
     updateApp: 'Щоб відкривати GSL Woman, оновіть застосунок «Квант»: presidenta.github.io/quantum-diary/app/'
   },
   en: {
@@ -27,6 +29,7 @@ export const TEXTS = {
     install: 'Icon on home screen',
     menu: 'GSL Woman+ — trainings',
     opening: 'Opening GSL Woman+…',
+    locked: 'Access to GSL Woman+ is opened by the administrator.',
     updateApp: 'To open GSL Woman, update the Kvant app: presidenta.github.io/quantum-diary/app/'
   }
 };

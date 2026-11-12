@@ -18,6 +18,7 @@ import { getMeta } from '../../db.js';
 import { API_BASE } from '../../config.js';
 import { request } from '../../core/net.js';
 import { textsFor } from './texts.js';
+import { hasAccess, lockIcon } from '../apps/access.js';
 
 export const WOMAN_URL = 'https://presidenta.github.io/gsl-woman/';
 const ICON = new URL('./gslwoman.png', import.meta.url).href;
@@ -57,6 +58,11 @@ async function passCode() {
  */
 export async function openWoman({ install = false } = {}) {
   const t = textsFor(state.language);
+  // Замочек закрыт — приложение не открываем (доступ выдаёт администратор, ../apps/access.js)
+  if (!hasAccess('gsl-woman')) {
+    showNote(t.locked, 8000);
+    return;
+  }
   const native = nativeBridge();
   // В браузере вкладку открываем сразу, пока нажатие свежее (как у спорта)
   const tab = native ? null : window.open('', '_blank');
@@ -114,7 +120,7 @@ function drawTile(t) {
     el('button', { type: 'button', class: 'sp-main', 'aria-label': `${t.open} ${t.name}`, onclick: () => openWoman() },
       el('img', { class: 'sp-icon', src: ICON, alt: '', width: '48', height: '48' }),
       el('span', { class: 'sp-body' },
-        el('b', { class: 'sp-name', text: t.name }),
+        el('span', { class: 'sp-name-row' }, el('b', { class: 'sp-name', text: t.name }), lockIcon('gsl-woman')),
         el('span', { class: 'sp-about', text: t.about }))),
     el('div', { class: 'sp-actions' },
       el('button', { type: 'button', class: 'btn primary', onclick: () => openWoman() },
@@ -134,7 +140,8 @@ function drawMenu(t) {
     }
   },
     el('img', { class: 'sp-menu-icon', src: ICON, alt: '', width: '19', height: '19' }),
-    el('span', { text: t.menu })));
+    el('span', { text: t.menu }),
+    lockIcon('gsl-woman')));
 }
 
 export function initWoman() {
