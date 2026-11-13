@@ -84,13 +84,16 @@ body.admin .top .icon-btn { flex: none; min-width: 40px; min-height: 40px; }
 .person-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .person-who { min-width: 0; flex: 1; }
 
-/* Фото участницы в GSL Woman+: кружок в карточке человека, нажатие — крупно (photoDialog) */
+/* Фото крупным кружком — и в списке людей, и «Фото в GSL Woman+» в карточке (владелец 13.11.2026: «чтобы было
+   видно, кто там»). Фото — кнопка: нажатие открывает его крупно (photoDialog). Без фото — первая буква на золоте */
 #personWomanPhoto, .person-photo { display: block; width: 120px; height: 120px; min-width: 120px; margin-top: 10px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: zoom-in; overflow: visible; }
+.person-photo:not(.has-photo) { display: grid; place-items: center; background: var(--gold-3d); font-size: 44px; cursor: default; }
 #personWomanImg, .person-photo img { display: block; width: 120px; height: 120px; max-width: none; object-fit: cover; border-radius: 50%; border: 1px solid var(--gold); }
-.photo-dialog { padding: 0; border: 0; background: transparent; max-width: 96vw; max-height: 96vh; overflow: visible; }
+.photo-dialog { padding: 0; border: 0; background: transparent; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; margin: 0; overflow: hidden; }
+.photo-dialog[open] { display: grid; place-items: center; }
 .photo-dialog::backdrop { background: rgba(0, 0, 0, .88); }
-.photo-dialog img { display: block; max-width: 94vw; max-height: 90vh; border-radius: 14px; }
-.photo-dialog__close { position: absolute; top: 8px; right: 8px; }
+.photo-dialog img { display: block; width: auto; height: auto; max-width: 94vw; max-height: 90vh; object-fit: contain; border-radius: 14px; }
+.photo-dialog__close { position: fixed; top: 14px; right: 14px; }
 
 /* Отчёты участницы в GSL Woman+: по карточке на запись дня, фото плиткой, нажатие — крупно */
 .woman-list { display: grid; gap: 10px; margin-top: 10px; }

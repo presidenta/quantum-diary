@@ -281,9 +281,14 @@ function renderPerson(person) {
   /* Лицо в списке: специалист ведёт людей, а не строки с почтой. Фотографию
      присылает само устройство человека уже сжатой — отдельного запроса за
      ней нет, она приходит вместе со списком. */
-  const face = h('span', { class: `person-photo${person.avatar ? ' has-photo' : ''}` });
-  if (person.avatar) face.appendChild(h('img', { src: person.avatar, alt: '' }));
-  else face.textContent = (person.displayName || '·').trim().charAt(0).toUpperCase();
+  // Фото — кнопка: нажатие открывает его крупно (владелец 13.11.2026: «чтобы было видно, кто там и что там»)
+  const face = h(person.avatar ? 'button' : 'span', { class: `person-photo${person.avatar ? ' has-photo' : ''}` });
+  if (person.avatar) {
+    face.type = 'button';
+    face.setAttribute('aria-label', t('adm.wOpenPhoto'));
+    face.appendChild(h('img', { src: person.avatar, alt: '' }));
+    face.addEventListener('click', () => openAvatarBig(person));
+  } else face.textContent = (person.displayName || '·').trim().charAt(0).toUpperCase();
 
   return h('li', { class: `person ${person.status}` },
     h('div', { class: 'person-head' },
@@ -638,6 +643,17 @@ async function openWomanReports(person) {
 $('personWomanReports').addEventListener('click', () => personOpen && openWomanReports(personOpen));
 $('womanBack').addEventListener('click', () => $('womanDialog').close());
 $('womanClose').addEventListener('click', () => $('womanDialog').close());
+
+/* Фото профиля «Кванта» крупно: большая копия с сервера (миграция 023); пока её нет — кружок из списка. */
+async function openAvatarBig(person) {
+  showBig(person.avatar);
+  try {
+    const { avatar } = await api(`/api/admin/users/${person.id}/avatar`);
+    if (avatar && $('photoDialog').open) $('photoDialogImg').src = avatar;
+  } catch {
+    // сервер не ответил — остаётся кружок
+  }
+}
 
 $('personWomanPhoto').addEventListener('click', () => {
   if (!womanPhotoUrl) return;

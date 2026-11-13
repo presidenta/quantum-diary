@@ -111,12 +111,13 @@ export async function cachedMe() {
    можно отдельной кнопкой в профиле. */
 /* Фотография: пустая строка её убирает. Сжатие делает устройство (profile.js),
    сюда приходит уже готовая строка — сервер больших снимков не принимает. */
-export async function saveAvatar(avatar) {
+export async function saveAvatar(avatar, avatarLarge = '') {
   const token = await getMeta('token');
+  // avatarLarge — тот же снимок целиком, крупно (profile.js, shrinkLarge); сервер старше 23-й миграции его не знает
   const res = await fetch(`${API_BASE}/api/me/avatar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ avatar })
+    body: JSON.stringify(avatar && avatarLarge ? { avatar, avatarLarge } : { avatar })
   });
   if (!res.ok) {
     const err = new Error('avatar_failed');

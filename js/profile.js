@@ -44,6 +44,38 @@ export function shrinkPhoto(file, size = PHOTO_SIZE) {
   });
 }
 
+/* БОЛЬШАЯ КОПИЯ — тот же снимок целиком, без обрезки, до 1280 точек по длинной стороне (владелец 13.11.2026:
+   «фото должно открываться большим, чтобы было видно, кто там и что там»). Её открывает кабинет администратора;
+   в списки и меню идёт кружок выше. Качество снижается, пока строка не влезет в предел сервера (и вместе с
+   кружком — в 1 МБ хоста). */
+const LARGE_SIZE = 1280;
+const LARGE_LIMIT = 600000;
+
+export function shrinkLarge(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('not_readable'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('not_an_image'));
+      img.onload = () => {
+        for (const [max, q] of [[LARGE_SIZE, 0.82], [LARGE_SIZE, 0.7], [1024, 0.68], [800, 0.65]]) {
+          const k = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * k);
+          canvas.height = Math.round(img.height * k);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const url = canvas.toDataURL('image/jpeg', q);
+          if (url.length <= LARGE_LIMIT) return resolve(url);
+        }
+        resolve('');
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /* Кружок с фотографией или первой буквой имени. Один вид и в меню, и в
    профиле — чтобы человек узнавал себя в обоих местах. */
 export function paintAvatar(node, avatar, name) {

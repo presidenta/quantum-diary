@@ -4,7 +4,7 @@
 import { clearAll, getMeta, setMeta } from './db.js';
 import { initSync, syncNow, deleteAccount } from './sync.js';
 import { requestAccess, createFirstAdmin, login as doLogin, hasSession, logout, fetchMe, cachedMe, changeOwnPassword, saveAvatar } from './auth.js';
-import { shrinkPhoto, paintAvatar, watchInstall } from './profile.js';
+import { shrinkPhoto, shrinkLarge, paintAvatar, watchInstall } from './profile.js';
 import { pushSupported, needsHomeScreen, pushStatus, enablePush, disablePush } from './core/push.js';
 import { API_BASE, serverAlive } from './config.js';
 import {
@@ -1611,7 +1611,9 @@ async function boot() {
     msg.textContent = t('profile.photoWorking');
     try {
       const small = await shrinkPhoto(file);
-      state.me.avatar = await saveAvatar(small);
+      // И большая копия — открыть крупно в кабинете администратора (не вышло — без неё, кружок всё равно уйдёт)
+      const large = await shrinkLarge(file).catch(() => '');
+      state.me.avatar = await saveAvatar(small, large);
       renderUser();
       msg.className = 'gate-msg is-ok';
       msg.textContent = t('profile.photoSaved');
