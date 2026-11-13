@@ -101,3 +101,9 @@ body.admin .top .icon-btn { flex: none; min-width: 40px; min-height: 40px; }
 .woman-photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .woman-photo { width: 84px; height: 84px; min-width: 84px; padding: 0; border: 1px solid var(--gold); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,.04); cursor: zoom-in; }
 .woman-photo img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; }
+
+/* Экран входа: логин и пароль сверху, аварийный служебный ключ — свёрнут ниже */
+.gate-form { display: grid; gap: 12px; }
+.gate-key { margin-top: 18px; }
+.gate-key summary { cursor: pointer; font-size: 13px; }
+.gate-key[open] summary { margin-bottom: 10px; }

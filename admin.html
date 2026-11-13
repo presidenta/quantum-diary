@@ -22,16 +22,30 @@
      экран показывается, только если её нет. Служебный ключ — запасной путь на
      случай, когда администраторов не осталось вовсе. -->
 <section id="tokenGate" class="gate" hidden>
-  <form class="gate-card" id="tokenForm">
+  <div class="gate-card">
     <div class="gate-brand">
       <h1 data-i18n="adm.title">Кабинет администратора</h1>
-      <p class="muted m0">Войдите в ежедневник записью с ролью администратора — и эта страница откроется сама.</p>
+      <p class="muted m0">Войдите логином и паролем кабинета с ролью администратора — как в «Квант».</p>
     </div>
-    <p class="muted">Служебный ключ нужен, только если администраторов не осталось. Он создаётся сервером при первом запуске и виден один раз в журнале контейнера.</p>
-    <label><span>Служебный ключ</span><input name="token" type="password" required autocomplete="off"></label>
-    <p class="gate-msg" id="tokenMsg" role="alert"></p>
-    <button type="submit" class="btn primary"><span class="gold-cut">Войти</span></button>
-  </form>
+    <!-- Обычный вход (владелец 13.11.2026: «не могу зайти — там только служебный ключ»): логин и пароль «Кванта».
+         Вход запоминается на этом устройстве до кнопки «Выйти» -->
+    <form id="loginForm" class="gate-form">
+      <label><span>Почта или номер кабинета</span><input name="login" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+      <label><span>Пароль</span><input name="password" type="password" required autocomplete="current-password"></label>
+      <p class="gate-msg" id="loginMsg" role="alert"></p>
+      <button type="submit" class="btn primary"><span class="gold-cut">Войти</span></button>
+    </form>
+    <!-- Служебный ключ — аварийный путь, когда администраторов не осталось вовсе -->
+    <details class="gate-key">
+      <summary class="muted">Аварийный вход служебным ключом</summary>
+      <form id="tokenForm" class="gate-form">
+        <p class="muted">Служебный ключ нужен, только если администраторов не осталось. Он создаётся сервером при первом запуске и виден один раз в журнале контейнера.</p>
+        <label><span>Служебный ключ</span><input name="token" type="password" required autocomplete="off"></label>
+        <p class="gate-msg" id="tokenMsg" role="alert"></p>
+        <button type="submit" class="btn"><span>Войти ключом</span></button>
+      </form>
+    </details>
+  </div>
 </section>
 
 <div id="adminRoot" hidden>

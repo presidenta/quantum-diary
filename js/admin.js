@@ -127,8 +127,55 @@ $('tokenForm').addEventListener('submit', async e => {
   }
 });
 
+/* ВХОД ЛОГИНОМ И ПАРОЛЕМ (владелец 13.11.2026). Раньше страница открывалась сама только при входе в «Квант» на
+   этом же устройстве, а иначе спрашивала служебный ключ — и администратор не мог зайти. Теперь — как в «Кванте»:
+   логин и пароль; сессия запоминается на устройстве (SESSION) до «Выйти». Роль проверяет сервер: не администратор —
+   кабинет не откроется. */
+const SESSION = 'planner.adminSession';
+const LOGIN_ERRORS = {
+  invalid_credentials: 'Логин или пароль с ошибкой — проверьте их глазиком.',
+  access_expired: 'Доступ к «Кванту» у этого кабинета закрыт.',
+  pending_approval: 'Заявка этого кабинета ещё ждёт одобрения.',
+  blocked: 'Кабинет заблокирован.'
+};
+
+function loginMsg(text) {
+  $('loginMsg').textContent = text;
+  $('loginMsg').className = text ? 'gate-msg is-error' : 'gate-msg';
+}
+
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const login = e.target.elements.login.value.trim();
+  const password = e.target.elements.password.value;
+  if (!login || !password) return;
+  loginMsg('');
+  try {
+    const res = await fetch(`${base}/api/session/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 429) { loginMsg('Слишком много попыток — подождите час.'); return; }
+    if (!res.ok) { loginMsg(LOGIN_ERRORS[body.error] || 'Войти не получилось — попробуйте ещё раз.'); return; }
+    if (!(await keyWorks(body.token))) {
+      loginMsg('У этого кабинета нет роли администратора.');
+      fetch(`${base}/api/session/logout`, { method: 'POST', headers: { Authorization: `Bearer ${body.token}` } }).catch(() => {});
+      return;
+    }
+    try { localStorage.setItem(SESSION, body.token); } catch { /* приватное окно — вход до закрытия вкладки */ }
+    showAdmin();
+    await refresh();
+  } catch {
+    loginMsg('Сервер не отвечает. Проверьте интернет.');
+  }
+});
+
 $('adminLogout').addEventListener('click', () => {
   sessionStorage.removeItem(KEY);
+  let saved = null;
+  try { saved = localStorage.getItem(SESSION); localStorage.removeItem(SESSION); } catch { /* ничего */ }
+  // Вход логином закрываем и на сервере
+  if (saved) fetch(`${base}/api/session/logout`, { method: 'POST', headers: { Authorization: `Bearer ${saved}` } }).catch(() => {});
   token = null;
   location.reload();
 });
@@ -446,7 +493,8 @@ async function boot() {
   initUpdate('adminUpdate');
 
   // По порядку: служебный ключ этой вкладки, затем своя учётная запись
-  const candidates = [sessionStorage.getItem(KEY), await getMeta('token').catch(() => null)];
+  const savedLogin = (() => { try { return localStorage.getItem(SESSION); } catch { return null; } })();
+  const candidates = [sessionStorage.getItem(KEY), savedLogin, await getMeta('token').catch(() => null)];
   try {
     for (const candidate of candidates) {
       if (!candidate || !looksLikeToken(candidate)) continue;
@@ -457,7 +505,7 @@ async function boot() {
       }
     }
     // Своя сессия есть, но роль не администраторская — это не повод молчать
-    showGate(candidates[1] ? 'Этот кабинет не администраторский.' : '');
+    showGate(candidates[2] ? 'Этот кабинет не администраторский.' : '');
   } catch {
     showGate('Сервер не отвечает. Он запущен?');
   }
