@@ -669,6 +669,55 @@ async function openWomanReports(person) {
 }
 
 $('personWomanReports').addEventListener('click', () => personOpen && openWomanReports(personOpen));
+
+/* «ПАРА» И «СЕМЬЯ» GSL (W+M)⁺ (владелец 13.11.2026: «психолог видит, что люди пишут, — двигаются они или им это во
+   вред»; люди подписывают соглашение). Только чтение: участники, переписка, общие цели, свои желания, мечты детей,
+   отмеченные разговоры. Сервер — /api/admin/users/:id/circles (planner/server/src/circles/). */
+function circleBlock(c) {
+  const name = id => c.members.find(m => m.id === id)?.name || '—';
+  const by = kind => c.items.filter(i => i.kind === kind);
+  const section = (title, rows) => rows.length
+    ? [h('h4', { class: 'mt10', text: `${title} · ${rows.length}` }), ...rows]
+    : [];
+  const msgs = by('msg').sort((a, b) => (a.data?.at || '').localeCompare(b.data?.at || '')).slice(-100)
+    .map(m => h('p', { class: 'woman-entry__field' },
+      h('span', { class: 'woman-entry__label', text: `${name(m.author)} · ${fmtWhen(m.data?.at || m.updatedAt)}` }),
+      h('span', { text: [m.data?.signal ? `[${t(`adm.cSignal.${m.data.signal}`)}]` : '', m.data?.text || ''].filter(Boolean).join(' ') })));
+  const goals = by('goal').map(g => {
+    const d = g.data || {};
+    const steps = Array.isArray(d.steps) ? d.steps : [];
+    const done = steps.filter(s => s.done).reduce((a, s) => a + (s.weight || 0), 0);
+    const line = d.type === 'counter' ? `${t('adm.cCounter')} · ${d.target}` : `${done}% · ${steps.map(s => `${s.done ? '✓' : '○'} ${s.text} (${s.weight}%)`).join(', ')}`;
+    return h('p', { class: 'woman-entry__field' }, h('span', { class: 'woman-entry__label', text: d.title || '—' }), h('span', { text: line }));
+  });
+  const wishes = by('wish').map(w => h('p', { class: 'woman-entry__field' },
+    h('span', { class: 'woman-entry__label', text: name(w.author) }), h('span', { text: w.data?.text || '' })));
+  const dreams = by('dream').map(d => h('p', { class: 'woman-entry__field' },
+    h('span', { class: 'woman-entry__label', text: name(d.data?.child) }), h('span', { text: `${d.data?.done ? '✓ ' : ''}${d.data?.text || ''}` })));
+  const talks = by('talk').map(x => h('p', { class: 'woman-entry__field' },
+    h('span', { class: 'woman-entry__label', text: x.data?.week || '' }), h('span', { text: name(x.author) })));
+  return h('article', { class: 'card woman-entry' },
+    h('div', { class: 'woman-entry__head' },
+      h('strong', { text: t(c.kind === 'pair' ? 'adm.cPair' : 'adm.cFamily') }),
+      h('span', { class: 'muted', text: c.members.map(m => m.name).join(', ') })),
+    ...section(t('adm.cMsg'), msgs), ...section(t('adm.cGoals'), goals), ...section(t('adm.cWishes'), wishes),
+    ...section(t('adm.cDreams'), dreams), ...section(t('adm.cTalks'), talks));
+}
+
+async function openCircles(person) {
+  $('womanFor').textContent = `${person.displayName} · ${person.email}`;
+  $('womanDialogTitle').textContent = t('adm.circles');
+  $('womanList').replaceChildren(h('p', { class: 'muted', text: '…' }));
+  $('womanDialog').showModal();
+  try {
+    const list = await api(`/api/admin/users/${person.id}/circles`);
+    $('womanList').replaceChildren(...(list.length ? list.map(circleBlock) : [h('p', { class: 'muted', text: t('adm.circlesEmpty') })]));
+  } catch {
+    $('womanList').replaceChildren(h('p', { class: 'muted', text: t('adm.wFailed') }));
+  }
+}
+
+$('personCircles').addEventListener('click', () => personOpen && openCircles(personOpen));
 $('womanBack').addEventListener('click', () => $('womanDialog').close());
 $('womanClose').addEventListener('click', () => $('womanDialog').close());
 
