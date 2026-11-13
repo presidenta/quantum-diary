@@ -174,18 +174,30 @@
     </div>
     <p class="muted m0" id="personFor"></p>
 
-    <!-- Фото профиля участницы в GSL Woman+: есть — показывается, нажатие открывает крупно (admin.js, loadWomanPhoto) -->
+    <!-- Пол — какая часть GSL (W+M)⁺ откроется: женская или мужская (admin.js, renderGender; сервер — gsl/gender.js) -->
+    <div class="card mt10">
+      <h3 data-i18n="adm.gslPart">Пол в GSL (W+M)⁺</h3>
+      <p class="muted m0" data-i18n="adm.gslPartHint">Какая часть откроется: женская или мужская.</p>
+      <select class="mt10 person-gender" id="personGender" aria-label="Пол">
+        <option value="" data-i18n="adm.genderNone">Пусто — выберет при входе</option>
+        <option value="female" data-i18n="adm.genderFemale">Женщина — GSL Woman+</option>
+        <option value="male" data-i18n="adm.genderMale">Мужчина — GSL Man+</option>
+      </select>
+    </div>
+
+    <!-- Фото профиля в своей части GSL (женская или мужская — по полу): есть — показывается, нажатие открывает
+         крупно (admin.js, loadWomanPhoto) -->
     <div class="card mt10" id="personWomanCard" hidden>
-      <h3 data-i18n="adm.womanPhoto">Фото в GSL Woman+</h3>
+      <h3 id="personWomanPhotoTitle" data-i18n="adm.womanPhoto">Фото в GSL Woman+</h3>
       <button type="button" class="person-photo" id="personWomanPhoto" aria-label="Открыть фото">
         <img id="personWomanImg" alt="">
       </button>
     </div>
 
-    <!-- Отчёты участницы в GSL Woman+: записи по дням с текстами и фото (admin.js, openWomanReports) -->
+    <!-- Отчёты в своей части GSL: записи по дням с текстами и фото (admin.js, openWomanReports) -->
     <div class="card mt10">
-      <h3 data-i18n="adm.womanRecords">Отчёты в GSL Woman+</h3>
-      <p class="muted m0" data-i18n="adm.womanRecordsHint">Задания по дням: что получилось, реакция мужчины, фото.</p>
+      <h3 id="personReportsTitle" data-i18n="adm.womanRecords">Отчёты в GSL Woman+</h3>
+      <p class="muted m0" id="personReportsHint" data-i18n="adm.womanRecordsHint">Задания по дням: что получилось, реакция мужчины, фото.</p>
       <button type="button" class="btn mt10" id="personWomanReports" data-i18n="adm.womanOpen">Открыть отчёты</button>
     </div>
 
@@ -220,7 +232,7 @@
       <button type="button" class="icon-btn plain back-btn" id="womanBack" aria-label="Назад">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
       </button>
-      <h2 data-i18n="adm.womanRecords">Отчёты в GSL Woman+</h2>
+      <h2 id="womanDialogTitle" data-i18n="adm.womanRecords">Отчёты в GSL Woman+</h2>
     </div>
     <p class="muted m0" id="womanFor"></p>
     <div id="womanList" class="woman-list"></div>

@@ -565,12 +565,38 @@ let personOpen = null;
    Нажатие — крупно, во весь экран (photoDialog). */
 let womanPhotoUrl = null;
 
+/* GSL (W+M)⁺ — две части одного приложения (владелец 13.11.2026). Фото и отчёты лежат в своей части: по полу
+   человека — женская (/woman-…) или мужская (/men-…). Пол пустой — показываем женскую: все прежние участницы там. */
+const partOf = person => (person.gender === 'male' ? 'men' : 'woman');
+
+/* Пол в карточке: пусто, женщина, мужчина. Сменили — сервер (gsl/gender.js) сохраняет сразу, фото и отчёты
+   карточки переключаются на нужную часть. */
+function renderGender(person) {
+  $('personGender').value = person.gender || '';
+  const men = partOf(person) === 'men';
+  $('personWomanPhotoTitle').textContent = t(men ? 'adm.menPhoto' : 'adm.womanPhoto');
+  $('personReportsTitle').textContent = t(men ? 'adm.menRecords' : 'adm.womanRecords');
+  $('personReportsHint').textContent = t(men ? 'adm.menRecordsHint' : 'adm.womanRecordsHint');
+}
+
+$('personGender').addEventListener('change', () => withBusy(async () => {
+  const person = personOpen;
+  if (!person) return;
+  const { gender } = await api(`/api/admin/users/${person.id}/gender`, {
+    method: 'POST', body: JSON.stringify({ gender: $('personGender').value || null })
+  });
+  person.gender = gender;
+  renderGender(person);
+  loadWomanPhoto(person);
+  loadPeople();
+}));
+
 async function loadWomanPhoto(person) {
   $('personWomanCard').hidden = true;
   if (womanPhotoUrl) URL.revokeObjectURL(womanPhotoUrl);
   womanPhotoUrl = null;
   try {
-    const res = await fetch(`${base}/api/admin/users/${person.id}/woman-avatar`, {
+    const res = await fetch(`${base}/api/admin/users/${person.id}/${partOf(person)}-avatar`, {
       headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
     });
     if (!res.ok || personOpen !== person) return;
@@ -610,7 +636,7 @@ function womanEntry(person, e) {
     const btn = h('button', { type: 'button', class: 'woman-photo', 'aria-label': t('adm.wOpenPhoto') });
     btn.disabled = true;
     photos.append(btn);
-    adminImage(`/api/admin/users/${person.id}/woman-photos/${encodeURIComponent(pid)}`).then(u => {
+    adminImage(`/api/admin/users/${person.id}/${partOf(person)}-photos/${encodeURIComponent(pid)}`).then(u => {
       if (!u) { btn.remove(); return; }
       btn.append(h('img', { src: u, alt: '' }));
       btn.disabled = false;
@@ -620,7 +646,8 @@ function womanEntry(person, e) {
   return h('article', { class: 'card woman-entry' },
     h('div', { class: 'woman-entry__head' }, h('strong', { text: head }), h('span', { class: 'muted', text: when })),
     ...W_FIELDS.filter(f => d[f]).map(f => h('p', { class: 'woman-entry__field' },
-      h('span', { class: 'woman-entry__label', text: t(`adm.wField.${f}`) }),
+      // У мужчины «с кем» и «реакция» — о женщине
+      h('span', { class: 'woman-entry__label', text: t(partOf(person) === 'men' && (f === 'man' || f === 'reaction') ? `adm.mField.${f}` : `adm.wField.${f}`) }),
       h('span', { text: d[f] }))),
     photos.childElementCount ? photos : null);
 }
@@ -628,10 +655,11 @@ function womanEntry(person, e) {
 async function openWomanReports(person) {
   for (const u of womanUrls.splice(0)) URL.revokeObjectURL(u);
   $('womanFor').textContent = `${person.displayName} · ${person.email}`;
+  $('womanDialogTitle').textContent = t(partOf(person) === 'men' ? 'adm.menRecords' : 'adm.womanRecords');
   $('womanList').replaceChildren(h('p', { class: 'muted', text: '…' }));
   $('womanDialog').showModal();
   try {
-    const entries = await api(`/api/admin/users/${person.id}/woman-entries`);
+    const entries = await api(`/api/admin/users/${person.id}/${partOf(person)}-entries`);
     $('womanList').replaceChildren(...(entries.length
       ? entries.map(e => womanEntry(person, e))
       : [h('p', { class: 'muted', text: t('adm.wEmpty') })]));
@@ -665,6 +693,7 @@ $('photoDialog').addEventListener('click', e => { if (e.target === $('photoDialo
 
 function openPerson(person) {
   personOpen = person;
+  renderGender(person);
   loadWomanPhoto(person);
   $('personFor').textContent = `${person.displayName} · ${person.email}`;
 

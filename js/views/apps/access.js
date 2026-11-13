@@ -15,8 +15,13 @@ import { KEY_APPS } from '../../core/access-controller.js';
 /** Отдельные приложения: ключ → название для подсказки. */
 export const APPS = {
   goldenfit: 'GoldenFit',
-  'gsl-woman': 'GSL Woman+'
+  'gsl-woman': 'GSL Woman+',
+  'gsl-man': 'GSL Man+'
 };
+
+/* GSL (W+M)⁺ — одно приложение на две части (владелец 13.11.2026): плитка открыта, если открыта любая из двух —
+   какая часть откроется внутри, решает пол человека на сервере. */
+const GSL_PARTS = ['gsl-woman', 'gsl-man'];
 
 /* Открыто ли приложение этому человеку — как сам «Квант» (core/access-controller.js): администратор ставит
    галочку и срок (сервер, access/apps.js), телефон хранит их у себя (ключ access_apps) и решает по дате и
@@ -24,6 +29,7 @@ export const APPS = {
    следующей связи сервер не пришлёт новую. Сервер ни разу не ответил (старый сервер, первый запуск) —
    открыто: закрывать по догадке нельзя, а сервер всё равно сам не пустит в закрытое. */
 export function hasAccess(app) {
+  if (app === 'gsl') return GSL_PARTS.some(hasAccess);
   if (!(app in APPS)) return false;
   let apps = null;
   try {

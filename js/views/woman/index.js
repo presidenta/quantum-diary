@@ -35,11 +35,23 @@ function nativeBridge() {
 
 /* Пропуск. Нет входа, нет сети, старый сервер — пустая строка: GSL Woman откроется и так и попросит
    войти логином и паролем «Кванта». */
+/* GSL (W+M)⁺ — одно приложение на две части (владелец 13.11.2026): пропуск выдаёт адрес той части, что открыта
+   человеку, — сначала женской, потом мужской. Какая часть откроется, решает пол человека на сервере. */
+const PASS_PATHS = ['/api/woman/pass', '/api/men/pass'];
+
 async function passCode() {
+  for (const path of PASS_PATHS) {
+    const code = await passFrom(path);
+    if (code) return code;
+  }
+  return '';
+}
+
+async function passFrom(path) {
   const token = await getMeta('token').catch(() => null);
   if (!token || !API_BASE) return '';
   try {
-    const res = await request(`${API_BASE}/api/woman/pass`, {
+    const res = await request(`${API_BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: '{}',
@@ -59,7 +71,7 @@ async function passCode() {
 export async function openWoman({ install = false } = {}) {
   const t = textsFor(state.language);
   // Замочек закрыт — приложение не открываем (доступ выдаёт администратор, ../apps/access.js)
-  if (!hasAccess('gsl-woman')) {
+  if (!hasAccess('gsl')) {
     showNote(t.locked, 8000);
     return;
   }
@@ -126,7 +138,7 @@ function drawTile(t) {
     el('button', { type: 'button', class: 'sp-main', 'aria-label': `${t.open} ${t.name}`, onclick: () => openWoman() },
       el('img', { class: 'sp-icon', src: ICON, alt: '', width: '48', height: '48' }),
       el('span', { class: 'sp-body' },
-        el('span', { class: 'sp-name-row' }, el('b', { class: 'sp-name', text: t.name }), lockIcon('gsl-woman')),
+        el('span', { class: 'sp-name-row' }, el('b', { class: 'sp-name', text: t.name }), lockIcon('gsl')),
         el('span', { class: 'sp-about', text: t.about }))),
     el('div', { class: 'sp-actions' },
       el('button', { type: 'button', class: 'btn primary', onclick: () => openWoman() },
@@ -147,7 +159,7 @@ function drawMenu(t) {
   },
     el('img', { class: 'sp-menu-icon', src: ICON, alt: '', width: '19', height: '19' }),
     el('span', { text: t.menu }),
-    lockIcon('gsl-woman')));
+    lockIcon('gsl')));
 }
 
 export function initWoman() {

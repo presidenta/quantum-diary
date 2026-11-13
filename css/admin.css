@@ -110,3 +110,10 @@ body.admin .top .icon-btn { flex: none; min-width: 40px; min-height: 40px; }
 .gate-key { margin-top: 18px; }
 .gate-key summary { cursor: pointer; font-size: 13px; }
 .gate-key[open] summary { margin-bottom: 10px; }
+
+/* Пол в GSL (W+M)⁺ — выпадающий список на всю ширину карточки (admin.html, admin.js → renderGender) */
+.person-gender {
+  display: block; width: 100%; min-height: 44px; padding: 0 12px;
+  border-radius: var(--edge); font: inherit; font-size: 15px; cursor: pointer;
+}
+.person-gender:focus-visible { outline: none; box-shadow: var(--glow-active); }
