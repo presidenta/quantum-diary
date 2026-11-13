@@ -160,6 +160,14 @@
     </div>
     <p class="muted m0" id="personFor"></p>
 
+    <!-- Фото профиля участницы в GSL Woman+: есть — показывается, нажатие открывает крупно (admin.js, loadWomanPhoto) -->
+    <div class="card mt10" id="personWomanCard" hidden>
+      <h3 data-i18n="adm.womanPhoto">Фото в GSL Woman+</h3>
+      <button type="button" class="person-photo" id="personWomanPhoto" aria-label="Открыть фото">
+        <img id="personWomanImg" alt="">
+      </button>
+    </div>
+
     <div class="card mt10">
       <h3 data-i18n="adm.password">Пароль</h3>
       <p class="muted m0" id="personPasswordState"></p>
@@ -183,6 +191,13 @@
       <button type="button" class="btn primary" id="personClose"><span class="gold-cut" data-i18n="adm.done">Готово</span></button>
     </div>
   </div>
+</dialog>
+
+<dialog id="photoDialog" class="photo-dialog">
+  <img id="photoDialogImg" alt="">
+  <button type="button" class="icon-btn photo-dialog__close" id="photoDialogClose" aria-label="Закрыть">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+  </button>
 </dialog>
 
 <dialog id="quantumDialog">

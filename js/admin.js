@@ -507,8 +507,39 @@ $('closeQuantum').addEventListener('click', () => $('quantumDialog').close());
 
 let personOpen = null;
 
+/* Фото профиля участницы в GSL Woman+ (владелец 13.11.2026: «администратор должен видеть фото участниц, и они
+   должны открываться»). Сервер отдаёт его по /api/admin/users/:id/woman-avatar; нет фото — карточка скрыта.
+   Нажатие — крупно, во весь экран (photoDialog). */
+let womanPhotoUrl = null;
+
+async function loadWomanPhoto(person) {
+  $('personWomanCard').hidden = true;
+  if (womanPhotoUrl) URL.revokeObjectURL(womanPhotoUrl);
+  womanPhotoUrl = null;
+  try {
+    const res = await fetch(`${base}/api/admin/users/${person.id}/woman-avatar`, {
+      headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
+    });
+    if (!res.ok || personOpen !== person) return;
+    womanPhotoUrl = URL.createObjectURL(await res.blob());
+    $('personWomanImg').src = womanPhotoUrl;
+    $('personWomanCard').hidden = false;
+  } catch {
+    // нет связи — карточки просто нет
+  }
+}
+
+$('personWomanPhoto').addEventListener('click', () => {
+  if (!womanPhotoUrl) return;
+  $('photoDialogImg').src = womanPhotoUrl;
+  $('photoDialog').showModal();
+});
+$('photoDialogClose').addEventListener('click', () => $('photoDialog').close());
+$('photoDialog').addEventListener('click', e => { if (e.target === $('photoDialog')) $('photoDialog').close(); });
+
 function openPerson(person) {
   personOpen = person;
+  loadWomanPhoto(person);
   $('personFor').textContent = `${person.displayName} · ${person.email}`;
 
   $('personPasswordState').textContent = person.passwordChangedAt
