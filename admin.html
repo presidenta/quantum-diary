@@ -168,6 +168,13 @@
       </button>
     </div>
 
+    <!-- Отчёты участницы в GSL Woman+: записи по дням с текстами и фото (admin.js, openWomanReports) -->
+    <div class="card mt10">
+      <h3 data-i18n="adm.womanRecords">Отчёты в GSL Woman+</h3>
+      <p class="muted m0" data-i18n="adm.womanRecordsHint">Задания по дням: что получилось, реакция мужчины, фото.</p>
+      <button type="button" class="btn mt10" id="personWomanReports" data-i18n="adm.womanOpen">Открыть отчёты</button>
+    </div>
+
     <div class="card mt10">
       <h3 data-i18n="adm.password">Пароль</h3>
       <p class="muted m0" id="personPasswordState"></p>
@@ -189,6 +196,22 @@
 
     <div class="actions">
       <button type="button" class="btn primary" id="personClose"><span class="gold-cut" data-i18n="adm.done">Готово</span></button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="womanDialog">
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <button type="button" class="icon-btn plain back-btn" id="womanBack" aria-label="Назад">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      </button>
+      <h2 data-i18n="adm.womanRecords">Отчёты в GSL Woman+</h2>
+    </div>
+    <p class="muted m0" id="womanFor"></p>
+    <div id="womanList" class="woman-list"></div>
+    <div class="actions">
+      <button type="button" class="btn primary" id="womanClose"><span class="gold-cut" data-i18n="adm.done">Готово</span></button>
     </div>
   </div>
 </dialog>

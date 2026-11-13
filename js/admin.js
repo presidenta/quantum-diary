@@ -529,6 +529,68 @@ async function loadWomanPhoto(person) {
   }
 }
 
+/* ОТЧЁТЫ УЧАСТНИЦЫ В GSL WOMAN+ (владелец 13.11.2026: «показывать администратору отчёты и фото к ним — согласие
+   на обработку данных участницы дают в оферте при регистрации»). Записи дня — с сервера (/woman-entries, новые
+   дни сверху), фото — по одному (/woman-photos/:pid), нажатие открывает крупно (photoDialog). */
+const womanUrls = [];
+const W_FIELDS = ['worked', 'man', 'reaction', 'happened', 'how'];
+
+async function adminImage(path) {
+  const res = await fetch(base + path, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+  if (!res.ok) return null;
+  const u = URL.createObjectURL(await res.blob());
+  womanUrls.push(u);
+  return u;
+}
+
+function showBig(u) {
+  $('photoDialogImg').src = u;
+  $('photoDialog').showModal();
+}
+
+function womanEntry(person, e) {
+  const d = e.data || {};
+  const head = [t('adm.wDay', { n: d.day ?? '—' }), t(`adm.wKind.${d.kind}`), t(`adm.wLevel.${d.level}`)].filter(x => x && !x.startsWith('adm.')).join(' · ');
+  const when = d.createdAt ? fmtWhen(d.createdAt) : '';
+  const photos = h('div', { class: 'woman-photos' });
+  for (const pid of Array.isArray(d.photos) ? d.photos : []) {
+    const btn = h('button', { type: 'button', class: 'woman-photo', 'aria-label': t('adm.wOpenPhoto') });
+    btn.disabled = true;
+    photos.append(btn);
+    adminImage(`/api/admin/users/${person.id}/woman-photos/${encodeURIComponent(pid)}`).then(u => {
+      if (!u) { btn.remove(); return; }
+      btn.append(h('img', { src: u, alt: '' }));
+      btn.disabled = false;
+      btn.addEventListener('click', () => showBig(u));
+    }).catch(() => btn.remove());
+  }
+  return h('article', { class: 'card woman-entry' },
+    h('div', { class: 'woman-entry__head' }, h('strong', { text: head }), h('span', { class: 'muted', text: when })),
+    ...W_FIELDS.filter(f => d[f]).map(f => h('p', { class: 'woman-entry__field' },
+      h('span', { class: 'woman-entry__label', text: t(`adm.wField.${f}`) }),
+      h('span', { text: d[f] }))),
+    photos.childElementCount ? photos : null);
+}
+
+async function openWomanReports(person) {
+  for (const u of womanUrls.splice(0)) URL.revokeObjectURL(u);
+  $('womanFor').textContent = `${person.displayName} · ${person.email}`;
+  $('womanList').replaceChildren(h('p', { class: 'muted', text: '…' }));
+  $('womanDialog').showModal();
+  try {
+    const entries = await api(`/api/admin/users/${person.id}/woman-entries`);
+    $('womanList').replaceChildren(...(entries.length
+      ? entries.map(e => womanEntry(person, e))
+      : [h('p', { class: 'muted', text: t('adm.wEmpty') })]));
+  } catch {
+    $('womanList').replaceChildren(h('p', { class: 'muted', text: t('adm.wFailed') }));
+  }
+}
+
+$('personWomanReports').addEventListener('click', () => personOpen && openWomanReports(personOpen));
+$('womanBack').addEventListener('click', () => $('womanDialog').close());
+$('womanClose').addEventListener('click', () => $('womanDialog').close());
+
 $('personWomanPhoto').addEventListener('click', () => {
   if (!womanPhotoUrl) return;
   $('photoDialogImg').src = womanPhotoUrl;
