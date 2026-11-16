@@ -59,6 +59,8 @@
 <link rel="stylesheet" href="js/views/scroll/scroll.css">
 <!-- GoldenFit: плитка на главной и пункт меню — модуль js/views/sport/ (README.md там) -->
 <link rel="stylesheet" href="js/views/sport/sport.css">
+<!-- Условия доступа: строка меню с зелёным $ и окно пакетов — модуль js/views/terms/ (README.md там) -->
+<link rel="stylesheet" href="js/views/terms/terms.css">
 <!-- Окно «Установить виджет»: предпросмотр берёт золото и буквы из app.css -->
 <link rel="stylesheet" href="css/widgets.css">
 <script type="module" src="js/ios-home.js"></script>
@@ -143,6 +145,11 @@
       </span>
       <span class="chev" aria-hidden="true">›</span>
     </button>
+
+    <!-- Условия доступа (пакеты и цены, ознакомительно) — самой первой строкой, своей чертой отделена от
+         «Кванта» (владелец 16.11.2026: «это как отдельная история»). Строку рисует js/views/terms/ -->
+    <div class="drawer-list" id="drawerTerms"></div>
+    <div class="drawer-sep"></div>
 
     <div class="drawer-list" id="drawerMain"></div>
     <!-- Отдельные приложения — своей группой под чертой, у каждого замочек доступа

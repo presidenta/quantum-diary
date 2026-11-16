@@ -26,6 +26,7 @@ import { getDoorAudio, saveDoorAudio, deleteDoorAudio } from './views/space/audi
 import { getDoorPhotos, addDoorPhotos, deleteDoorPhotos } from './views/space/photos.js';
 import { initUpdate } from './update.js';
 import { createCabinetEditor, SLOT_NAMES as SLOTS, LANG_CODES as LANGS } from './views/cabinet-editor.js';
+import { initPeopleView, syncPeopleView } from './views/people-view/index.js';
 
 const $ = id => document.getElementById(id);
 const KEY = 'planner.adminToken';
@@ -42,6 +43,7 @@ const t = (key, values) => translate(language, key, values);
 function applyLanguage() {
   document.documentElement.lang = language;
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  syncPeopleView(language);
   const select = $('adminLang');
   if (select.options.length !== LANGUAGES.length) {
     /* Флаг и короткий код. Полное название в шапке рядом с двумя кнопками
@@ -268,7 +270,7 @@ function renderPerson(person) {
        шестерёнкой: пять кнопок в ряд, среди них «Заблокировать» красным,
        превращали список людей в пульт. */
     actions.push(h('button', {
-      type: 'button', class: 'btn grow', text: t('adm.quantumCabinet'),
+      type: 'button', class: 'btn', text: t('adm.quantumCabinet'),
       onclick: () => openQuantum(person)
     }));
     actions.push(h('button', {
@@ -290,13 +292,15 @@ function renderPerson(person) {
     face.addEventListener('click', () => openAvatarBig(person));
   } else face.textContent = (person.displayName || '·').trim().charAt(0).toUpperCase();
 
+  /* Фото слева на всю высоту карточки, кнопки — сразу под именем и почтой (владелец 16.11.2026: кружки
+     забирали место, «Квантовый кабинет» во всю ширину — тоже). Раскладку списком или плитками задаёт
+     класс у #peopleList (views/people-view/), сама карточка одна. */
   return h('li', { class: `person ${person.status}` },
-    h('div', { class: 'person-head' },
-      face,
-      h('div', { class: 'person-who' },
-        h('b', { text: person.displayName }),
-        h('span', { class: 'contacts', text: contacts })),
-      h('time', { text: fmtWhen(person.approvedAt || person.createdAt) })),
+    face,
+    h('div', { class: 'person-who' },
+      h('b', { text: person.displayName }),
+      h('span', { class: 'contacts', text: contacts, title: contacts })),
+    h('time', { text: fmtWhen(person.approvedAt || person.createdAt) }),
     h('div', { class: 'person-actions' }, ...actions));
 }
 
@@ -461,6 +465,9 @@ $('adminTabs').addEventListener('click', e => {
   $('tabLogs').hidden = tab !== 'logs';
   if (tab === 'logs') withBusy(loadLogs);
 });
+
+// «Списком / Плитками» над списком людей (владелец 16.11.2026)
+initPeopleView(language);
 
 $('statusTabs').addEventListener('click', e => {
   const next = e.target.dataset.status;

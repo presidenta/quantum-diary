@@ -1,0 +1,58 @@
+/* УСЛОВИЯ ДОСТУПА (js/views/terms/): строка меню с зелёным $ и окно с четырьмя пакетами.
+   Цвета — имена «Кванта» из css/app.css; своих не заводим, кроме зелёного кружка ($ — «важная кнопка»). */
+
+/* Строка меню: зелёный кружок со знаком $ вместо значка, подпись — светлым золотом */
+.drawer-list .terms-menu { color: var(--gold-bright); font-weight: 600; }
+/* Плюсик в тонком кружке справа — там же, где у GoldenFit и GSL замочек: «открой, там больше» */
+.drawer-list .terms-menu .terms-plus {
+  margin-left: auto; flex: none; width: 22px; height: 22px;
+  fill: none; stroke: var(--gold-bright); stroke-width: 1.8; stroke-linecap: round;
+}
+.drawer-list .terms-menu .terms-plus circle { stroke: var(--gold); stroke-width: 1.3; opacity: .8; }
+.terms-dollar {
+  display: grid; place-items: center; flex: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--ok); color: #fff;
+  font: 700 13px/1 var(--sans); margin: 0 -1.5px;
+  box-shadow: 0 0 0 2px rgba(25, 158, 112, .28), 0 0 12px rgba(25, 158, 112, .55);
+}
+
+/* Окно: длинное — листается внутри */
+.terms-dialog { overflow-y: auto; overscroll-behavior: contain; }
+.terms-sheet { gap: 14px; padding: 16px 14px; }
+.terms-intro { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+
+/* Карточка пакета — как слайд: тонкая золотая рамка, цена в своей рамке */
+.terms-card {
+  display: grid; gap: 9px; padding: 14px;
+  border: 1px solid var(--line-strong); border-radius: 14px;
+  background: var(--surface-2);
+}
+.terms-card--star { background: linear-gradient(180deg, var(--gold-fill), var(--surface-2) 70%); box-shadow: var(--glow); }
+
+.terms-name { margin: 0; font-family: var(--serif); font-size: 19px; line-height: 1.25; color: var(--gold); }
+.terms-num { color: var(--gold-bright); margin-right: 6px; }
+.terms-star { color: var(--gold-bright); margin-left: 6px; }
+.terms-lead { margin: 0; font-size: 14px; line-height: 1.45; }
+
+.terms-price {
+  display: grid; gap: 4px; padding: 10px 12px;
+  border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(0, 0, 0, .25);
+}
+.terms-card--star .terms-price { background: var(--gold-fill); }
+.terms-price p { margin: 0; }
+.terms-old { font-size: 13px; color: var(--ink-2); }
+.terms-now { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-size: 14px; }
+.terms-sum { font-family: var(--serif); font-size: 34px; line-height: 1.05; font-weight: 600; color: var(--gold-bright); }
+.terms-note { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+
+.terms-seats { margin: 0; font-size: 14px; color: var(--ink-2); }
+.terms-seats b { color: var(--gold-bright); }
+.terms-includes { margin: 2px 0 0; font-weight: 700; color: var(--gold); font-size: 14px; }
+.terms-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.terms-list li { position: relative; padding-left: 18px; font-size: 14px; line-height: 1.45; }
+.terms-list li::before { content: '◆'; position: absolute; left: 0; top: 1px; font-size: 10px; color: var(--gold); }
+.terms-total {
+  margin: 4px 0 0; padding-top: 10px; border-top: 1px solid var(--line-strong);
+  font-size: 14px; font-weight: 600; line-height: 1.4;
+}
