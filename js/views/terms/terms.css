@@ -1,7 +1,7 @@
 /* УСЛОВИЯ ДОСТУПА (js/views/terms/): строка меню с зелёным $ и окно с четырьмя пакетами.
    Цвета — имена «Кванта» из css/app.css; своих не заводим, кроме зелёного кружка ($ — «важная кнопка»). */
 
-/* Строка меню: зелёный кружок со знаком $ вместо значка, подпись — светлым золотом */
+/* Строка меню: зелёный кант со знаком $ вместо значка, подпись — золотом, как «Квант» */
 .drawer-list .terms-menu { color: var(--gold-bright); font-weight: 600; }
 /* Плюсик в тонком кружке справа — там же, где у GoldenFit и GSL замочек: «открой, там больше» */
 .drawer-list .terms-menu .terms-plus {
@@ -9,12 +9,14 @@
   fill: none; stroke: var(--gold-bright); stroke-width: 1.8; stroke-linecap: round;
 }
 .drawer-list .terms-menu .terms-plus circle { stroke: var(--gold); stroke-width: 1.3; opacity: .8; }
+/* Кружок НЕ залит (владелец 16.11.2026: «залитый смотрится ужасно»): зелёный кант, внутри чёрная пустота
+   и зелёный $. Зелёный светлее --ok: на чёрном тот тускнеет. */
 .terms-dollar {
-  display: grid; place-items: center; flex: none;
+  display: grid; place-items: center; flex: none; box-sizing: border-box;
   width: 22px; height: 22px; border-radius: 50%;
-  background: var(--ok); color: #fff;
+  border: 1.5px solid #2bc48c; background: #000; color: #2bc48c;
   font: 700 13px/1 var(--sans); margin: 0 -1.5px;
-  box-shadow: 0 0 0 2px rgba(25, 158, 112, .28), 0 0 12px rgba(25, 158, 112, .55);
+  box-shadow: 0 0 8px rgba(43, 196, 140, .35);
 }
 
 /* Окно: длинное — листается внутри */
