@@ -20,6 +20,7 @@
 
 import { t } from './store.js';
 import { isNative, widgetList, widgetSave, offerWidget, offerTile } from './core/reminders.js';
+import { isDesktop } from './pc-install.js';
 import { widgetTerms, publishDesktopWidget } from './reminder-plan.js';
 import {
     FORMATS, CHAKRAS, DEFAULT_ALPHA, normalizeStyle, resolveLook, widgetAliases, translateOwn
@@ -254,8 +255,10 @@ export async function openWidgets(номер = 0) {
     };
 
     $('widgetsBrowserNote').hidden = isNative();
-    // Ссылка на установщик для компьютера — только в обычном браузере
-    $('widgetsDesktopDownload').hidden = isNative() || вПриложенииДляКомпьютера();
+    /* Ссылка на установщик для компьютера — только в настольном браузере (isDesktop: не телефон и не планшет).
+       На iPhone она была видна, и Safari открывал .exe как текст — «This program cannot be run in DOS mode»
+       (снимок владельца, 16.11.2026). Файл .exe ставится только на Windows. */
+    $('widgetsDesktopDownload').hidden = !isDesktop() || вПриложенииДляКомпьютера();
     $('widgetsTileBox').hidden = !isNative();
     $('widgetsMsg').hidden = true;
     нарисоватьВсё();
