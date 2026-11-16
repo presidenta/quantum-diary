@@ -1224,7 +1224,10 @@ body.q-chromo-on .q-sound-bar { display: none; }
 .qm-tab > span,
 .lang-btn > span:first-child,
 .drawer-list button[aria-current="page"] > span:not(.count),
-.bottom-nav button[aria-current="page"] > span:not(.count) {
+.bottom-nav button[aria-current="page"] > span:not(.count),
+#drawerTerms button > span:not([class]),
+#drawerSport button > span:not([class]),
+#drawerWoman button > span:not([class]) {
   background-image: var(--pult-rim);
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1240,6 +1243,11 @@ body.q-chromo-on .q-sound-bar { display: none; }
           drop-shadow(0 0 6px rgba(14, 8, 0, .85));
 }
 .qm-tab > span { display: inline-block; }
+/* Исключение из «невыбранные — белые» (владелец 16.11.2026): «Условия доступа», GoldenFit и GSL всегда тем же
+   золотом, что выбранный «Квант» — видно, что условия доступа именно к «золотым» названиям. */
+#drawerTerms button > span:not([class]),
+#drawerSport button > span:not([class]),
+#drawerWoman button > span:not([class]) { font-weight: 600; }
 /* Обрезка по тексту накрывает весь элемент, поэтому она висит на самой
    подписи, а не на кнопке: иначе значок рядом с ней гаснет вместе с
    заливкой. Счётчик справа тоже остаётся при своём виде. */

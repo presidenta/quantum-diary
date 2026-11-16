@@ -26,7 +26,17 @@
 .people--tiles .person > time { align-self: end; }
 .people--tiles .person-actions { flex-wrap: nowrap; gap: 6px; margin-top: 4px; }
 .people--tiles .person-actions .btn {
-  flex: 0 1 auto; min-width: 0; padding: 4px 10px; font-size: 12px; line-height: 1.15; white-space: normal;
+  flex: 1; min-width: 0; padding: 4px 8px; font-size: 12px; line-height: 1.15; white-space: normal;
 }
 .people--tiles .person-actions .icon-btn { flex: none; }
 .people--tiles .empty { grid-column: 1 / -1; }
+
+/* Компьютер: четыре плитки в ряд (владелец 16.11.2026: «в компьютере сделай 4 плитки в строчку» — при двух
+   правая половина каждой плитки пустовала). Кнопка — во всю ширину плитки, шестерёнка в конце, как и на телефоне. */
+@media (min-width: 720px) {
+  .people.people--tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .people--tiles .person { padding: 10px 9px; gap: 4px 8px; }
+  .people--tiles .person > .person-photo { --face: 44px; }
+  .people--tiles .person-actions .btn { padding: 4px 6px; }
+  .people--tiles .person-actions .icon-btn { min-width: 32px; min-height: 32px; }
+}

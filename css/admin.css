@@ -135,3 +135,11 @@ body.admin .top .icon-btn { flex: none; min-width: 40px; min-height: 40px; }
   body.admin .top { flex-wrap: wrap; justify-content: flex-end; }
   body.admin .top h1 { flex-basis: 100%; }
 }
+
+/* Телефон, вид «Списком»: «Квантовый кабинет» тянется до края карточки, шестерёнка — в конце строки
+   (владелец 16.11.2026: «растяни, чтобы было на всю… и кнопка в конце»). На компьютере кнопка небольшая. */
+@media (max-width: 600px) {
+  .person-actions { flex-wrap: nowrap; }
+  .person-actions .btn { flex: 1; min-width: 0; }
+  .person-actions .icon-btn { flex: none; }
+}
