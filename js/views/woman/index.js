@@ -131,6 +131,9 @@ function showNote(text, ms = 4000) {
   noteTimer = setTimeout(() => { note.hidden = true; }, ms);
 }
 
+/** «Я⁺» — плюс в степени крупный и жирный, «как буква» (владелец 18.11.2026, как .quest-mark__plus в самом GSL): знак ⁺ — отдельным плюсом .gsl-plus. */
+const withPlus = (text) => text.split('⁺').flatMap((part, i) => (i ? [el('span', { class: 'gsl-plus', text: '+' }), part] : [part]));
+
 function drawTile(t) {
   const host = document.getElementById('womanTile');
   if (!host) return;
@@ -138,7 +141,7 @@ function drawTile(t) {
     el('button', { type: 'button', class: 'sp-main', 'aria-label': `${t.open} ${t.name}`, onclick: () => openWoman() },
       el('img', { class: 'sp-icon', src: ICON, alt: '', width: '48', height: '48' }),
       el('span', { class: 'sp-body' },
-        el('span', { class: 'sp-name-row' }, el('b', { class: 'sp-name', text: t.name }), lockIcon('gsl')),
+        el('span', { class: 'sp-name-row' }, el('b', { class: 'sp-name' }, ...withPlus(t.name)), lockIcon('gsl')),
         el('span', { class: 'sp-about', text: t.about }))),
     el('div', { class: 'sp-actions' },
       el('button', { type: 'button', class: 'btn primary', onclick: () => openWoman() },
@@ -158,7 +161,7 @@ function drawMenu(t) {
     }
   },
     el('img', { class: 'sp-menu-icon', src: ICON, alt: '', width: '19', height: '19' }),
-    el('span', { text: t.menu }),
+    el('span', {}, ...withPlus(t.menu)),
     lockIcon('gsl')));
 }
 
