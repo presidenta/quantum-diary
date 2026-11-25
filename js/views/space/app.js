@@ -25,6 +25,9 @@ import { planReminders, loadAlarm, loadQuiet, observerNamedHour, observerNamedSe
 import { observerClock, countdownText } from '../../core/observer-clock.js';
 import { logEvent } from '../../core/web-journal.js';
 
+// Сколько ждать, что браузер сам вернёт потерянный видеоконтекст коридора, прежде чем собрать новый
+const CORRIDOR_RESTORE_WAIT_MS = 3000;
+
 export class QuantumApp {
     constructor(rootEl) {
         this.rootEl = rootEl || null;   // корень модуля (.qm-root)
@@ -1396,16 +1399,32 @@ export class QuantumApp {
         return true;
     }
 
-    startCorridorScreen() {
+    /* @param {boolean} rebuilt коридор собирается заново после мёртвого видеоконтекста,
+                                а не по нажатию человека */
+    startCorridorScreen(rebuilt = false) {
         this.showScreen(null);
         // Чем называется дверь без текста, знают только флаги — снимаем их
         this.refreshDoorMediaFlags();
+        if (!rebuilt) this.corridorRebuilt = false;
+
+        // Сцена с мёртвым контекстом дверей уже не покажет — берём новую
+        if (this.scene3D && this.scene3D.contextLost) this.disposeCorridor();
 
         if (!this.scene3D) {
-            this.scene3D = new QuantumCorridorScene(
-                document.getElementById('three-canvas'),
-                (idx, txt) => this.onDoorChosen(idx, txt)
-            );
+            try {
+                this.scene3D = new QuantumCorridorScene(
+                    document.getElementById('three-canvas'),
+                    (idx, txt) => this.onDoorChosen(idx, txt)
+                );
+            } catch (err) {
+                /* Видеоконтекст не дали вовсе: прежде здесь оставался чёрный экран без таймера.
+                   Возвращаем на начало — войти можно снова. */
+                logEvent('E', { m: `Коридор дверей не собрался: ${err && err.message}` });
+                this.disposeCorridor();
+                this.showScreen('screen-1');
+                return;
+            }
+            this.scene3D.onContextChange = lost => this.onCorridorContext(lost);
         }
 
         this.scene3D.setupRealities(this.shuffleDoors());
@@ -1415,20 +1434,75 @@ export class QuantumApp {
         document.getElementById('hud-timer-val').innerText = timeLeft.toFixed(1);
 
         if (this.countdownInterval) clearInterval(this.countdownInterval);
+        this.corridorLive = true;
         this.countdownInterval = setInterval(() => {
+            /* ДВЕРЕЙ НЕ ВИДНО — ВРЕМЯ СТОИТ (25.11.2026). Видеоконтекст на телефоне умер:
+               экран чёрный, а таймер шёл дальше и через 33 секунды уводил в «Хроники»,
+               будто человек прошёл коридор, не открыв двери. */
+            if (this.scene3D && this.scene3D.contextLost) return;
+
             timeLeft -= 0.1;
             document.getElementById('hud-timer-val').innerText = Math.max(0, timeLeft).toFixed(1);
 
             if (timeLeft <= 0) {
                 clearInterval(this.countdownInterval);
+                this.corridorLive = false;
                 if (this.scene3D) this.scene3D.isRunning = false;
                 this.renderChronicles();
                 this.showScreen('screen-5');
             }
             if (this.scene3D && this.scene3D.isSelecting) {
                 clearInterval(this.countdownInterval);
+                this.corridorLive = false;
             }
         }, 100);
+    }
+
+    /* Видеоконтекст коридора потерян или вернулся.
+
+       Вернулся — коридор рисуется дальше сам, таймер идёт с того же места.
+       Не вернулся за три секунды — собираем коридор заново на новом контексте,
+       с полным таймером: дверей человек так и не увидел. Умер и новый — на начало,
+       к «Войти в суперпозицию», а не в «Хроники». */
+    onCorridorContext(lost) {
+        clearTimeout(this.corridorRestoreWait);
+        if (!lost) return;
+        this.corridorRestoreWait = this.later(() => {
+            if (this._destroyed || !this.corridorLive || !this.scene3D || !this.scene3D.contextLost) return;
+            clearInterval(this.countdownInterval);
+            this.corridorLive = false;
+            this.disposeCorridor();
+            if (this.corridorRebuilt) {
+                logEvent('E', { m: 'Коридор дверей: новый видеоконтекст тоже потерян — возврат на начало' });
+                this.showScreen('screen-1');
+                return;
+            }
+            this.corridorRebuilt = true;
+            logEvent('E', { m: 'Коридор дверей собирается заново на новом видеоконтексте' });
+            this.startCorridorScreen(true);
+        }, CORRIDOR_RESTORE_WAIT_MS);
+    }
+
+    /* Убрать сцену коридора целиком.
+
+       ВИДЕОКОНТЕКСТ ОТПУСКАЕМ СРАЗУ (выкладка 191). dispose() освобождает только буферы three.js, а сам
+       WebGL-контекст жил, пока его не соберёт сборщик мусора, — то есть неопределённо долго. Каждое
+       открытие «Наблюдателя» добавляло по контексту во весь экран; на телефоне (OBLUE TANK 3, 27.10.2026)
+       видеопамять кончалась, и новый коридор получал мёртвый контекст: таймер идёт, дверей нет, чёрный экран. */
+    disposeCorridor() {
+        const scene = this.scene3D;
+        this.scene3D = null;
+        if (!scene) return;
+        scene.isRunning = false;
+        scene.onContextChange = null;
+        if (scene.hand && scene.hand.parentNode) scene.hand.parentNode.removeChild(scene.hand);
+        scene.disposing = true;
+        const renderer = scene.renderer;
+        if (renderer) {
+            renderer.dispose();
+            renderer.forceContextLoss();
+            renderer.domElement.remove();
+        }
     }
 
     /* СЛЕПОЙ ВЫБОР.
@@ -2240,22 +2314,8 @@ export class QuantumApp {
         }
 
         if (this.scene3D) {
-            this.scene3D.isRunning = false;
-            if (this.scene3D.hand && this.scene3D.hand.parentNode) {
-                this.scene3D.hand.parentNode.removeChild(this.scene3D.hand);
-            }
-            /* ВИДЕОКОНТЕКСТ ОТПУСКАЕМ СРАЗУ (выкладка 191). dispose() освобождает только буферы three.js, а сам
-               WebGL-контекст жил, пока его не соберёт сборщик мусора, — то есть неопределённо долго. Каждое
-               открытие «Наблюдателя» добавляло по контексту во весь экран; на телефоне (OBLUE TANK 3, 27.10.2026)
-               видеопамять кончалась, и новый коридор получал мёртвый контекст: таймер идёт, дверей нет, чёрный экран. */
-            const renderer = this.scene3D.renderer;
-            this.scene3D.disposing = true;
-            if (renderer) {
-                renderer.dispose();
-                renderer.forceContextLoss();
-                renderer.domElement.remove();
-            }
-            this.scene3D = null;
+            // Видеоконтекст отпускается сразу — см. disposeCorridor
+            this.disposeCorridor();
         }
     }
 }

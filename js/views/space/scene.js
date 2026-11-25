@@ -213,8 +213,22 @@ export class QuantumCorridorScene {
         /* Потерю видеоконтекста — в журнал устройства (выкладка 191). Сама по себе она не ошибка кода, и без
            этой строки человек видит чёрный экран с таймером, а в журнале пусто. Свой forceContextLoss() при
            уходе с вкладки сюда тоже попадает — его отличаем по флагу disposing. */
+        /* 25.11.2026: потеря видна и экрану, не только журналу. Пока контекста нет, дверей не видно,
+           и таймер коридора стоит (app.js), а не дотикивает в «Хроники» без выбранной двери. three.js
+           сам отменяет потерю (preventDefault), поэтому браузер может вернуть контекст: вернул — коридор
+           рисуется дальше с того же места. Что делать, если не вернул, решает app.js (onContextChange). */
+        this.contextLost = false;
         this.renderer.domElement.addEventListener('webglcontextlost', () => {
-            if (!this.disposing) logEvent('E', { m: 'Коридор дверей: видеоконтекст WebGL потерян — дверей не видно' });
+            if (this.disposing) return;
+            this.contextLost = true;
+            logEvent('E', { m: 'Коридор дверей: видеоконтекст WebGL потерян — дверей не видно' });
+            if (this.onContextChange) this.onContextChange(true);
+        });
+        this.renderer.domElement.addEventListener('webglcontextrestored', () => {
+            if (this.disposing) return;
+            this.contextLost = false;
+            logEvent('E', { m: 'Коридор дверей: видеоконтекст WebGL вернулся' });
+            if (this.onContextChange) this.onContextChange(false);
         });
 
         this.raycaster = new THREE.Raycaster();
