@@ -16,6 +16,7 @@
     position: relative;
     width: 96px;
     height: 72px;
+    cursor: pointer;
     border-radius: 10px;
     overflow: hidden;
     border: 1px solid var(--qm-border);
@@ -32,6 +33,8 @@
 
 /* Треугольник «видео» поверх кадра — чтобы с первого взгляда отличалось от фото */
 .qm-root .qm-video-play {
+    padding: 0;
+    cursor: pointer;
     position: absolute;
     left: 50%;
     top: 50%;
@@ -92,5 +95,113 @@
     padding: 10px;
     font-size: 12px;
     color: var(--qm-faint);
+    text-align: center;
+}
+
+/* Просмотр видео (openVideoViewer): на весь экран, в body — поэтому без .qm-root */
+/* Выше экрана «Пространства» (.qm-root — 9999) и его затемнений (до 99999): иначе окно открывалось под ним, невидимым */
+.qm-vv {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+    background: rgba(0, 0, 0, 0.94);
+}
+
+.qm-vv-video {
+    width: 100%;
+    max-height: 72vh;
+    object-fit: contain;
+    background: #000;
+    border-radius: 12px;
+}
+
+.qm-vv-close {
+    align-self: flex-end;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(227, 199, 124, .58);
+    background: rgba(20, 18, 14, .9);
+    color: #e3c77c;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.qm-vv-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #f3ead6;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.qm-vv-toggle {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(227, 199, 124, .58);
+    background: rgba(20, 18, 14, .9);
+    color: #e3c77c;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Ползунок крупный — чтобы попадать пальцем; пройденное — золотом */
+.qm-vv-seek {
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.qm-vv-seek::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #e3c77c var(--qm-vv-fill, 0%), rgba(255, 255, 255, .22) var(--qm-vv-fill, 0%));
+}
+
+.qm-vv-seek::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    margin-top: -8px;
+    border-radius: 50%;
+    background: #e3c77c;
+    border: 2px solid #1a160e;
+}
+
+.qm-vv-seek::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .22);
+}
+
+.qm-vv-seek::-moz-range-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: #e3c77c;
+}
+
+.qm-vv-seek::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e3c77c;
+    border: 2px solid #1a160e;
+}
+
+.qm-vv-bad {
+    color: #f3ead6;
     text-align: center;
 }

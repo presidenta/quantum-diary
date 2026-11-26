@@ -127,6 +127,119 @@ function videoNode(blob, t, { controls }) {
     return video;
 }
 
+const clock = (sec) => {
+    if (!Number.isFinite(sec) || sec < 0) return '0:00';
+    const m = Math.floor(sec / 60);
+    const r = Math.floor(sec % 60);
+    return m + ':' + String(r).padStart(2, '0');
+};
+
+/* ПРОСМОТР ВИДЕО (владелец 26.11.2026: «добавил видео — не могу посмотреть, должен работать значок play»; «перемотка —
+   ползунок перемещать»). Нажатие на кадр в ленте — видео на весь экран, со звуком: большой ползунок перемотки,
+   «пауза / дальше», время, «Закрыть». Окно — поверх всего, в body: внутри экрана «Пространства» есть слои с
+   transform, и fixed там встал бы не по экрану. */
+export function openVideoViewer(blob, t) {
+    const url = URL.createObjectURL(blob);
+    const box = document.createElement('div');
+    box.className = 'qm-vv';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+
+    const video = document.createElement('video');
+    video.className = 'qm-vv-video';
+    video.src = url;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.preload = 'auto';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'qm-vv-toggle';
+    const now = document.createElement('span');
+    now.className = 'qm-vv-time';
+    now.textContent = '0:00';
+    const seek = document.createElement('input');
+    seek.type = 'range';
+    seek.className = 'qm-vv-seek';
+    seek.min = '0';
+    seek.max = '1000';
+    seek.step = '1';
+    seek.value = '0';
+    seek.setAttribute('aria-label', t('videoSeek'));
+    const total = document.createElement('span');
+    total.className = 'qm-vv-time';
+    total.textContent = '0:00';
+    const bar = document.createElement('div');
+    bar.className = 'qm-vv-bar';
+    bar.append(toggle, now, seek, total);
+
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'qm-vv-close';
+    close.textContent = '✕ ' + t('videoClose');
+
+    box.append(close, video, bar);
+    document.body.appendChild(box);
+
+    let dragging = false;
+    const length = () => (Number.isFinite(video.duration) ? video.duration : 0);
+    const paint = () => {
+        toggle.textContent = video.paused ? '▶' : '❚❚';
+        toggle.setAttribute('aria-label', t(video.paused ? 'videoPlay' : 'videoPause'));
+        now.textContent = clock(video.currentTime);
+        total.textContent = clock(length());
+        if (!dragging && length()) seek.value = String(Math.round((video.currentTime / length()) * 1000));
+        seek.style.setProperty('--qm-vv-fill', (Number(seek.value) / 10) + '%');
+    };
+
+    /* Запись с телефона без длины в заголовке (бывает у WebM) — браузер говорит «длина бесконечна», и ползунку не за
+       что держаться. Прыжок в самый конец заставляет его досчитать длину, потом — снова в начало. */
+    video.addEventListener('loadedmetadata', () => {
+        if (video.duration === Infinity) {
+            const back = () => { video.removeEventListener('timeupdate', back); video.currentTime = 0; paint(); };
+            video.addEventListener('timeupdate', back);
+            video.currentTime = 1e101;
+        }
+        paint();
+    });
+    ['timeupdate', 'play', 'pause', 'durationchange', 'ended'].forEach((e) => video.addEventListener(e, paint));
+
+    const flip = () => { if (video.paused) video.play().catch(() => {}); else video.pause(); };
+    toggle.addEventListener('click', flip);
+    video.addEventListener('click', flip);
+
+    seek.addEventListener('input', () => {
+        dragging = true;
+        if (length()) video.currentTime = (Number(seek.value) / 1000) * length();
+        now.textContent = clock(video.currentTime);
+        seek.style.setProperty('--qm-vv-fill', (Number(seek.value) / 10) + '%');
+    });
+    seek.addEventListener('change', () => { dragging = false; paint(); });
+
+    video.addEventListener('error', () => {
+        const note = document.createElement('p');
+        note.className = 'qm-vv-bad';
+        note.textContent = t('videoCantPlay');
+        video.replaceWith(note);
+        bar.hidden = true;
+    }, { once: true });
+
+    const shut = () => {
+        video.pause();
+        box.remove();
+        URL.revokeObjectURL(url);
+        document.removeEventListener('keydown', onKey);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') shut(); };
+    close.addEventListener('click', shut);
+    document.addEventListener('keydown', onKey);
+
+    paint();
+    // Нажатие на кадр — уже касание человека: звук телефон пустит
+    video.play().catch(() => paint());
+    close.focus();
+}
+
 /** Лента видео в настройке двери: кадр каждого и «убрать». Нажатие «убрать» ловит app.js (data-act). */
 export function fillVideoStrip(strip, videos, t) {
     releaseVideoUrls(strip);
@@ -135,9 +248,13 @@ export function fillVideoStrip(strip, videos, t) {
         const cell = document.createElement('div');
         cell.className = 'qm-video-cell';
         cell.appendChild(videoNode(v.blob, t, { controls: false }));
-        const play = document.createElement('span');
+        // ▶ — кнопка: нажатие на кадр открывает просмотр с перемоткой
+        const play = document.createElement('button');
+        play.type = 'button';
         play.className = 'qm-video-play';
-        play.setAttribute('aria-hidden', 'true');
+        play.title = t('videoPlay');
+        play.setAttribute('aria-label', t('videoPlay'));
+        play.addEventListener('click', () => openVideoViewer(v.blob, t));
         cell.appendChild(play);
         const drop = document.createElement('button');
         drop.type = 'button';
