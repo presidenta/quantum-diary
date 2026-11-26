@@ -1,0 +1,96 @@
+/* Видео дверей (door-video/, выкладка 258) — как фото: лента кадров в настройке двери, проигрыватель на открытой
+   двери. Цвета — те же токены «Пространства» (css/space.css). */
+
+.qm-root .qm-ico-video::before { content: "\1F3AC"; }
+
+.qm-root .qm-video-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.qm-root .qm-video-strip:empty { display: none; }
+
+.qm-root .qm-video-cell {
+    position: relative;
+    width: 96px;
+    height: 72px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--qm-border);
+    background: #000;
+}
+
+.qm-root .qm-video-cell video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+/* Треугольник «видео» поверх кадра — чтобы с первого взгляда отличалось от фото */
+.qm-root .qm-video-play {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 26px;
+    height: 26px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(8, 8, 12, 0.62);
+    border: 1px solid var(--qm-border-strong);
+}
+
+.qm-root .qm-video-play::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    top: 7px;
+    border-style: solid;
+    border-width: 6px 0 6px 9px;
+    border-color: transparent transparent transparent var(--qm-gold);
+}
+
+.qm-root .qm-video-local {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 11px;
+    color: var(--qm-faint);
+}
+
+/* Открытая дверь: каждое видео во всю ширину, «Поделиться» под ним */
+.qm-root .qm-s3-video {
+    flex: 1 1 100%;
+    display: grid;
+    gap: 8px;
+}
+
+.qm-root .qm-s3-video video {
+    width: 100%;
+    max-height: 70vh;
+    border-radius: 12px;
+    background: #000;
+    border: 1px solid var(--line-strong, rgba(227, 199, 124, .58));
+}
+
+.qm-root .qm-video-share {
+    justify-self: start;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--qm-gold-line, rgba(227, 199, 124, .58));
+    background: var(--qm-panel-3);
+    color: var(--qm-gold);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.qm-root .qm-video-bad {
+    margin: 0;
+    padding: 10px;
+    font-size: 12px;
+    color: var(--qm-faint);
+    text-align: center;
+}

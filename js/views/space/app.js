@@ -17,6 +17,11 @@ import {
 import {
     getDoorPhotos, countDoorPhotos, addDoorPhotos, deleteDoorPhoto, PHOTO_LIMIT
 } from './photos.js';
+// Видео дверей — только на этом устройстве, без копии на сервере (выкладка 258, door-video/)
+import {
+    getDoorVideos, countDoorVideos, addDoorVideos, deleteDoorVideo, VIDEO_LIMIT, VIDEO_ACCEPT,
+    fillVideoStrip, appendChosenVideos, releaseVideoUrls
+} from './door-video/index.js';
 import { buildSeekBar, bindSeekBar } from './audio-seek/index.js';
 import { doorState, saveOneDoor, buildSaveButton, showSaveState } from './door-save/index.js';
 /* Системный будильник телефона. Раздел знает время следующего окна —
@@ -740,6 +745,7 @@ export class QuantumApp {
             row.dataset.doorId = this.doorIds[i];
             row.dataset.hasAudio = '0';
             row.dataset.photoCount = '0';
+            row.dataset.videoCount = '0';
 
             const head = document.createElement('div');
             head.className = 'qm-door-head';
@@ -854,6 +860,14 @@ export class QuantumApp {
         photoChip.appendChild(counter);
         actions.appendChild(photoChip);
 
+        const videoChip = this.buildPickChip('video', VIDEO_ACCEPT, true, 'qm-ico-video', this.t('videoAdd'));
+        videoChip.title = this.t('videoLocal');
+        const videoCounter = document.createElement('span');
+        videoCounter.className = 'qm-photo-count qm-video-count';
+        videoCounter.textContent = '0/' + VIDEO_LIMIT;
+        videoChip.appendChild(videoCounter);
+        actions.appendChild(videoChip);
+
         box.appendChild(actions);
 
         const state = document.createElement('div');
@@ -873,6 +887,10 @@ export class QuantumApp {
         const strip = document.createElement('div');
         strip.className = 'qm-photo-strip';
         box.appendChild(strip);
+
+        const videoStrip = document.createElement('div');
+        videoStrip.className = 'qm-video-strip';
+        box.appendChild(videoStrip);
 
         return box;
     }
@@ -924,7 +942,8 @@ export class QuantumApp {
         const hasText = Boolean(input && input.value.trim());
         const hasAudio = row.dataset.hasAudio === '1';
         const hasPhoto = Number(row.dataset.photoCount || 0) > 0;
-        const ready = hasText || hasAudio || hasPhoto;
+        const hasVideo = Number(row.dataset.videoCount || 0) > 0;
+        const ready = hasText || hasAudio || hasPhoto || hasVideo;
 
         row.classList.toggle('qm-door-ready', ready);
         if (badge) badge.hidden = !ready;
@@ -1003,6 +1022,26 @@ export class QuantumApp {
         this.updateDoorStatus(row);
     }
 
+    /* Лента видео двери (door-video/) — как лента снимков. */
+    async refreshVideoStrip(row) {
+        const strip = row.querySelector('.qm-video-strip');
+        const counter = row.querySelector('.qm-video-count');
+        if (!strip) return;
+        const videos = await getDoorVideos(row.dataset.doorId);
+        if (this._destroyed || !row.isConnected) return;
+        fillVideoStrip(strip, videos, key => this.t(key));
+        if (counter) counter.textContent = videos.length + '/' + VIDEO_LIMIT;
+        row.dataset.videoCount = String(videos.length);
+        this.updateDoorStatus(row);
+    }
+
+    async removeDoorVideo(row, videoId) {
+        if (!videoId) return;
+        await deleteDoorVideo(row.dataset.doorId, videoId);
+        if (this._destroyed || !row.isConnected) return;
+        await this.refreshVideoStrip(row);
+    }
+
     // Ссылки на картинки отпускаем при замене ленты: иначе снимки копились
     // бы в памяти при каждой перерисовке дверей.
     releasePhotoUrls(strip) {
@@ -1050,6 +1089,9 @@ export class QuantumApp {
             this.applyAudioState(row, meta);
 
             await this.refreshPhotoStrip(row);
+            if (this._destroyed || !row.isConnected) return;
+
+            await this.refreshVideoStrip(row);
             if (this._destroyed || !row.isConnected) return;
         }
     }
@@ -1107,6 +1149,7 @@ export class QuantumApp {
         else if (act === 'save-door') this.saveDoorRow(row);
         else if (act === 'remove') this.removeDoorAudio(row);
         else if (act === 'photo-remove') this.removeDoorPhoto(row, button.dataset.photoId);
+        else if (act === 'video-remove') this.removeDoorVideo(row, button.dataset.videoId);
     }
 
     async removeDoorPhoto(row, photoId) {
@@ -1145,6 +1188,18 @@ export class QuantumApp {
 
             await this.refreshPhotoStrip(row);
             if (skipped > 0) alert(this.t('photoLimitReached'));
+            return;
+        }
+
+        if (input.dataset.act === 'video') {
+            const files = Array.from(input.files || []);
+            input.value = '';
+            if (files.length === 0) return;
+            const { skipped, noSpace } = await addDoorVideos(row.dataset.doorId, files);
+            if (this._destroyed || !row.isConnected) return;
+            await this.refreshVideoStrip(row);
+            if (noSpace) alert(this.t('videoNoSpace'));
+            else if (skipped > 0) alert(this.t('videoLimitReached'));
         }
     }
 
@@ -1365,10 +1420,11 @@ export class QuantumApp {
             const text = input ? input.value.trim() : '';
             const hasAudio = row.dataset.hasAudio === '1';
             const hasPhoto = Number(row.dataset.photoCount || 0) > 0;
+            const hasVideo = Number(row.dataset.videoCount || 0) > 0;
 
             // Дверь живёт, если в ней есть хоть что-то. У двери без текста
             // должно остаться имя — иначе в коридоре она была бы безымянной.
-            if (text === '' && !hasAudio && !hasPhoto) continue;
+            if (text === '' && !hasAudio && !hasPhoto && !hasVideo) continue;
 
             /* Имя двери хранится таким, каким его написал человек, —
                пустое остаётся пустым.
@@ -1547,6 +1603,7 @@ export class QuantumApp {
            перед показом хроник, чтобы здесь не ждать базу. */
         const flags = this.doorMediaFlags[this.doorIds[slot]] || {};
         if (flags.photos) return this.t('doorTitlePhoto');
+        if (flags.videos) return this.t('doorTitleVideo');
         if (flags.audio) return this.t('doorTitleAudio');
         return this.t('doorTitleEmpty');
     }
@@ -1576,13 +1633,15 @@ export class QuantumApp {
 
         for (const doorId of this.doorIds) {
             if (!doorId) continue;
-            const [audio, photos] = await Promise.all([
+            const [audio, photos, videos] = await Promise.all([
                 getDoorAudio(doorId).catch(() => null),
-                countDoorPhotos(doorId).catch(() => 0)
+                countDoorPhotos(doorId).catch(() => 0),
+                countDoorVideos(doorId).catch(() => 0)
             ]);
             flags[doorId] = {
                 audio: Boolean(audio && audio.blob && audio.blob.size > 0),
-                photos: photos || 0
+                photos: photos || 0,
+                videos: videos || 0
             };
         }
 
@@ -1657,13 +1716,17 @@ export class QuantumApp {
         if (!box) return;
 
         this.releasePhotoUrls(box);
+        releaseVideoUrls(box);
         box.innerHTML = '';
         box.hidden = true;
         if (!this.currentDoorId) return;
 
-        const photos = await getDoorPhotos(this.currentDoorId);
+        const [photos, videos] = await Promise.all([
+            getDoorPhotos(this.currentDoorId),
+            getDoorVideos(this.currentDoorId)
+        ]);
         if (this._destroyed || !box.isConnected) return;
-        if (!photos.length) return;
+        if (!photos.length && !videos.length) return;
 
         /* Снимок раскрывается по нажатию.
 
@@ -1703,6 +1766,9 @@ export class QuantumApp {
 
             box.appendChild(cell);
         }
+
+        // Видео — под снимками, проигрыватель во всю ширину и «Поделиться» (door-video/)
+        appendChosenVideos(box, videos, key => this.t(key));
 
         box.hidden = false;
     }
@@ -2306,7 +2372,8 @@ export class QuantumApp {
 
         this.stopDoorAudio();
         this.stopRecTimer();
-        this.$$('.qm-photo-strip').forEach(strip => this.releasePhotoUrls(strip));
+        this.$('.qm-photo-strip').forEach(strip => this.releasePhotoUrls(strip));
+        this.$('.qm-video-strip').forEach(strip => releaseVideoUrls(strip));
         if (this.recorder) {
             this.recorder.stop().catch(() => {});
             this.recorder = null;
